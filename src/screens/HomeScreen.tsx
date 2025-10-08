@@ -1,154 +1,242 @@
-// src/screens/HomeScreen.tsx
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import Card from '../components/cards/Card';
-import TaskCheckboxRow from '../components/TaskCheckboxRow';
-import AlertSolutionCard from '../components/AlertSolutionCard';
-import EmptyState from '../components/EmptyState';
-import { theme } from '../styles/theme';
-import { RootState, AppDispatch } from '../state/store';
-import { loadPets } from '../state/slices/petsSlice';
-import { addCareLog, loadLogsByPet } from '../state/slices/logsSlice';
-import { addPointsForTask, getBalance } from '../state/slices/pointsSlice';
-import { loadAlerts } from '../state/slices/alertsSlice';
-import { type TaskType } from '../domain/taskTypes';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  useColorScheme,
+  Alert,
+} from 'react-native';
+import Checkbox from 'expo-checkbox';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { RootTabParamList } from '../navigation/rootNavigator';
 
-const TODAY_KEYS: { key: TaskType; title: string }[] = [
-  { key: 'feed', title: '餵食' },
-  { key: 'calcium', title: '加鈣' },
-  { key: 'uvb_on', title: 'UVB 開' },
-  { key: 'clean', title: '清潔' },
-  { key: 'weigh', title: '量體重' },
-];
+type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
 
-// ✅ 用不可變的空陣列常數，避免每 render 新建 []
-const EMPTY: ReadonlyArray<any> = Object.freeze([]);
+const PRIMARY = '#38e07b';
 
-export default function HomeScreen() {
-  const dispatch = useDispatch<AppDispatch>();
+export default function HomeScreen({ navigation }: Props) {
+  const scheme = useColorScheme();
+  const isDark = scheme === 'dark';
+  const colors = useMemo(
+    () => ({
+      bg: isDark ? '#122017' : '#f6f8f7',
+      card: isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.05)',
+      text: isDark ? '#ffffff' : '#1f2937',
+      subText: isDark ? '#d1d5db' : '#4b5563',
+      border: 'rgba(56,224,123,0.3)',
+    }),
+    [isDark]
+  );
 
-  // 只選擇 "原始資料結構"（map/object），不要在 selector 內做 fallback
-  const pets = useSelector((s: RootState) => s.pets.items);
-  const alertsByPet = useSelector((s: RootState) => s.alerts.byPet);
-  const pointsByPet = useSelector((s: RootState) => s.points.byPet);
-  const logsByPet = useSelector((s: RootState) => s.logs.byPet);
+  const [tasks, setTasks] = useState([
+    { key: 'temp', label: 'Check enclosure temperature', done: true },
+    { key: 'mist', label: 'Mist enclosure', done: true },
+    { key: 'observe', label: 'Observe for any health changes', done: false },
+  ]);
 
-  const [focusedPetId, setFocusedPetId] = useState<string | null>(null);
-
-  useEffect(() => { dispatch(loadPets()); }, []);
-  useEffect(() => {
-    if (pets.length && !focusedPetId) setFocusedPetId(pets[0].id);
-  }, [pets, focusedPetId]);
-
-  useEffect(() => {
-    if (!focusedPetId) return;
-    dispatch(loadLogsByPet({ petId: focusedPetId }));
-    dispatch(loadAlerts(focusedPetId));
-    dispatch(getBalance(focusedPetId));
-  }, [dispatch, focusedPetId]);
-
-  const todayISO = new Date().toISOString().slice(0, 10);
-
-  // 在組件中做 fallback，但用同一個 EMPTY 常數
-  const logs = (focusedPetId && logsByPet[focusedPetId]) || EMPTY;
-  const petAlerts = (focusedPetId && alertsByPet[focusedPetId]) || EMPTY;
-  const balance = (focusedPetId && pointsByPet[focusedPetId]) || 0;
-
-  const doneKeys = useMemo(() => {
-    const set = new Set<TaskType>();
-    (logs as any[]).forEach(l => {
-      if ((l.at ?? '').startsWith(todayISO)) set.add(l.type as TaskType);
-    });
-    return set;
-  }, [logs, todayISO]);
-
-  const onToggleTask = async (taskKey: TaskType) => {
-    if (!focusedPetId) return;
-    if (!doneKeys.has(taskKey)) {
-      const at = new Date().toISOString();
-      await dispatch(addCareLog({ pet_id: focusedPetId, type: taskKey, value: null, note: null, at }));
-      await dispatch(addPointsForTask({ petId: focusedPetId, taskKey, points: 5 }));
-    }
-  };
+  const toggleTask = (k: string) =>
+    setTasks((arr) => arr.map((t) => (t.key === k ? { ...t, done: !t.done } : t)));
 
   return (
-    <FlatList
-      contentContainerStyle={styles.container}
-      data={[{ kind: 'tasks' }, { kind: 'alerts' }] as const}
-      keyExtractor={(_, i) => String(i)}
-      renderItem={({ item }) => {
-        if (item.kind === 'tasks') {
-          return (
-            <Card style={{ marginBottom: theme.spacing.xl }}>
-              <Text style={styles.h2}>今日任務</Text>
-              <View style={{ height: theme.spacing.sm }} />
-              {focusedPetId ? TODAY_KEYS.map(t => (
-                <TaskCheckboxRow
-                  key={t.key}
-                  title={t.title}
-                  description={t.key === 'uvb_on' ? '日照/UVB 曝光建議 10–20 分鐘（依品種與天氣）' : undefined}
-                  checked={doneKeys.has(t.key)}
-                  onToggle={() => onToggleTask(t.key)}
-                />
-              )) : <EmptyState title="尚未建立寵物" hint="請先新增寵物檔案" />}
-              <View style={styles.balanceRow}>
-                <Text style={styles.label}>CarePoints</Text>
-                <Text style={styles.balance}>{balance}</Text>
-              </View>
-            </Card>
-          );
-        }
-        // alerts
-        return (
-          <View>
-            <Text style={styles.h2}>風險 / 解法</Text>
-            <View style={{ height: theme.spacing.md }} />
-            {petAlerts.length === 0
-              ? <EmptyState title="目前沒有警報" hint="每日 09:00 自動檢查規則" />
-              : (petAlerts as any[]).map(a => (
-                  <View key={a.id} style={{ marginBottom: theme.spacing.lg }}>
-                    <AlertSolutionCard
-                      severity={a.severity}
-                      title={a.title}
-                      body={a.body}
-                      products={tryDecodeProducts(a.recommended_product_ids)}
-                      onOpenArticle={undefined}
-                    />
-                  </View>
-                ))
-            }
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.bg }]}>
+        <View style={{ width: 48 }} />
+        <Text style={[styles.appTitle, { color: colors.text }]}>ScaleFeatherFur</Text>
+        <Pressable
+          style={styles.iconBtn}
+          onPress={() => Alert.alert('Settings', 'Open settings…')}
+          hitSlop={10}
+        >
+          <Feather name="settings" size={22} color={isDark ? '#d1d5db' : '#4b5563'} />
+        </Pressable>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Pet header */}
+        <View style={styles.petRow}>
+          <Image
+            source={{
+              uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCUOIGdn2TnKmCo9kPudx1UkTcpugunLBRhgyleUPOTX4qYSTwA4WnK-kzqlAqB6syHzDu0vfaPXRbIcEmD_zQQIf6TQ2sf3i9FN_I0o7qzIIpdSNzBOwBkUByOLeqCH_Ezh12HjbFbXadx0Pm9ASWqFlQNUXmc3YvobOFoLxWvRWgtCzE_e5qCtCIdU3bl0QQWEgjP5N31PwAgtpEAdqV7IdjhL44rhvX8b8UGUxhSd8xFUP8DZXuYZAmZncor4uSJR0Mg-iWBFic',
+            }}
+            style={styles.avatar}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.petName, { color: colors.text }]}>Rex</Text>
+            <Text style={[styles.petMeta, { color: colors.subText }]}>Chameleon</Text>
+            <Text style={[styles.petMeta, { color: colors.subText }]}>Age: 2 years</Text>
           </View>
-        );
-      }}
-    />
+        </View>
+
+        {/* Care Alerts */}
+        <View style={{ marginTop: 16 }}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Care Alerts</Text>
+
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <View style={styles.alertRow}>
+              <View style={styles.alertIconBox}>
+                <Feather name="cloud" size={22} color={PRIMARY} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.alertTitle, { color: colors.text }]}>Feeding</Text>
+                <Text style={[styles.alertSub, { color: colors.subText }]}>
+                  Next feeding in 2 days
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.alertRow, { marginTop: 10 }]}>
+              <View style={styles.alertIconBox}>
+                <MaterialCommunityIcons name="stethoscope" size={22} color={PRIMARY} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.alertTitle, { color: colors.text }]}>Vet Checkup</Text>
+                <Text style={[styles.alertSub, { color: colors.subText }]}>
+                  Next vet visit in 1 month
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Daily Tasks */}
+        <View style={{ marginTop: 16 }}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, paddingVertical: 6 }]}>
+            {tasks.map((t) => (
+              <Pressable
+                key={t.key}
+                onPress={() => toggleTask(t.key)}
+                style={({ pressed }) => [styles.taskRow, pressed && { opacity: 0.7 }]}
+              >
+                <Checkbox
+                  value={t.done}
+                  onValueChange={() => toggleTask(t.key)}
+                  color={t.done ? PRIMARY : undefined}
+                  style={styles.checkbox}
+                />
+                <Text style={[styles.taskLabel, { color: colors.text }]}>{t.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Resources */}
+        <View style={{ marginTop: 16, marginBottom: 16 }}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Resources</Text>
+          <Pressable
+            style={({ pressed }) => [
+              styles.resourceRow,
+              { backgroundColor: colors.card },
+              pressed && { opacity: 0.7 },
+            ]}
+            // 以前導到 'Articles'，現在改到你的分頁之一（示範導到 Community）
+            onPress={() => navigation.navigate('Community')}
+          >
+            <View style={styles.resourceIconBox}>
+              <Feather name="book-open" size={20} color={PRIMARY} />
+            </View>
+            <Text style={[styles.resourceLabel, { color: colors.text }]}>
+              Chameleon Care Guide
+            </Text>
+            <Feather name="chevron-right" size={18} color={colors.subText} />
+          </Pressable>
+        </View>
+
+        {/* 你也可以提供一個快速新增入口（會前往中間的 Plus 分頁＝PetEditorScreen） */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.addButton,
+            { backgroundColor: PRIMARY, opacity: pressed ? 0.9 : 1 },
+          ]}
+          onPress={() => navigation.navigate('Plus')}
+        >
+          <Feather name="plus" size={20} color="#122017" />
+          <Text style={styles.addButtonText}>Add Care / Log</Text>
+        </Pressable>
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    </View>
   );
 }
 
-function tryDecodeProducts(s: string | null) {
-  if (!s) return [];
-  try {
-    const ids: string[] = JSON.parse(s);
-    return ids.slice(0, 2).map((id) => ({ id, name: `產品 ${id}`, affiliate_url: undefined }));
-  } catch { return []; }
-}
-
 const styles = StyleSheet.create({
-  container: {
-    padding: theme.spacing.xl,
-    backgroundColor: theme.colors.bg,
-    gap: theme.spacing.xl,
-  },
-  h2: { ...theme.typography.h2, color: theme.colors.text },
-  label: { ...theme.typography.small },
-  balanceRow: {
-    marginTop: theme.spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: theme.spacing.md,
+  container: { flex: 1 },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  balance: { ...theme.typography.h2, color: theme.colors.accent },
+  appTitle: { fontSize: 18, fontWeight: '700' },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: { padding: 16 },
+  petRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  avatar: { width: 96, height: 96, borderRadius: 48, marginRight: 16 },
+  petName: { fontSize: 24, fontWeight: '800' },
+  petMeta: { fontSize: 14, marginTop: 2 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  card: { borderRadius: 12, padding: 12 },
+  alertRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  alertIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(56,224,123,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  alertTitle: { fontSize: 16, fontWeight: '600' },
+  alertSub: { fontSize: 12, marginTop: 2 },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+  },
+  checkbox: { width: 22, height: 22, borderRadius: 4, marginRight: 10 },
+  taskLabel: { fontSize: 15 },
+  resourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    gap: 12,
+  },
+  resourceIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(56,224,123,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resourceLabel: { fontSize: 15, fontWeight: '600', flex: 1 },
+  addButton: {
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  addButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#122017',
+  },
 });

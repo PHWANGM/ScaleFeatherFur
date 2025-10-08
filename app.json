@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow the app to access your photo library for pet avatars.",
+        "NSCameraUsageDescription": "Allow the app to use the camera for pet avatars."
+      }
     },
     "android": {
       "adaptiveIcon": {
