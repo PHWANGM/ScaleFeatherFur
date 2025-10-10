@@ -22,7 +22,7 @@ import { setCurrentPetId } from '../store/myPetSlice';
 import { PetRow } from '../lib/db/repos/pets.repo';
 
 // Theme
-import { useThemeColors } from '../styles/Themes';
+import { useThemeColors } from '../styles/themesColors';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
 

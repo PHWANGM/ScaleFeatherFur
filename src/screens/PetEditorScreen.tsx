@@ -35,7 +35,7 @@ import {
 import { listSpecies, type SpeciesRow } from '../lib/db/repos/species.repo';
 import Field from '../components/fields/Field';
 import { useImagePicker } from '../lib/ui/useImagePicker';
-import { useThemeColors } from '../styles/Themes';
+import { useThemeColors } from '../styles/themesColors';
 
 type RootStackParamList = {
   PetEditor: { id?: string } | undefined;
