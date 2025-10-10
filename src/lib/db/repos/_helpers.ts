@@ -16,7 +16,7 @@ export function buildSetClause(patch: Record<string, unknown>): {
   if (entries.length === 0) {
     throw new Error('Nothing to update');
   }
-  const cols = entries.map(([k], i) => `${k} = ?`).join(', ');
+  const cols = entries.map(([k]) => `${k} = ?`).join(', ');
   const params = entries.map(([_, v]) => v as any);
   return { sql: cols, params };
 }
@@ -52,4 +52,38 @@ export function dayRangeIso(dateStr?: string): { dayStartISO: string; dayEndISO:
     dayStartISO: dayStart.toISOString(),
     dayEndISO: dayEnd.toISOString(),
   };
+}
+
+/**
+ * 年齡計算器：將生日 ISO 字串轉為易讀年齡。
+ * - 若 < 12 個月：回傳 "X mo"
+ * - 若 >= 12 個月：回傳 "Y yr" 或 "Y yr M mo"
+ * - 無生日或無法解析則回傳 null
+ */
+export function ageCalculator(
+  birthISO?: string | null,
+  options?: { compact?: boolean } // compact = true 時，剛好整年則不顯示月份
+): string | null {
+  if (!birthISO) return null;
+  const birth = new Date(birthISO);
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const now = new Date();
+
+  // 以月份作為基準，並根據日調整
+  let months =
+    (now.getFullYear() - birth.getFullYear()) * 12 +
+    (now.getMonth() - birth.getMonth());
+
+  // 若當月日期未達生日日期，月份退一
+  if (now.getDate() < birth.getDate()) months -= 1;
+  if (months < 0) return null;
+
+  if (months < 12) return `${months} mo`;
+
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+
+  if (options?.compact && rem === 0) return `${years} yr`;
+  return rem === 0 ? `${years} yr` : `${years} yr ${rem} mo`;
 }

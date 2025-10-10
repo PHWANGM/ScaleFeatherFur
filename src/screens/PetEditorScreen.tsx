@@ -22,6 +22,7 @@ import {
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import {
@@ -60,8 +61,9 @@ export default function PetEditorScreen() {
   const route = useRoute<PetEditorRoute>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { colors, isDark } = useThemeColors();
+  const insets = useSafeAreaInsets();
 
-  // ✅ 與 HomeScreen 完全對齊的 palette（不額外加 key）
+  // ✅ 與 HomeScreen 對齊的 palette
   const palette = useMemo(
     () => ({
       bg: colors.bg,
@@ -74,7 +76,7 @@ export default function PetEditorScreen() {
     [colors]
   );
 
-  // 🔹 其他 UI 用色在內部推導（不修改 palette 結構）
+  // 🔹 其他 UI 用色
   const ui = useMemo(
     () => ({
       hairline: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
@@ -99,7 +101,7 @@ export default function PetEditorScreen() {
   const [speciesKey, setSpeciesKey] = useState('');
   const [habitat, setHabitat] = useState<Habitat>('indoor_uvb');
 
-  // Birth date managed by ISO string + Date object
+  // Birth date
   const [birthDateIso, setBirthDateIso] = useState<string>('');     // '' => 未設定
   const [birthDateObj, setBirthDateObj] = useState<Date | null>(null);
 
@@ -110,7 +112,7 @@ export default function PetEditorScreen() {
   const [locationCity, setLocationCity] = useState<string>('');
   const [avatarUri, setAvatarUri] = useState<string>('');
 
-  // refs for "next" focus
+  // refs
   const locationRef = useRef<RNTextInput>(null);
 
   const { pickFromLibrary, takePhoto } = useImagePicker();
@@ -286,14 +288,17 @@ export default function PetEditorScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loading, { backgroundColor: palette.bg }]}>
+      <SafeAreaView style={[styles.loading, { backgroundColor: palette.bg }]} edges={['top','left','right','bottom']}>
         <ActivityIndicator />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.bg }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: palette.bg }]}
+      edges={['top', 'left', 'right']} // ⬅️ 上/左/右避開狀態列與瀏海
+    >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: ui.hairline }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -311,6 +316,7 @@ export default function PetEditorScreen() {
         <ScrollView
           contentContainerStyle={[styles.body, { gap: 14 }]}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {/* Avatar */}
           <View style={styles.avatarWrap}>
@@ -481,8 +487,17 @@ export default function PetEditorScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Footer */}
-      <View style={[styles.footer, { borderTopColor: ui.hairline, backgroundColor: palette.bg }]}>
+      {/* Footer（含底部安全區域） */}
+      <View
+        style={[
+          styles.footer,
+          {
+            borderTopColor: ui.hairline,
+            backgroundColor: palette.bg,
+            paddingBottom: 16 + insets.bottom, // ⬅️ 重點：吃到底部安全區域
+          },
+        ]}
+      >
         <TouchableOpacity
           disabled={saving}
           onPress={onSave}
@@ -530,7 +545,7 @@ export default function PetEditorScreen() {
           </View>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

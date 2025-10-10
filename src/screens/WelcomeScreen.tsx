@@ -6,10 +6,10 @@ import {
   ImageBackground,
   StyleSheet,
   Pressable,
-  SafeAreaView,
   StatusBar,
   useColorScheme,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/rootNavigator';
@@ -47,7 +47,7 @@ export default function WelcomeScreen() {
   return (
     <View style={[styles.root, { backgroundColor: isDark ? colors.darkBg : colors.lightBg }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}>
         <View style={{ flex: 1 }}>
           <View style={styles.heroPad}>
             <ImageBackground

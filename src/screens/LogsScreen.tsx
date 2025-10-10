@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { theme } from '../styles/tokens';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../state/store';
-import { loadPets } from '../state/slices/petsSlice';
 import { loadLogsByPet, type CareLog } from '../state/slices/logsSlice';
 import EmptyState from '../components/EmptyState';
 import Card from '../components/cards/Card';
@@ -11,14 +10,11 @@ import { TASK_TYPES, type TaskType } from '../domain/taskTypes';
 
 export default function LogsScreen() {
   const dispatch = useDispatch<AppDispatch>();
-  const pets = useSelector((s: RootState) => s.pets.items);
   const [petId, setPetId] = useState<string | null>(null);
   const [type, setType] = useState<TaskType | undefined>(undefined);
   const logs = useSelector((s: RootState) => (petId ? s.logs.byPet[petId] ?? [] : []));
 
-  useEffect(() => { dispatch(loadPets()); }, []);
-  useEffect(() => { if (pets.length && !petId) setPetId(pets[0].id); }, [pets]);
-  useEffect(() => { if (petId) dispatch(loadLogsByPet({ petId, type })); }, [petId, type]);
+
 
   return (
     <View style={styles.container}>

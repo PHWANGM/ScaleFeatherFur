@@ -9,11 +9,12 @@ import {
   DarkTheme,
   Theme,
 } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { runMigrations } from './src/lib/db/migrate';
-import RootNavigator from './src/navigation/rootNavigator'; // 下面第2節會示範如何加入 Welcome
+import RootNavigator from './src/navigation/rootNavigator';
 import { store } from './src/state/store';
-import { theme } from './src/styles/tokens'; // 你自己的顏色系統（沿用即可）
+import { theme } from './src/styles/tokens'; // 你的顏色系統
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -23,7 +24,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        await runMigrations(); // ex: 跑 V1__init.sql 等
+        await runMigrations();
       } catch (e) {
         console.error('Migration failed', e);
       } finally {
@@ -48,7 +49,7 @@ export default function App() {
     );
   }
 
-  // 以系統深淺色為基底，再覆蓋成你自家 theme 色票
+  // 以系統深淺色為基底，再覆蓋自家色票
   const base = isDark ? DarkTheme : DefaultTheme;
   const navTheme: Theme = {
     ...base,
@@ -65,10 +66,15 @@ export default function App() {
 
   return (
     <Provider store={store}>
-      <NavigationContainer theme={navTheme}>
-        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <RootNavigator />
-      </NavigationContainer>
+      <SafeAreaProvider>
+        <NavigationContainer theme={navTheme}>
+          <StatusBar
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor={theme.colors.bg}
+          />
+          <RootNavigator />
+        </NavigationContainer>
+      </SafeAreaProvider>
     </Provider>
   );
 }
