@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { theme } from '../../styles/theme';
+import { theme } from '../../styles/tokens';
 
 type Point = { x: number; y: number };
 type Props = {

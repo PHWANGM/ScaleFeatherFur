@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Linking } from 'react-native';
 import Card from './cards/Card';
-import { theme } from '../styles/theme';
+import { theme } from '../styles/tokens';
 
 type Props = {
   severity: 'info' | 'warn' | 'critical';

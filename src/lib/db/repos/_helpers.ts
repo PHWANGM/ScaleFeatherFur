@@ -36,3 +36,20 @@ export function genId(prefix: string): string {
   } catch {}
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 }
+
+export function dayRangeIso(dateStr?: string): { dayStartISO: string; dayEndISO: string } {
+  const base = dateStr && dateStr.length >= 10
+    ? new Date(`${dateStr}T00:00:00.000Z`)
+    : new Date();
+
+  const dayStart = new Date(base);
+  dayStart.setUTCHours(0, 0, 0, 0);
+
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  return {
+    dayStartISO: dayStart.toISOString(),
+    dayEndISO: dayEnd.toISOString(),
+  };
+}

@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import ChartLine from '../components/charts/ChartLine';
 import Card from '../components/cards/Card';
 import EmptyState from '../components/EmptyState';
-import { theme } from '../styles/theme';
+import { theme } from '../styles/tokens';
 import { AppDispatch, RootState } from '../state/store';
 import { loadLogsByPet } from '../state/slices/logsSlice';
 import type { TaskType } from '../domain/taskTypes';

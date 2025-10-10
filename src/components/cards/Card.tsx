@@ -1,6 +1,6 @@
 import React, { PropsWithChildren } from 'react';
 import { View, ViewStyle, StyleSheet } from 'react-native';
-import { theme } from '../../styles/theme';
+import { theme } from '../../styles/tokens';
 
 type Props = PropsWithChildren<{ style?: ViewStyle }>;
 

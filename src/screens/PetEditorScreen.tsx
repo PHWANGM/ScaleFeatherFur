@@ -35,10 +35,11 @@ import {
 import { listSpecies, type SpeciesRow } from '../lib/db/repos/species.repo';
 import Field from '../components/fields/Field';
 import { useImagePicker } from '../lib/ui/useImagePicker';
+import { useThemeColors } from '../styles/Themes';
 
 type RootStackParamList = {
   PetEditor: { id?: string } | undefined;
-  SpeciesEditor: undefined; // 供 navigate 使用
+  SpeciesEditor: undefined;
 };
 
 type PetEditorRoute = RouteProp<RootStackParamList, 'PetEditor'>;
@@ -58,6 +59,34 @@ const parseISODate = (s: string): Date | null => {
 export default function PetEditorScreen() {
   const route = useRoute<PetEditorRoute>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { colors, isDark } = useThemeColors();
+
+  // ✅ 與 HomeScreen 完全對齊的 palette（不額外加 key）
+  const palette = useMemo(
+    () => ({
+      bg: colors.bg,
+      card: colors.card,
+      text: colors.text,
+      subText: colors.subText ?? colors.textDim ?? '#97A3B6',
+      border: colors.border,
+      primary: colors.primary ?? '#38e07b',
+    }),
+    [colors]
+  );
+
+  // 🔹 其他 UI 用色在內部推導（不修改 palette 結構）
+  const ui = useMemo(
+    () => ({
+      hairline: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+      placeholder: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)',
+      inputBg: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+      chipBorder: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+      overlay: 'rgba(0,0,0,0.45)',
+      inverseBg: palette.text,
+      inverseText: palette.bg,
+    }),
+    [isDark, palette.bg, palette.text]
+  );
 
   const editingId = route.params?.id;
 
@@ -127,7 +156,7 @@ export default function PetEditorScreen() {
     load();
   }, [load, navigation]);
 
-  // 回到此畫面時刷新 species 清單（例如剛從 SpeciesEditor 新增後）
+  // 回到此畫面時刷新 species 清單
   useFocusEffect(
     useCallback(() => {
       let alive = true;
@@ -137,9 +166,7 @@ export default function PetEditorScreen() {
           if (alive) setSpecies(sp);
         } catch {}
       })();
-      return () => {
-        alive = false;
-      };
+      return () => { alive = false; };
     }, [])
   );
 
@@ -206,18 +233,9 @@ export default function PetEditorScreen() {
     locationRef.current?.focus();
   }, [iosTempDate]);
 
-  const onIosCancel = useCallback(() => {
-    setShowDatePicker(false);
-  }, []);
-
-  const clearBirthDate = useCallback(() => {
-    setBirthDateIso('');
-    setBirthDateObj(null);
-  }, []);
-
-  const goToSpeciesEditor = useCallback(() => {
-    navigation.navigate('SpeciesEditor');
-  }, [navigation]);
+  const onIosCancel = useCallback(() => setShowDatePicker(false), []);
+  const clearBirthDate = useCallback(() => { setBirthDateIso(''); setBirthDateObj(null); }, []);
+  const goToSpeciesEditor = useCallback(() => navigation.navigate('SpeciesEditor'), [navigation]);
 
   const onSave = useCallback(async () => {
     if (!name.trim()) {
@@ -268,20 +286,20 @@ export default function PetEditorScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: palette.bg }]}>
         <ActivityIndicator />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: palette.bg }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: ui.hairline }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.closeButton}>✕</Text>
+          <Text style={[styles.closeButton, { color: palette.text }]}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{title}</Text>
+        <Text style={[styles.headerTitle, { color: palette.text }]}>{title}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -290,19 +308,28 @@ export default function PetEditorScreen() {
         style={{ flex: 1 }}
         behavior={Platform.select({ ios: 'padding', android: undefined })}
       >
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.body, { gap: 14 }]}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Avatar */}
           <View style={styles.avatarWrap}>
-            <View style={styles.avatarCircle}>
+            <View style={[styles.avatarCircle, { backgroundColor: ui.inputBg }]}>
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
-                <Text style={{ opacity: 0.6 }}>🦎</Text>
+                <Text style={{ color: palette.subText }}>🦎</Text>
               )}
             </View>
 
-            <TouchableOpacity onPress={chooseAvatar} style={styles.avatarAdd}>
-              <Text style={styles.avatarAddText}>＋</Text>
+            <TouchableOpacity
+              onPress={chooseAvatar}
+              style={[
+                styles.avatarAdd,
+                { backgroundColor: palette.primary, borderColor: palette.bg },
+              ]}
+            >
+              <Text style={[styles.avatarAddText, { color: palette.bg }]}>＋</Text>
             </TouchableOpacity>
           </View>
 
@@ -310,23 +337,26 @@ export default function PetEditorScreen() {
           <Field label="Pet Name">
             <TextInput
               placeholder="e.g. Spike"
-              placeholderTextColor="rgba(255,255,255,0.5)"
+              placeholderTextColor={ui.placeholder}
               value={name}
               onChangeText={setName}
-              style={styles.input}
+              style={[
+                styles.input,
+                { backgroundColor: ui.inputBg, color: palette.text },
+              ]}
               autoCapitalize="words"
-              autoCorrect={true}
+              autoCorrect
               autoComplete="name"
               textContentType="name"
               returnKeyType="next"
               blurOnSubmit={false}
-              onSubmitEditing={openDatePicker} // 直接開日期選擇器
+              onSubmitEditing={openDatePicker}
             />
           </Field>
 
           {/* Species + Add Species */}
           <Field label="Species">
-            <View style={[styles.select, styles.speciesSelectWrap]}>
+            <View style={[styles.select, { backgroundColor: ui.inputBg }]}>
               <View style={styles.speciesRow}>
                 <ScrollView
                   horizontal
@@ -340,9 +370,22 @@ export default function PetEditorScreen() {
                       <TouchableOpacity
                         key={opt.value}
                         onPress={() => setSpeciesKey(opt.value)}
-                        style={[styles.chip, selected && styles.chipSelected]}
+                        style={[
+                          styles.chip,
+                          { borderColor: ui.chipBorder },
+                          selected && {
+                            backgroundColor: ui.inverseBg,
+                            borderColor: ui.inverseBg,
+                          },
+                        ]}
                       >
-                        <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                        <Text
+                          style={[
+                            styles.chipText,
+                            { color: palette.text },
+                            selected && { color: ui.inverseText, fontWeight: '600' },
+                          ]}
+                        >
                           {opt.label}
                         </Text>
                       </TouchableOpacity>
@@ -350,8 +393,13 @@ export default function PetEditorScreen() {
                   })}
                 </ScrollView>
 
-                <TouchableOpacity onPress={goToSpeciesEditor} style={styles.addSpeciesBtn}>
-                  <Text style={styles.addSpeciesBtnText}>＋ Add Species</Text>
+                <TouchableOpacity
+                  onPress={goToSpeciesEditor}
+                  style={[styles.addSpeciesBtn, { backgroundColor: ui.inverseBg }]}
+                >
+                  <Text style={[styles.addSpeciesBtnText, { color: ui.inverseText }]}>
+                    ＋ Add Species
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -359,7 +407,7 @@ export default function PetEditorScreen() {
 
           {/* Habitat */}
           <Field label="Habitat">
-            <View style={styles.select}>
+            <View style={[styles.select, { backgroundColor: ui.inputBg }]}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {habitatOptions.map((opt) => {
                   const selected = opt.value === habitat;
@@ -367,9 +415,22 @@ export default function PetEditorScreen() {
                     <TouchableOpacity
                       key={opt.value}
                       onPress={() => setHabitat(opt.value as Habitat)}
-                      style={[styles.chip, selected && styles.chipSelected]}
+                      style={[
+                        styles.chip,
+                        { borderColor: ui.chipBorder },
+                        selected && {
+                          backgroundColor: ui.inverseBg,
+                          borderColor: ui.inverseBg,
+                        },
+                      ]}
                     >
-                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: palette.text },
+                          selected && { color: ui.inverseText, fontWeight: '600' },
+                        ]}
+                      >
                         {opt.label}
                       </Text>
                     </TouchableOpacity>
@@ -379,17 +440,23 @@ export default function PetEditorScreen() {
             </View>
           </Field>
 
-          {/* Birth Date：日期選擇器 */}
+          {/* Birth Date */}
           <Field label="Birth Date (YYYY-MM-DD)">
             <View style={styles.dateRow}>
-              <Pressable onPress={openDatePicker} style={styles.dateInputLike}>
-                <Text style={birthDateIso ? styles.dateText : styles.datePlaceholder}>
+              <Pressable
+                onPress={openDatePicker}
+                style={[styles.dateInputLike, { backgroundColor: ui.inputBg }]}
+              >
+                <Text style={birthDateIso ? { color: palette.text } : { color: ui.placeholder }}>
                   {birthDateIso || 'Select a date'}
                 </Text>
               </Pressable>
               {!!birthDateIso && (
-                <TouchableOpacity onPress={clearBirthDate} style={styles.clearBtn}>
-                  <Text style={styles.clearBtnText}>Clear</Text>
+                <TouchableOpacity
+                  onPress={clearBirthDate}
+                  style={[styles.clearBtn, { backgroundColor: ui.inputBg }]}
+                >
+                  <Text style={{ color: palette.text, fontSize: 12 }}>Clear</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -400,12 +467,12 @@ export default function PetEditorScreen() {
             <TextInput
               ref={locationRef}
               placeholder="e.g. Taipei"
-              placeholderTextColor="rgba(255,255,255,0.5)"
+              placeholderTextColor={ui.placeholder}
               value={locationCity}
               onChangeText={setLocationCity}
-              style={styles.input}
+              style={[styles.input, { backgroundColor: ui.inputBg, color: palette.text }]}
               autoCapitalize="words"
-              autoCorrect={true}
+              autoCorrect
               autoComplete="postal-address-locality"
               textContentType="addressCity"
               returnKeyType="done"
@@ -415,13 +482,15 @@ export default function PetEditorScreen() {
       </KeyboardAvoidingView>
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { borderTopColor: ui.hairline, backgroundColor: palette.bg }]}>
         <TouchableOpacity
           disabled={saving}
           onPress={onSave}
-          style={[styles.primaryBtn, saving && { opacity: 0.6 }]}
+          style={[styles.primaryBtn, { backgroundColor: palette.primary }, saving && { opacity: 0.6 }]}
         >
-          <Text style={styles.primaryBtnText}>{editingId ? 'Save Changes' : 'Add Pet'}</Text>
+          <Text style={[styles.primaryBtnText, { color: ui.inverseText }]}>
+            {editingId ? 'Save Changes' : 'Add Pet'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -438,15 +507,17 @@ export default function PetEditorScreen() {
 
       {/* ---- iOS overlay with spinner ---- */}
       {Platform.OS === 'ios' && showDatePicker && (
-        <View style={styles.iosOverlay}>
-          <View style={styles.iosSheet}>
-            <View style={styles.iosSheetHeader}>
+        <View style={[styles.iosOverlay, { backgroundColor: ui.overlay }]}>
+          <View style={[styles.iosSheet, { backgroundColor: palette.card }]}>
+            <View style={[styles.iosSheetHeader, { borderBottomColor: ui.hairline }]}>
               <TouchableOpacity onPress={onIosCancel} style={styles.iosHeaderBtn}>
-                <Text style={styles.iosHeaderBtnText}>Cancel</Text>
+                <Text style={[styles.iosHeaderBtnText, { color: palette.text }]}>Cancel</Text>
               </TouchableOpacity>
-              <Text style={styles.iosHeaderTitle}>Select Date</Text>
+              <Text style={[styles.iosHeaderTitle, { color: palette.text }]}>Select Date</Text>
               <TouchableOpacity onPress={onIosConfirm} style={styles.iosHeaderBtn}>
-                <Text style={[styles.iosHeaderBtnText, { fontWeight: '700' }]}>Done</Text>
+                <Text style={[styles.iosHeaderBtnText, { color: palette.text, fontWeight: '700' }]}>
+                  Done
+                </Text>
               </TouchableOpacity>
             </View>
             <DateTimePicker
@@ -463,153 +534,72 @@ export default function PetEditorScreen() {
   );
 }
 
-const BG_DARK = '#122017';
-const PRIMARY = '#38e07b';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG_DARK },
+  container: { flex: 1 },
   header: {
     height: 56,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
   },
-  closeButton: { color: 'white', fontSize: 20, width: 24, textAlign: 'center' },
+  closeButton: { fontSize: 20, width: 24, textAlign: 'center' },
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    paddingRight: 24,
+    flex: 1, textAlign: 'center', fontSize: 18, fontWeight: 'bold', paddingRight: 24,
   },
-  body: { padding: 16, gap: 14 },
+  body: { padding: 16 },
   avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   avatarCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+    width: 96, height: 96, borderRadius: 48,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   avatarImage: { width: 96, height: 96, borderRadius: 48 },
   avatarAdd: {
     position: 'absolute',
     right: (StyleSheet.hairlineWidth + 96) / 6,
     bottom: (StyleSheet.hairlineWidth + 96) / 6,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderColor: BG_DARK,
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
     borderWidth: 2,
   },
-  avatarAddText: { color: BG_DARK, fontWeight: 'bold', fontSize: 18, lineHeight: 18 },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    color: 'white',
-  },
+  avatarAddText: { fontWeight: 'bold', fontSize: 18, lineHeight: 18 },
+
+  input: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12 },
 
   // species row
   speciesSelectWrap: { paddingRight: 8 },
-  speciesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  addSpeciesBtn: {
-    marginLeft: 8,
-    backgroundColor: 'white',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  addSpeciesBtnText: { color: BG_DARK, fontWeight: '600', fontSize: 12 },
+  speciesRow: { flexDirection: 'row', alignItems: 'center' },
+  addSpeciesBtn: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  addSpeciesBtnText: { fontWeight: '600', fontSize: 12 },
 
-  select: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    padding: 8,
-  },
+  select: { borderRadius: 12, padding: 8 },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    marginRight: 8,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 999, backgroundColor: 'transparent',
+    borderWidth: 1, marginRight: 8,
   },
-  chipSelected: { backgroundColor: 'white' },
-  chipText: { color: 'rgba(255,255,255,0.8)' },
-  chipTextSelected: { color: BG_DARK, fontWeight: '600' },
+  chipText: {},
 
   // date field styles
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateInputLike: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  dateText: { color: 'white' },
-  datePlaceholder: { color: 'rgba(255,255,255,0.5)' },
-  clearBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  clearBtnText: { color: 'rgba(255,255,255,0.9)', fontSize: 12 },
+  dateInputLike: { flex: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12 },
+  clearBtn: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10 },
 
-  footer: {
-    padding: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: BG_DARK,
-  },
-  primaryBtn: {
-    backgroundColor: PRIMARY,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryBtnText: { color: BG_DARK, fontWeight: 'bold', fontSize: 16 },
+  footer: { padding: 16, borderTopWidth: StyleSheet.hairlineWidth },
+  primaryBtn: { borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
+  primaryBtnText: { fontWeight: 'bold', fontSize: 16 },
 
   // iOS overlay
-  iosOverlay: {
-    position: 'absolute',
-    left: 0, right: 0, top: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  iosSheet: {
-    backgroundColor: BG_DARK,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 24,
-  },
+  iosOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'flex-end' },
+  iosSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 24 },
   iosSheetHeader: {
-    height: 48,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    height: 48, paddingHorizontal: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iosHeaderBtn: { paddingHorizontal: 8, paddingVertical: 6 },
-  iosHeaderBtnText: { color: 'white' },
-  iosHeaderTitle: { color: 'white', fontWeight: '600' },
+  iosHeaderBtnText: {},
+  iosHeaderTitle: { fontWeight: '600' },
 
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: BG_DARK },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

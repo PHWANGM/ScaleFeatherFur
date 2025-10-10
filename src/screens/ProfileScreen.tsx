@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Card from '../components/cards/Card';
 import EmptyState from '../components/EmptyState';
-import { theme } from '../styles/theme';
+import { theme } from '../styles/tokens';
 import { AppDispatch, RootState } from '../state/store';
 import { searchProductsByTags } from '../state/slices/productsSlice';
 

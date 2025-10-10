@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { theme } from '../styles/theme';
+import { theme } from '../styles/tokens';
 
 export default function EmptyState({ title = '沒有資料', hint }: { title?: string; hint?: string }) {
   return (
