@@ -1,3 +1,4 @@
+// src/styles/themesColors.ts
 import { useColorScheme } from 'react-native';
 import { useMemo } from 'react';
 

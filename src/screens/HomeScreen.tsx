@@ -1,7 +1,6 @@
-// src/screens/HomeScreen.tsx
 import React, { useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, Image, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -10,19 +9,17 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import StatsContainer from '../components/container/StatsContainer';
-import PetPickerModal from '../components/modals/PetPickerModal';
+import PetsHeader from '../components/headers/PetsHeader';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentPetId, selectCurrentPetId } from '../state/slices/petsSlice';
 
-// 🔹 使用 JOIN 版
 import {
   getPetWithSpeciesById,
   listPetsWithSpecies,
   type PetWithSpeciesRow,
 } from '../lib/db/repos/pets.repo';
 
-import { ageCalculator } from '../lib/db/repos/_helpers';
 import { useThemeColors } from '../styles/themesColors';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
@@ -44,9 +41,9 @@ export default function HomeScreen({ navigation }: Props) {
     [colors]
   );
 
+  // 仍保留這段：用於 Resources 區塊顯示 species 名稱
   const [pet, setPet] = useState<PetWithSpeciesRow | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [showPicker, setShowPicker] = useState(false);
 
   const loadPet = useCallback(async () => {
     setLoading(true);
@@ -77,26 +74,14 @@ export default function HomeScreen({ navigation }: Props) {
     }, [loadPet])
   );
 
-  const handleSelectPet = useCallback(
-    (p: PetWithSpeciesRow) => {
-      dispatch(setCurrentPetId(p.id));
-      setPet(p);
-      setShowPicker(false);
-    },
-    [dispatch]
-  );
-
-  const avatarUri = pet?.avatar_uri ?? 'https://picsum.photos/seed/sff-avatar/200/200';
-  const titleName = pet?.name ?? 'No pet yet';
   const speciesLabel = pet?.species_name ?? pet?.species_key ?? '—';
-  const ageLabel = ageCalculator(pet?.birth_date, { compact: true });
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: palette.bg }]}
-      edges={['top', 'left', 'right']} // ⬅️ 讓內容避開上方瀏海/狀態列
+      edges={['top', 'left', 'right']}
     >
-      {/* Header */}
+      {/* App header */}
       <View style={[styles.header, { backgroundColor: palette.bg }]}>
         <View style={{ width: 48 }} />
         <Text style={[styles.appTitle, { color: palette.text }]}>ScaleFeatherFur</Text>
@@ -116,19 +101,10 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Pet header */}
-          <View style={styles.petRow}>
-            <Pressable onPress={() => setShowPicker(true)}>
-              <Image source={{ uri: avatarUri }} style={styles.avatar} />
-            </Pressable>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.petName, { color: palette.text }]}>{titleName}</Text>
-              <Text style={[styles.petMeta, { color: palette.subText }]}>{speciesLabel}</Text>
-              {!!ageLabel && (
-                <Text style={[styles.petMeta, { color: palette.subText }]}>Age: {ageLabel}</Text>
-              )}
-            </View>
-          </View>
+          {/* ✅ 共用 PetsHeader（與 Logs 一致） */}
+          <PetsHeader
+            onAddPress={() => navigation.navigate('Plus')}
+          />
 
           {/* Care Alerts */}
           <View style={{ marginTop: 16 }}>
@@ -192,27 +168,9 @@ export default function HomeScreen({ navigation }: Props) {
             </Pressable>
           </View>
 
-          {/* 快速新增入口 */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.addButton,
-              { backgroundColor: palette.primary, opacity: pressed ? 0.9 : 1 },
-            ]}
-            onPress={() => navigation.navigate('Plus')}
-          >
-            <Feather name="plus" size={20} color="#122017" />
-            <Text style={styles.addButtonText}>Add Care / Log</Text>
-          </Pressable>
-
           <View style={{ height: 32 }} />
         </ScrollView>
       )}
-
-      <PetPickerModal
-        visible={showPicker}
-        onClose={() => setShowPicker(false)}
-        onSelect={handleSelectPet}
-      />
     </SafeAreaView>
   );
 }
@@ -232,10 +190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   content: { padding: 16 },
-  petRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatar: { width: 96, height: 96, borderRadius: 48, marginRight: 16 },
-  petName: { fontSize: 24, fontWeight: '800' },
-  petMeta: { fontSize: 14, marginTop: 2 },
+
   sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
   card: { borderRadius: 12, padding: 12, borderWidth: StyleSheet.hairlineWidth },
   alertRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -253,9 +208,4 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
   },
   resourceLabel: { fontSize: 15, fontWeight: '600', flex: 1 },
-  addButton: {
-    height: 44, borderRadius: 12, alignItems: 'center',
-    justifyContent: 'center', flexDirection: 'row', gap: 8, marginTop: 12,
-  },
-  addButtonText: { fontSize: 15, fontWeight: '700', color: '#122017' },
 });

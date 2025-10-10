@@ -10,7 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import HomeScreen from '../screens/HomeScreen';
 import LogsScreen from '../screens/LogsScreen';
-import PetEditorScreen from '../screens/PetEditorScreen';
+import PetAddScreen from '../screens/PetAddScreen';
 import CommunityScreen from '../screens/CommunityScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SpeciesEditorScreen from '../screens/SpeciesEditorScreen'; // 新增的物種編輯器
@@ -79,7 +79,7 @@ function MainTabs() {
       {/* 中間 +，客製化大按鈕 */}
       <Tab.Screen
         name="Plus"
-        component={PetEditorScreen}
+        component={PetAddScreen}
         options={{
           tabBarLabel: '',
           tabBarButton: (p) => <PlusTabButton {...p} />,

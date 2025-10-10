@@ -1,4 +1,4 @@
-// src/screens/PetEditorScreen.tsx
+// src/screens/PetsAddScreen.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -37,15 +37,14 @@ import { listSpecies, type SpeciesRow } from '../lib/db/repos/species.repo';
 import Field from '../components/fields/Field';
 import { useImagePicker } from '../lib/ui/useImagePicker';
 import { useThemeColors } from '../styles/themesColors';
+import PrimaryButton from '../components/buttons/PrimaryButton';
 
-type RootStackParamList = {
-  PetEditor: { id?: string } | undefined;
+// === 本畫面路由參數（可同時當作新增/編輯頁） ===
+type LocalStackParamList = {
+  PetsAdd: { id?: string } | undefined; // 帶 id 表示編輯模式，不帶表示新增
   SpeciesEditor: undefined;
 };
-
-type PetEditorRoute = RouteProp<RootStackParamList, 'PetEditor'>;
-
-const HABITATS: Habitat[] = ['indoor_uvb', 'outdoor_sun', 'mixed'];
+type LocalRoute = RouteProp<LocalStackParamList, 'PetsAdd'>;
 
 // ---- date helpers ----
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -57,13 +56,16 @@ const parseISODate = (s: string): Date | null => {
   return new Date(y, mo - 1, d);
 };
 
-export default function PetEditorScreen() {
-  const route = useRoute<PetEditorRoute>();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+// 允許值
+const HABITATS: Habitat[] = ['indoor_uvb', 'outdoor_sun', 'mixed'];
+
+export default function PetsAddScreen() {
+  const route = useRoute<LocalRoute>();
+  const navigation = useNavigation<NavigationProp<LocalStackParamList>>();
   const { colors, isDark } = useThemeColors();
   const insets = useSafeAreaInsets();
 
-  // ✅ 與 HomeScreen 對齊的 palette
+  // 與 HomeScreen 對齊的 palette
   const palette = useMemo(
     () => ({
       bg: colors.bg,
@@ -76,7 +78,7 @@ export default function PetEditorScreen() {
     [colors]
   );
 
-  // 🔹 其他 UI 用色
+  // 其他 UI 用色
   const ui = useMemo(
     () => ({
       hairline: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
@@ -96,16 +98,14 @@ export default function PetEditorScreen() {
   const [saving, setSaving] = useState(false);
   const [species, setSpecies] = useState<SpeciesRow[]>([]);
 
-  // form state
+  // 表單狀態
   const [name, setName] = useState('');
   const [speciesKey, setSpeciesKey] = useState('');
   const [habitat, setHabitat] = useState<Habitat>('indoor_uvb');
 
-  // Birth date
-  const [birthDateIso, setBirthDateIso] = useState<string>('');     // '' => 未設定
+  const [birthDateIso, setBirthDateIso] = useState<string>(''); // '' => 未設定
   const [birthDateObj, setBirthDateObj] = useState<Date | null>(null);
 
-  // iOS picker overlay
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [iosTempDate, setIosTempDate] = useState<Date>(new Date());
 
@@ -168,7 +168,9 @@ export default function PetEditorScreen() {
           if (alive) setSpecies(sp);
         } catch {}
       })();
-      return () => { alive = false; };
+      return () => {
+        alive = false;
+      };
     }, [])
   );
 
@@ -186,7 +188,7 @@ export default function PetEditorScreen() {
     []
   );
 
-  // Avatar 選擇
+  // 選擇頭像
   const chooseAvatar = useCallback(() => {
     Alert.alert('選擇頭像', '要從哪裡選取？', [
       {
@@ -236,7 +238,10 @@ export default function PetEditorScreen() {
   }, [iosTempDate]);
 
   const onIosCancel = useCallback(() => setShowDatePicker(false), []);
-  const clearBirthDate = useCallback(() => { setBirthDateIso(''); setBirthDateObj(null); }, []);
+  const clearBirthDate = useCallback(() => {
+    setBirthDateIso('');
+    setBirthDateObj(null);
+  }, []);
   const goToSpeciesEditor = useCallback(() => navigation.navigate('SpeciesEditor'), [navigation]);
 
   const onSave = useCallback(async () => {
@@ -288,7 +293,10 @@ export default function PetEditorScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.loading, { backgroundColor: palette.bg }]} edges={['top','left','right','bottom']}>
+      <SafeAreaView
+        style={[styles.loading, { backgroundColor: palette.bg }]}
+        edges={['top', 'left', 'right', 'bottom']}
+      >
         <ActivityIndicator />
       </SafeAreaView>
     );
@@ -297,7 +305,7 @@ export default function PetEditorScreen() {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: palette.bg }]}
-      edges={['top', 'left', 'right']} // ⬅️ 上/左/右避開狀態列與瀏海
+      edges={['top', 'left', 'right']}
     >
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: ui.hairline }]}>
@@ -318,13 +326,13 @@ export default function PetEditorScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Avatar */}
+          {/* Avatar（右下角覆蓋＋按鈕） */}
           <View style={styles.avatarWrap}>
             <View style={[styles.avatarCircle, { backgroundColor: ui.inputBg }]}>
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
-                <Text style={{ color: palette.subText }}>🦎</Text>
+                <Text style={{ color: palette.subText, fontSize: 28 }}>🦎</Text>
               )}
             </View>
 
@@ -334,6 +342,7 @@ export default function PetEditorScreen() {
                 styles.avatarAdd,
                 { backgroundColor: palette.primary, borderColor: palette.bg },
               ]}
+              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
             >
               <Text style={[styles.avatarAddText, { color: palette.bg }]}>＋</Text>
             </TouchableOpacity>
@@ -346,10 +355,7 @@ export default function PetEditorScreen() {
               placeholderTextColor={ui.placeholder}
               value={name}
               onChangeText={setName}
-              style={[
-                styles.input,
-                { backgroundColor: ui.inputBg, color: palette.text },
-              ]}
+              style={[styles.input, { backgroundColor: ui.inputBg, color: palette.text }]}
               autoCapitalize="words"
               autoCorrect
               autoComplete="name"
@@ -379,10 +385,7 @@ export default function PetEditorScreen() {
                         style={[
                           styles.chip,
                           { borderColor: ui.chipBorder },
-                          selected && {
-                            backgroundColor: ui.inverseBg,
-                            borderColor: ui.inverseBg,
-                          },
+                          selected && { backgroundColor: ui.inverseBg, borderColor: ui.inverseBg },
                         ]}
                       >
                         <Text
@@ -400,7 +403,7 @@ export default function PetEditorScreen() {
                 </ScrollView>
 
                 <TouchableOpacity
-                  onPress={goToSpeciesEditor}
+                  onPress={() => navigation.navigate('SpeciesEditor')}
                   style={[styles.addSpeciesBtn, { backgroundColor: ui.inverseBg }]}
                 >
                   <Text style={[styles.addSpeciesBtnText, { color: ui.inverseText }]}>
@@ -424,10 +427,7 @@ export default function PetEditorScreen() {
                       style={[
                         styles.chip,
                         { borderColor: ui.chipBorder },
-                        selected && {
-                          backgroundColor: ui.inverseBg,
-                          borderColor: ui.inverseBg,
-                        },
+                        selected && { backgroundColor: ui.inverseBg, borderColor: ui.inverseBg },
                       ]}
                     >
                       <Text
@@ -494,19 +494,16 @@ export default function PetEditorScreen() {
           {
             borderTopColor: ui.hairline,
             backgroundColor: palette.bg,
-            paddingBottom: 16 + insets.bottom, // ⬅️ 重點：吃到底部安全區域
+            paddingBottom: 16 + insets.bottom,
           },
         ]}
       >
-        <TouchableOpacity
-          disabled={saving}
+        <PrimaryButton
+          title={editingId ? 'Save Changes' : 'Add Pet'}
           onPress={onSave}
-          style={[styles.primaryBtn, { backgroundColor: palette.primary }, saving && { opacity: 0.6 }]}
-        >
-          <Text style={[styles.primaryBtnText, { color: ui.inverseText }]}>
-            {editingId ? 'Save Changes' : 'Add Pet'}
-          </Text>
-        </TouchableOpacity>
+          disabled={saving}
+          style={{ borderRadius: 16 }}
+        />
       </View>
 
       {/* ---- Android inline modal ---- */}
@@ -563,7 +560,17 @@ const styles = StyleSheet.create({
     flex: 1, textAlign: 'center', fontSize: 18, fontWeight: 'bold', paddingRight: 24,
   },
   body: { padding: 16 },
-  avatarWrap: { alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+
+  // Avatar + 「＋」浮動按鈕
+  avatarWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    position: 'relative',      // 讓右下角按鈕以此定位
+    width: 96,
+    height: 96,
+    alignSelf: 'center',
+  },
   avatarCircle: {
     width: 96, height: 96, borderRadius: 48,
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
@@ -571,9 +578,9 @@ const styles = StyleSheet.create({
   avatarImage: { width: 96, height: 96, borderRadius: 48 },
   avatarAdd: {
     position: 'absolute',
-    right: (StyleSheet.hairlineWidth + 96) / 6,
-    bottom: (StyleSheet.hairlineWidth + 96) / 6,
-    width: 32, height: 32, borderRadius: 16,
+    right: 4,
+    bottom: 4,
+    width: 28, height: 28, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2,
   },
@@ -582,7 +589,6 @@ const styles = StyleSheet.create({
   input: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12 },
 
   // species row
-  speciesSelectWrap: { paddingRight: 8 },
   speciesRow: { flexDirection: 'row', alignItems: 'center' },
   addSpeciesBtn: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
   addSpeciesBtnText: { fontWeight: '600', fontSize: 12 },
@@ -601,8 +607,6 @@ const styles = StyleSheet.create({
   clearBtn: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10 },
 
   footer: { padding: 16, borderTopWidth: StyleSheet.hairlineWidth },
-  primaryBtn: { borderRadius: 16, paddingVertical: 14, alignItems: 'center' },
-  primaryBtnText: { fontWeight: 'bold', fontSize: 16 },
 
   // iOS overlay
   iosOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'flex-end' },

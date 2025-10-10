@@ -1,3 +1,4 @@
+// src/state/slices/petsSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export type MyPetState = {
