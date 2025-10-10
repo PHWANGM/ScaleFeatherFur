@@ -13,7 +13,7 @@ import {
 import { runMigrations } from './src/lib/db/migrate';
 import RootNavigator from './src/navigation/rootNavigator'; // 下面第2節會示範如何加入 Welcome
 import { store } from './src/state/store';
-import { theme } from './src/styles/theme'; // 你自己的顏色系統（沿用即可）
+import { theme } from './src/styles/tokens'; // 你自己的顏色系統（沿用即可）
 
 export default function App() {
   const [ready, setReady] = useState(false);
