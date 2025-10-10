@@ -18,7 +18,7 @@ import PetPickerModal from '../components/modals/PetPickerModal';
 
 // Redux
 import { useDispatch } from 'react-redux';
-import { setCurrentPetId } from '../store/myPetSlice';
+import { setCurrentPetId } from '../state/slices/petsSlice';
 import { PetRow } from '../lib/db/repos/pets.repo';
 
 // Theme

@@ -10,7 +10,7 @@ import {
   type DailyAggregates,
 } from '../../lib/db/repos/care.logs';
 import { dayRangeIso } from '../../lib/db/repos/_helpers';
-import { selectCurrentPetId, selectSelectedDate } from '../../store/myPetSlice';
+import { selectCurrentPetId, selectSelectedDate } from '../../state/slices/PetSlice';
 
 const initialAgg: DailyAggregates = {
   feed_grams: 0,
