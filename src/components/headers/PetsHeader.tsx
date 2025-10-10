@@ -20,11 +20,9 @@ import PetPickerModal from '../modals/PetPickerModal';
 type Props = {
   /** 可選：想在右邊放一顆「新增紀錄」按鈕就傳這個（例如導到 NewActivity） */
   onAddPress?: () => void;
-  /** 外層可選擇是否顯示右側按鈕（預設不顯示） */
-  showAddButton?: boolean;
 };
 
-export default function PetsHeader({ onAddPress, showAddButton = false }: Props) {
+export default function PetsHeader({ onAddPress}: Props) {
   const dispatch = useDispatch();
   const currentPetId = useSelector(selectCurrentPetId);
 
@@ -154,6 +152,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 6,
+    width: '100%',
   },
   loadingRow: {
     flexDirection: 'row',
