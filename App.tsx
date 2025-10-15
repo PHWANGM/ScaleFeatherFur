@@ -1,68 +1,54 @@
-// App.tsx
-import 'react-native-gesture-handler'; // 建議置頂且僅匯入一次
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View, StatusBar, useColorScheme } from 'react-native';
+import React from 'react';
+import { View, Text, StatusBar, useColorScheme } from 'react-native';
 import { Provider } from 'react-redux';
-import {
-  NavigationContainer,
-  DefaultTheme,
-  DarkTheme,
-  Theme,
-} from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { runMigrations } from './src/lib/db/migrate';
-import RootNavigator from './src/navigation/rootNavigator';
+// ⬇️ 依你的實際路徑調整 store 與 RootNavigator 的 import
 import { store } from './src/state/store';
-import { theme } from './src/styles/tokens'; // 你的顏色系統
+import RootNavigator from './src/navigation/rootNavigator';
+
+// ✅ 開關：true = 顯示 "It boots! ✅"，false = 正常進入 RootNavigator
+const BOOT_TEST = false;
+
+/** 簡單 Error Boundary：若有 JS 錯誤直接顯示在螢幕上，避免黑屏 */
+class ErrorBoundary extends React.Component<React.PropsWithChildren, { error?: any }> {
+  state = { error: undefined as any };
+  componentDidCatch(error: any) { this.setState({ error }); }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#fff', padding: 16, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#C53030', marginBottom: 8 }}>
+            JS Error
+          </Text>
+          <Text style={{ color: '#2D3748' }}>{String(this.state.error)}</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/** 最小測試畫面 */
+function BootProbe() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' }}>
+      <Text style={{ fontSize: 20 }}>It boots! ✅</Text>
+    </View>
+  );
+}
 
 export default function App() {
-  const [ready, setReady] = useState(false);
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  const isDark = useColorScheme?.() === 'dark';
 
-  useEffect(() => {
-    (async () => {
-      try {
-        await runMigrations();
-      } catch (e) {
-        console.error('Migration failed', e);
-      } finally {
-        setReady(true);
-      }
-    })();
-  }, []);
+  // 簡單 theme（提供 StatusBar 背景色用）
+  const theme = React.useMemo(
+    () => ({ colors: { bg: isDark ? '#000' : '#fff' } }),
+    [isDark]
+  );
 
-  if (!ready) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: theme.colors.bg,
-        }}
-      >
-        <StatusBar barStyle="light-content" />
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  // 以系統深淺色為基底，再覆蓋自家色票
-  const base = isDark ? DarkTheme : DefaultTheme;
-  const navTheme: Theme = {
-    ...base,
-    colors: {
-      ...base.colors,
-      primary: theme.colors.primary,
-      background: theme.colors.bg,
-      card: theme.colors.card,
-      text: theme.colors.text,
-      border: theme.colors.border,
-      notification: theme.colors.accent,
-    },
-  };
+  const navTheme = isDark ? DarkTheme : DefaultTheme;
 
   return (
     <Provider store={store}>
@@ -72,7 +58,9 @@ export default function App() {
             barStyle={isDark ? 'light-content' : 'dark-content'}
             backgroundColor={theme.colors.bg}
           />
-          <RootNavigator />
+          <ErrorBoundary>
+            {BOOT_TEST ? <BootProbe /> : <RootNavigator />}
+          </ErrorBoundary>
         </NavigationContainer>
       </SafeAreaProvider>
     </Provider>

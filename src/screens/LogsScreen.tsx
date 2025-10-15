@@ -31,9 +31,7 @@ const Activities: React.FC<ActivitiesProps> = ({ route, navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.activityContainer}>
         {/* ✅ 共用 PetsHeader（與 Home 一致） */}
-        <PetsHeader
-          onAddPress={() => navigation.navigate('Plus')}
-        />
+        <PetsHeader/>
 
         <View style={styles.calendar}>
           <CustomCalendar />

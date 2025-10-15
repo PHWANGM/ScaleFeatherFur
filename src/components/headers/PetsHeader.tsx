@@ -3,28 +3,25 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useThemeColors } from '../../styles/themesColors';
 import { setCurrentPetId, selectCurrentPetId } from '../../state/slices/petsSlice';
-
-// 與 HomeScreen 相同的 repo 與型別
-import {
-  getPetWithSpeciesById,
-  listPetsWithSpecies,
-  type PetWithSpeciesRow,
-} from '../../lib/db/repos/pets.repo';
-
+import { getPetWithSpeciesById, listPetsWithSpecies, type PetWithSpeciesRow } from '../../lib/db/repos/pets.repo';
 import { ageCalculator } from '../../lib/db/repos/_helpers';
 import PetPickerModal from '../modals/PetPickerModal';
+import type { RootStackParamList } from '../../navigation/rootNavigator';
 
 type Props = {
-  /** 可選：想在右邊放一顆「新增紀錄」按鈕就傳這個（例如導到 NewActivity） */
+  /** 可選：若仍然傳入，會覆蓋內建自動導航行為 */
   onAddPress?: () => void;
 };
 
-export default function PetsHeader({ onAddPress}: Props) {
+export default function PetsHeader({ onAddPress }: Props) {
   const dispatch = useDispatch();
   const currentPetId = useSelector(selectCurrentPetId);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { colors, isDark } = useThemeColors();
   const palette = useMemo(
@@ -79,6 +76,20 @@ export default function PetsHeader({ onAddPress}: Props) {
     [dispatch]
   );
 
+  const goToAdd = useCallback(() => {
+    if (onAddPress) {
+      onAddPress();
+      return;
+    }
+    // 在巢狀導航（Tab 內）時優先使用 parent，否則退回自己
+    const parent = (navigation as any)?.getParent?.();
+    if (parent?.navigate) {
+      parent.navigate('PetsAdd' as never);
+    } else {
+      navigation.navigate('PetsAdd');
+    }
+  }, [navigation, onAddPress]);
+
   const avatarUri = pet?.avatar_uri ?? 'https://picsum.photos/seed/sff-avatar/200/200';
   const titleName = pet?.name ?? 'No pet yet';
   const speciesLabel = pet?.species_name ?? pet?.species_key ?? '—';
@@ -93,7 +104,7 @@ export default function PetsHeader({ onAddPress}: Props) {
         </View>
       ) : (
         <View style={styles.row}>
-          {/* Avatar + 下拉角標（與 HomeScreen 一致） */}
+          {/* Avatar + 下拉角標 */}
           <View style={styles.avatarContainer}>
             <Pressable onPress={() => setShowPicker(true)} style={styles.avatarPressable}>
               <Image source={{ uri: avatarUri }} style={styles.avatar} />
@@ -103,7 +114,7 @@ export default function PetsHeader({ onAddPress}: Props) {
             </Pressable>
           </View>
 
-          {/* 名稱/物種/年齡（與 HomeScreen 一致字級） */}
+          {/* 名稱/物種/年齡 */}
           <View style={{ flex: 1 }}>
             <Text style={[styles.petName, { color: palette.text }]} numberOfLines={1}>
               {titleName}
@@ -118,23 +129,19 @@ export default function PetsHeader({ onAddPress}: Props) {
             )}
           </View>
 
-            <Pressable
-              onPress={onAddPress}
-              style={({ pressed }) => [
-                styles.addBtn,
-                { borderColor: palette.border },
-                pressed && { opacity: 0.85 },
-              ]}
-              hitSlop={8}
-            >
-              <Feather
-                name="plus"
-                size={16}
-                color={isDark ? '#d1d5db' : '#122017'}
-              />
-              <Text style={styles.addBtnText}>Add</Text>
-            </Pressable>
-
+          {/* 右側 Add（自動導航到 PetsAdd） */}
+          <Pressable
+            onPress={goToAdd}
+            style={({ pressed }) => [
+              styles.addBtn,
+              { borderColor: palette.border },
+              pressed && { opacity: 0.85 },
+            ]}
+            hitSlop={8}
+          >
+            <Feather name="plus" size={16} color={isDark ? '#d1d5db' : '#122017'} />
+            <Text style={styles.addBtnText}>Add</Text>
+          </Pressable>
         </View>
       )}
 
@@ -167,7 +174,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // 與 HomeScreen 對齊
   avatarContainer: { position: 'relative' },
   avatarPressable: { width: 96, height: 96 },
   avatar: { width: 96, height: 96, borderRadius: 48, marginRight: 16 },

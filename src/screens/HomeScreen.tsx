@@ -102,9 +102,7 @@ export default function HomeScreen({ navigation }: Props) {
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* ✅ 共用 PetsHeader（與 Logs 一致） */}
-          <PetsHeader
-            onAddPress={() => navigation.navigate('Plus')}
-          />
+          <PetsHeader/>
 
           {/* Care Alerts */}
           <View style={{ marginTop: 16 }}>

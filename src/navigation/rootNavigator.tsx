@@ -1,31 +1,48 @@
 // src/navigation/rootNavigator.tsx
 import React from 'react';
-import { Text, View, Pressable, Platform } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
+import { View, Pressable, Platform } from 'react-native';
+import { createBottomTabNavigator, type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 
-// Screens
+// ===== Screens =====
 import WelcomeScreen from '../screens/WelcomeScreen';
 import HomeScreen from '../screens/HomeScreen';
 import LogsScreen from '../screens/LogsScreen';
-import PetAddScreen from '../screens/PetAddScreen';
 import CommunityScreen from '../screens/CommunityScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import SpeciesEditorScreen from '../screens/SpeciesEditorScreen'; // 新增的物種編輯器
+import SpeciesEditorScreen from '../screens/SpeciesEditorScreen';
+import PetSelectScreen from '../screens/PetSelectScreen';
+import SpeciesNeedsScreen from '../screens/SpeciesNeedsScreen';
+import PetsAddScreen from '../screens/PetAddScreen';
 
 // ===== 型別 =====
 export type RootStackParamList = {
-  Welcome: undefined;           // 全螢幕覆蓋
-  MainTabs: undefined;          // 底部五頁
-  SpeciesEditor: { key?: string } | undefined; // ★ 新增：可帶 key 進編輯模式
+  Welcome: undefined;
+  MainTabs: undefined;
+  SpeciesEditor: { key?: string } | undefined;
+  PetSelect: undefined;
+  SpeciesNeeds: { petId: string };
+  PetsAdd: undefined;
+  // 預留
+  UVBLogScreen?: { petId: string };
+  HeatControlScreen?: { petId: string };
+  FeedGreensScreen?: { petId: string };
+  FeedInsectScreen?: { petId: string };
+  FeedMeatScreen?: { petId: string };
+  FeedFruitScreen?: { petId: string };
+  CalciumPlainScreen?: { petId: string };
+  CalciumD3Screen?: { petId: string };
+  VitaminMultiScreen?: { petId: string };
+  WeighScreen?: { petId: string };
+  CleanScreen?: { petId: string };
+  TempMonitorScreen?: { petId: string };
 };
 
 export type RootTabParamList = {
   Home: undefined;
-  Care: undefined;      // Logs
-  Plus: undefined;      // PetEditor（目前放在中間 tab）
+  Care: undefined;
+  Plus: undefined;
   Community: undefined;
   Profile: undefined;
 };
@@ -34,13 +51,47 @@ export type RootTabParamList = {
 const colors = {
   primary: '#38e07b',
   darkBg: '#122017',
-  lightBg: '#f6f8f7',
-  text: '#0a0a0a',
 };
 
-// ===== MainTabs（底部五頁）=====
-const Tab = createBottomTabNavigator<RootTabParamList>();
+// 佔位畫面：給中間＋使用
+const NoopScreen: React.FC = () => <View style={{ flex: 1 }} />;
 
+// 中間＋自訂按鈕
+type PlusTabButtonProps = BottomTabBarButtonProps & {
+  onPressCustom?: () => void;
+};
+function PlusTabButton({ style, accessibilityState, onPressCustom }: PlusTabButtonProps) {
+  const selected = accessibilityState?.selected;
+  return (
+    <View style={[style, { alignItems: 'center' }]}>
+      <Pressable
+        onPress={onPressCustom}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        hitSlop={10}
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.primary,
+          marginTop: -18,
+          shadowColor: '#000',
+          shadowOpacity: 0.15,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 4,
+        }}
+      >
+        <Feather name="plus" size={28} color={colors.darkBg} />
+      </Pressable>
+    </View>
+  );
+}
+
+// ===== MainTabs =====
+const Tab = createBottomTabNavigator<RootTabParamList>();
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -76,14 +127,22 @@ function MainTabs() {
         }}
       />
 
-      {/* 中間 +，客製化大按鈕 */}
+      {/* 中間＋：直接導航到 RootStack 的 PetSelect（不取 parent） */}
       <Tab.Screen
         name="Plus"
-        component={PetAddScreen}
-        options={{
+        component={NoopScreen}
+        options={({ navigation }) => ({
           tabBarLabel: '',
-          tabBarButton: (p) => <PlusTabButton {...p} />,
-        }}
+          tabBarButton: (p) => (
+            <PlusTabButton
+              {...p}
+              onPressCustom={() => {
+                // 直接在根導航樹解析路由名稱
+                navigation.navigate('PetSelect' as never);
+              }}
+            />
+          ),
+        })}
       />
 
       <Tab.Screen
@@ -107,56 +166,36 @@ function MainTabs() {
   );
 }
 
-// ===== RootStack（外層）=====
+// ===== Root Stack =====
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
 export default function RootNavigator() {
   return (
     <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="MainTabs" component={MainTabs} />
-
-      {/* ★ 新增：SpeciesEditor 註冊到 RootStack（可被子層畫面 navigate 到） */}
       <Stack.Screen
         name="SpeciesEditor"
         component={SpeciesEditorScreen}
         options={{
-          presentation: Platform.select({ ios: 'modal', android: 'modal' }), // 或 'fullScreenModal'
+          presentation: Platform.select({ ios: 'modal', android: 'modal' }),
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="PetSelect"
+        component={PetSelectScreen}
+        options={{ headerShown: true, title: '選擇寵物' }}
+      />
+      <Stack.Screen
+        name="SpeciesNeeds"
+        component={SpeciesNeedsScreen}
+        options={{ headerShown: true, title: '需求選單' }}
+      />
+      <Stack.Screen
+        name="PetsAdd"
+        component={PetsAddScreen}
+        options={{ headerShown: true, title: '新增寵物' }}
+      />
     </Stack.Navigator>
-  );
-}
-
-// 在 MainTabs 外定義一個客製化按鈕
-function PlusTabButton({ onPress, style, accessibilityState }: BottomTabBarButtonProps) {
-  const selected = accessibilityState?.selected;
-  return (
-    <View style={[style, { alignItems: 'center' }]}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
-        hitSlop={10}
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.primary,
-          marginTop: -18,
-          shadowColor: '#000',
-          shadowOpacity: 0.15,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 4,
-        }}
-      >
-        <Text style={{ fontSize: 28, lineHeight: 28, color: colors.darkBg }}>＋</Text>
-        {/* 或使用圖示：<Feather name="plus" size={28} color={colors.darkBg} /> */}
-      </Pressable>
-    </View>
   );
 }

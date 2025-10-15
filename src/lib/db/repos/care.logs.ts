@@ -6,18 +6,37 @@ import { genId, nowIso, buildSetClause } from './_helpers';
 export type CareLogType =
   | 'feed'
   | 'calcium'
+  | 'vitamin'
   | 'uvb_on'
   | 'uvb_off'
+  | 'heat_on'
+  | 'heat_off'
   | 'clean'
   | 'weigh';
+
+export type CareLogSubtype =
+  | 'calcium_plain'
+  | 'calcium_d3'
+  | 'vitamin_multi'
+  | 'feed_greens'
+  | 'feed_insect'
+  | 'feed_meat'
+  | 'feed_fruit'
+  | 'uvb'
+  | 'basking_heat'
+  | 'heat_mat'
+  | 'insect_dusting';
 
 export type CareLogRow = {
   id: string;
   pet_id: string;
   type: CareLogType;
-  value: number | null;   // grams / kg / ...
+  subtype: CareLogSubtype | null; // ★ 新增
+  category: string | null;        // ★ 新增（彙整分類用：'supplement','feed_insect',...）
+  value: number | null;           // grams / kg / ...
+  unit: string | null;            // ★ 新增：'g','kg','pcs','min','h'...
   note: string | null;
-  at: string;             // ISO datetime
+  at: string;                     // ISO datetime
   created_at: string;
   updated_at: string;
 };
@@ -25,10 +44,12 @@ export type CareLogRow = {
 // ========= CRUD =========
 
 /** 新增 care_log；自動填 id / created_at / updated_at */
-export async function insertCareLog(data: Omit<CareLogRow, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
+export async function insertCareLog(
+  data: Omit<CareLogRow, 'id' | 'created_at' | 'updated_at'>
+): Promise<string> {
   const sql = `
-    INSERT INTO care_logs (id, pet_id, type, value, note, at, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO care_logs (id, pet_id, type, subtype, category, value, unit, note, at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const id = genId('log');
   const now = nowIso();
@@ -36,7 +57,10 @@ export async function insertCareLog(data: Omit<CareLogRow, 'id' | 'created_at' |
     id,
     data.pet_id,
     data.type,
+    data.subtype ?? null,
+    data.category ?? null,
     data.value ?? null,
+    data.unit ?? null,
     data.note ?? null,
     data.at,
     now,
@@ -114,15 +138,20 @@ export async function getLatestWeighOnOrBefore(
 // ========= 當日彙總（單一 SQL 版） =========
 
 export type DailyAggregates = {
-  feed_grams: number;     // 當日餵食總克數
-  calcium_count: number;  // 當日補鈣次數
-  uvb_hours: number;      // 當日 UVB 時數（on/off 配對）
-  weight_kg: number;      // 當日結束前最近一次體重
+  feed_grams: number;           // 當日餵食總克數
+  calcium_count: number;        // 當日補鈣（不分 D3）
+  calcium_plain_count: number;  // ★ 當日純鈣次數
+  calcium_d3_count: number;     // ★ 當日含 D3 次數
+  vitamin_count: number;        // ★ 當日維他命次數
+  uvb_hours: number;            // 當日 UVB 時數（on/off 配對）
+  heat_hours: number;           // ★ 當日加熱時數（on/off 配對）
+  weight_kg: number;            // 當日結束前最近一次體重
 };
 
 /**
- * 以單一 SQL 回傳四個欄位：
- * feed_grams / calcium_count / uvb_hours / weight_kg
+ * 以單一 SQL 回傳多個欄位：
+ * feed_grams / calcium_count / calcium_plain_count / calcium_d3_count / vitamin_count
+ * uvb_hours / heat_hours / weight_kg
  *
  * 參數：
  * - petId：指定寵物
@@ -152,6 +181,21 @@ export async function getDailyAggregatesSQL(
     FROM day_logs
     WHERE type = 'calcium'
   ),
+  calcium_plain AS (
+    SELECT COUNT(*) AS calcium_plain_count
+    FROM day_logs
+    WHERE type = 'calcium' AND subtype = 'calcium_plain'
+  ),
+  calcium_d3 AS (
+    SELECT COUNT(*) AS calcium_d3_count
+    FROM day_logs
+    WHERE type = 'calcium' AND subtype = 'calcium_d3'
+  ),
+  vitamin AS (
+    SELECT COUNT(*) AS vitamin_count
+    FROM day_logs
+    WHERE type = 'vitamin'
+  ),
   uvb_pairs AS (
     SELECT
       at,
@@ -167,6 +211,20 @@ export async function getDailyAggregatesSQL(
     FROM uvb_pairs
     WHERE type = 'uvb_off' AND prev_type = 'uvb_on'
   ),
+  heat_pairs AS (
+    SELECT
+      at,
+      type,
+      LAG(type) OVER (ORDER BY at) AS prev_type,
+      LAG(at)   OVER (ORDER BY at) AS prev_at
+    FROM day_logs
+    WHERE type IN ('heat_on','heat_off')
+  ),
+  heat AS (
+    SELECT COALESCE(SUM((julianday(at) - julianday(prev_at)) * 24.0), 0.0) AS heat_hours
+    FROM heat_pairs
+    WHERE type = 'heat_off' AND prev_type = 'heat_on'
+  ),
   weigh AS (
     SELECT value AS weight_kg
     FROM care_logs
@@ -177,10 +235,14 @@ export async function getDailyAggregatesSQL(
     LIMIT 1
   )
   SELECT
-    (SELECT feed_grams     FROM feed)     AS feed_grams,
-    (SELECT calcium_count  FROM calcium)  AS calcium_count,
-    (SELECT uvb_hours      FROM uvb)      AS uvb_hours,
-    COALESCE((SELECT weight_kg FROM weigh), 0.0) AS weight_kg;
+    (SELECT feed_grams              FROM feed)            AS feed_grams,
+    (SELECT calcium_count           FROM calcium)         AS calcium_count,
+    (SELECT calcium_plain_count     FROM calcium_plain)   AS calcium_plain_count,
+    (SELECT calcium_d3_count        FROM calcium_d3)      AS calcium_d3_count,
+    (SELECT vitamin_count           FROM vitamin)         AS vitamin_count,
+    (SELECT uvb_hours               FROM uvb)             AS uvb_hours,
+    (SELECT heat_hours              FROM heat)            AS heat_hours,
+    COALESCE((SELECT weight_kg FROM weigh), 0.0)          AS weight_kg;
   `;
 
   const rows = await query<DailyAggregates>(sql, [
@@ -191,5 +253,28 @@ export async function getDailyAggregatesSQL(
     dayEndISO,
   ]);
 
-  return rows[0] ?? { feed_grams: 0, calcium_count: 0, uvb_hours: 0, weight_kg: 0 };
+  return rows[0] ?? {
+    feed_grams: 0,
+    calcium_count: 0,
+    calcium_plain_count: 0,
+    calcium_d3_count: 0,
+    vitamin_count: 0,
+    uvb_hours: 0,
+    heat_hours: 0,
+    weight_kg: 0,
+  };
+}
+
+/** （範例）統計一段期間內的補充品分布，可用來對照 species_targets 的規則 */
+export async function getSupplementCounts(
+  petId: string,
+  fromISO: string,
+  toISO: string
+): Promise<{ subtype: string; count: number }[]> {
+  return query<{ subtype: string; count: number }>(`
+    SELECT subtype, COUNT(*) as count
+    FROM care_logs
+    WHERE pet_id = ? AND at >= ? AND at < ? AND (type = 'calcium' OR type = 'vitamin')
+    GROUP BY subtype
+  `, [petId, fromISO, toISO]);
 }
