@@ -79,17 +79,32 @@ CREATE TABLE IF NOT EXISTS species_targets (
 );
 CREATE INDEX IF NOT EXISTS idx_species_targets_species ON species_targets(species_key);
 
--- 天氣/UVI 快取
+-- 天氣/UVI 快取（支援逐小時資料）
 CREATE TABLE IF NOT EXISTS weather_cache (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  location_key TEXT NOT NULL,       -- city or "lat,lon"
-  date TEXT NOT NULL,               -- YYYY-MM-DD
-  uvi_max REAL,
-  raw_json TEXT,
+  location_key TEXT NOT NULL,                 -- 建議 "lat,lon"（緯度、經度各保留 3 位小數）
+  date TEXT NOT NULL,                         -- YYYY-MM-DD（以本地日為 key）
+  tz TEXT,                                    -- 來源 API 的時區（例: 'Asia/Taipei'）
+  lat REAL,                                   -- 實際請求使用的緯度
+  lon REAL,                                   -- 實際請求使用的經度
+
+  -- 日彙總
+  uvi_max REAL,                               -- 當日最大 UVI（可為 null）
+
+  -- 逐小時快取（JSON 陣列；通常長度 24）
+  hourly_temp_c_json TEXT NOT NULL DEFAULT '[]',       -- [23.1, 22.8, ...]
+  hourly_cloudcover_json TEXT NOT NULL DEFAULT '[]',   -- [0..100 的百分比]
+  hourly_uv_index_json TEXT NOT NULL DEFAULT '[]',     -- [0..11+]
+
+  raw_json TEXT,                                       -- 完整 API 回應（備查）
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  UNIQUE(location_key, date)
+
+  UNIQUE (location_key, date)
 );
+
+-- 查詢加速
+CREATE INDEX IF NOT EXISTS idx_weather_location_date ON weather_cache(location_key, date);
 
 -- 警報 & 規則
 CREATE TABLE IF NOT EXISTS alerts (
