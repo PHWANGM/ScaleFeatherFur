@@ -1,5 +1,5 @@
 // src/screens/PetsAddScreen.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -33,7 +33,7 @@ import {
   type PetUpdate,
   type Habitat,
 } from '../lib/db/repos/pets.repo';
-import { listSpecies, type SpeciesRow } from '../lib/db/repos/species.repo';
+import { listSpecies, type SpeciesRow ,debugSpeciesSnapshot} from '../lib/db/repos/species.repo';
 import Field from '../components/fields/Field';
 import { useImagePicker } from '../lib/ui/useImagePicker';
 import { useThemeColors } from '../styles/themesColors';
@@ -122,6 +122,17 @@ export default function PetsAddScreen() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
+          // 🔧 只在調試階段使用
+          const snap = await debugSpeciesSnapshot();
+          Alert.alert(
+            'Species Debug',
+            [
+              `tables: ${snap.tables.join(', ') || '(none)'}`,
+              `species count: ${snap.speciesCount}`,
+              `sample: ${JSON.stringify(snap.sample, null, 2)}`
+            ].join('\n')
+          );
+
       const [sp] = await Promise.all([listSpecies()]);
       setSpecies(sp);
 

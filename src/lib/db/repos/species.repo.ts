@@ -60,3 +60,26 @@ export async function deleteSpecies(key: string): Promise<boolean> {
   const res = await execute(`DELETE FROM species WHERE key = ?`, [key]);
   return res.changes > 0;
 }
+
+// --- Debug only ---
+export async function debugSpeciesSnapshot(): Promise<{
+  tables: string[];
+  speciesCount: number;
+  sample: Pick<SpeciesRow, 'key' | 'common_name' | 'scientific_name' | 'updated_at'>[];
+}> {
+  const tables = await query<{ name: string }>(
+    `SELECT name FROM sqlite_master 
+     WHERE type='table' AND name IN ('species','migrations','species_targets');`
+  );
+  const countRows = await query<{ n: number }>(`SELECT COUNT(*) AS n FROM species;`);
+  const sample = await query<Pick<SpeciesRow,'key'|'common_name'|'scientific_name'|'updated_at'>>(
+    `SELECT key, common_name, scientific_name, updated_at 
+     FROM species ORDER BY updated_at DESC LIMIT 3;`
+  );
+
+  return {
+    tables: tables.map(t => t.name),
+    speciesCount: countRows?.[0]?.n ?? 0,
+    sample,
+  };
+}

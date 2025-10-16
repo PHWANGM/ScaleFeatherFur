@@ -1,5 +1,5 @@
 // src/screens/PetDetailScreen.tsx
-import React, { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import ChartLine from '../components/charts/ChartLine';

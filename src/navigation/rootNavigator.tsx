@@ -1,5 +1,4 @@
 // src/navigation/rootNavigator.tsx
-import React from 'react';
 import { View, Pressable, Platform } from 'react-native';
 import { createBottomTabNavigator, type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -14,7 +13,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import SpeciesEditorScreen from '../screens/SpeciesEditorScreen';
 import PetSelectScreen from '../screens/PetSelectScreen';
 import SpeciesNeedsScreen from '../screens/SpeciesNeedsScreen';
-import PetsAddScreen from '../screens/PetAddScreen';
+import PetsAddScreen from '../screens/PetsAddScreen';
 
 // ===== 型別 =====
 export type RootStackParamList = {

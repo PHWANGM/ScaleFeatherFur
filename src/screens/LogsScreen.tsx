@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+// src/screens/LogsScreen.tsx
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CustomCalendar from '../components/calendar/CustomCalendar';
@@ -15,24 +16,23 @@ type ActivitiesProps = {
   };
 };
 
-const Activities: React.FC<ActivitiesProps> = ({ route, navigation }) => {
-  const isFocused = useIsFocused();
+function Activities({ route, navigation }: ActivitiesProps) {
   const isRedirect = route?.params?.redirectToNewActivity === true;
 
-  useEffect(() => {
-    if (!isFocused) return;
-    if (isRedirect) {
-      navigation.setParams({ redirectToNewActivity: false });
-      navigation.navigate('Activities', { screen: 'NewActivity' });
-    }
-  }, [isFocused, isRedirect, navigation]);
+  useFocusEffect(
+    useCallback(() => {
+      if (isRedirect) {
+        navigation.setParams({ redirectToNewActivity: false });
+        navigation.navigate('Activities', { screen: 'NewActivity' });
+      }
+      // 沒有清理邏輯需求就回傳 undefined
+    }, [isRedirect, navigation])
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.activityContainer}>
-        {/* ✅ 共用 PetsHeader（與 Home 一致） */}
-        <PetsHeader/>
-
+        <PetsHeader />
         <View style={styles.calendar}>
           <CustomCalendar />
         </View>
@@ -42,7 +42,7 @@ const Activities: React.FC<ActivitiesProps> = ({ route, navigation }) => {
       </View>
     </SafeAreaView>
   );
-};
+}
 
 export default Activities;
 

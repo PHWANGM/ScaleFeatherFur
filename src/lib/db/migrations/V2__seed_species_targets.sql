@@ -1,11 +1,9 @@
-PRAGMA foreign_keys = ON;
-
 /* 2.1: 物種基本資料（若尚未建檔） */
 INSERT OR IGNORE INTO species (key, common_name, scientific_name, notes, created_at, updated_at)
 VALUES
-  ('sulcata', '蘇卡達象龜', 'Centrochelys sulcata', NULL, datetime('now'), datetime('now')),
-  ('argentine_tegu', '南美巨蜥', 'Salvator merianae', NULL, datetime('now'), datetime('now')),
-  ('aft_gecko', '肥尾守宮', 'Hemitheconyx caudicinctus', NULL, datetime('now'), datetime('now'));
+  ('sulcata',        '蘇卡達象龜',          'Centrochelys sulcata',      NULL, datetime('now'), datetime('now')),
+  ('argentine_tegu', '南美巨蜥',            'Salvator merianae',         NULL, datetime('now'), datetime('now')),
+  ('aft_gecko',      '肥尾守宮',            'Hemitheconyx caudicinctus', NULL, datetime('now'), datetime('now'));
 
 /* 2.2: species_targets（juvenile/adult 各一筆；若已存在則忽略） */
 

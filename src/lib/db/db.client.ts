@@ -12,8 +12,9 @@ export async function getDB(): Promise<SQLite.SQLiteDatabase> {
   if (!_dbPromise) {
     _dbPromise = (async () => {
       const db = await SQLite.openDatabaseAsync('scale_feather_fur.db');
-      // 基本 PRAGMA（雙保險：migration 時也會下）
-      await db.execAsync(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;`);
+      // 重要：分開執行 PRAGMA（更穩定）
+      await db.execAsync('PRAGMA foreign_keys = ON;');
+      await db.execAsync('PRAGMA journal_mode = WAL;');
       return db;
     })();
   }
@@ -40,8 +41,7 @@ export async function query<T = any>(sql: string, params: SQLParams = []): Promi
     const rows = await db.getAllAsync<T>(sql, params);
     return rows;
   } catch (err) {
-    // 這裡可串 Sentry
-    throw new Error(`DB query failed: ${(err as Error).message}\nSQL: ${sql}`);
+    throw new Error(`DB query failed: ${(err as Error).message}\nSQL:\n${sql}`);
   }
 }
 
@@ -54,7 +54,7 @@ export async function execute(sql: string, params: SQLParams = []): Promise<Exec
       lastInsertRowid: (res.lastInsertRowId as number | null | undefined) ?? null,
     };
   } catch (err) {
-    throw new Error(`DB execute failed: ${(err as Error).message}\nSQL: ${sql}`);
+    throw new Error(`DB execute failed: ${(err as Error).message}\nSQL:\n${sql}`);
   }
 }
 
@@ -69,17 +69,19 @@ export async function execute(sql: string, params: SQLParams = []): Promise<Exec
 export async function transaction(
   fn: (tx: {
     execute: (sql: string, params?: SQLParams) => Promise<ExecuteResult>;
-    query: <T = any>(sql: string, params?: SQLParams) => Promise<T[]>;
+    query:   <T = any>(sql: string, params?: SQLParams) => Promise<T[]>;
   }) => Promise<void>
 ): Promise<void> {
   const db = await getDB();
   await db.withTransactionAsync(async () => {
     const txApi = {
-      execute: (sql: string, params: SQLParams = []) => db.runAsync(sql, params).then(res => ({
-        changes: res.changes ?? 0,
-        lastInsertRowid: (res.lastInsertRowId as number | null | undefined) ?? null,
-      })),
-      query: <T = any>(sql: string, params: SQLParams = []) => db.getAllAsync<T>(sql, params),
+      execute: (sql: string, params: SQLParams = []) =>
+        db.runAsync(sql, params).then(res => ({
+          changes: res.changes ?? 0,
+          lastInsertRowid: (res.lastInsertRowId as number | null | undefined) ?? null,
+        })),
+      query:   <T = any>(sql: string, params: SQLParams = []) =>
+        db.getAllAsync<T>(sql, params),
     };
     await fn(txApi);
   });

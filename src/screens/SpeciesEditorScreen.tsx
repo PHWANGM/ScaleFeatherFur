@@ -1,5 +1,5 @@
 // src/screens/SpeciesEditorScreen.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
