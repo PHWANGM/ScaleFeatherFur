@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import DetailListContainer from './DetailListContainer';
-import { selectSelectedDate } from '../../state/slices/petsSlice'; // ← 路徑依你的實際專案調整
+import { selectSelectedDate,selectCurrentPetId } from '../../state/slices/petsSlice'; // ← 路徑依你的實際專案調整
 import type { ISODate } from '../../lib/db/repos/_helpers';
 
 /**
@@ -22,9 +22,10 @@ function formatReadableDate(isoString: ISODate | null | undefined): string {
 
 const CalenderDateDetail: React.FC = () => {
   const selectedDate = useSelector(selectSelectedDate) as ISODate | null;
-
+  const currentPetId = useSelector(selectCurrentPetId) as string | null;
   const displayDate = useMemo(() => formatReadableDate(selectedDate), [selectedDate]);
-
+  console.log('[DetailListContainer] currentPetId =', currentPetId);
+  console.log('[DetailListContainer] selectedDate =', selectedDate);
   return (
     <View style={styles.detailsContainer}>
       <View style={styles.detailDateContainer}>

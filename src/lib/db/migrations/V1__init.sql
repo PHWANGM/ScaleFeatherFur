@@ -1,5 +1,10 @@
+-- V1__init.sql
+-- 初始化資料庫（SQLite）
+
+
 -- === Core tables ===
 
+-- 物種清單
 CREATE TABLE IF NOT EXISTS species (
   key TEXT PRIMARY KEY,            -- 'sulcata', 'leopard_gecko', ...
   common_name TEXT NOT NULL,
@@ -9,6 +14,7 @@ CREATE TABLE IF NOT EXISTS species (
   updated_at TEXT NOT NULL
 );
 
+-- 寵物個體
 CREATE TABLE IF NOT EXISTS pets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -17,14 +23,14 @@ CREATE TABLE IF NOT EXISTS pets (
   location_city TEXT,              -- e.g., 'Taipei'
   habitat TEXT CHECK (habitat IN ('indoor_uvb','outdoor_sun','mixed')) NOT NULL,
   avatar_uri TEXT,
-  life_stage TEXT CHECK (life_stage IN ('juvenile','adult')) NULL, -- ← 已含 V2 新欄位
+  life_stage TEXT CHECK (life_stage IN ('juvenile','adult')) NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_pets_species    ON pets(species_key);
 CREATE INDEX IF NOT EXISTS idx_pets_updated_at ON pets(updated_at);
 
--- care_logs（已是「最終版」結構）
+-- 照護紀錄（最終版）
 CREATE TABLE IF NOT EXISTS care_logs (
   id TEXT PRIMARY KEY,
   pet_id TEXT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
@@ -47,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_care_logs_type     ON care_logs(type);
 CREATE INDEX IF NOT EXISTS idx_care_logs_category ON care_logs(category);
 CREATE INDEX IF NOT EXISTS idx_care_logs_subtype  ON care_logs(subtype);
 
--- env_readings（metric/zone/value 版本）
+-- 環境讀數（metric/zone/value）
 CREATE TABLE IF NOT EXISTS env_readings (
   id TEXT PRIMARY KEY,
   pet_id TEXT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
@@ -61,20 +67,74 @@ CREATE TABLE IF NOT EXISTS env_readings (
 CREATE INDEX IF NOT EXISTS idx_env_readings_pet_at      ON env_readings(pet_id, at);
 CREATE INDEX IF NOT EXISTS idx_env_readings_metric_zone ON env_readings(metric, zone);
 
--- species_targets（物種/生命階段的合規目標）
+-- 物種/生命階段的合規目標（v2）
 CREATE TABLE IF NOT EXISTS species_targets (
   id TEXT PRIMARY KEY,
   species_key TEXT NOT NULL REFERENCES species(key),
   life_stage TEXT CHECK (life_stage IN ('juvenile','adult')) NOT NULL,
-  uvb_spec TEXT,                 -- e.g., '10.0','12%','5.0','2.0'
+
+  -- UVB：強度與每日照射時數（單位小時；強度單位請在 extra_json 或規則層統一）
+  uvb_intensity_min REAL,
+  uvb_intensity_max REAL,
+  uvb_daily_hours_min REAL,
+  uvb_daily_hours_max REAL,
+
+  -- 昼夜光照（沿用原欄位）
   photoperiod_hours_min REAL,
   photoperiod_hours_max REAL,
-  temp_ranges_json TEXT NOT NULL,        -- {"basking":[35,40],...}
-  diet_split_json TEXT,                  -- {"greens":0.9,"insect":0.1,...}
-  supplement_rules_json TEXT,            -- {"calcium_plain":"every_meal",...}
-  extra_json TEXT,                       -- 其它自由欄（濕度/基質...）
+
+  -- 適應（環境/常溫）溫度（°C）
+  ambient_temp_c_min REAL,
+  ambient_temp_c_max REAL,
+
+  -- 餵食頻率（每 X～Y 小時一次；每列已對應 life_stage）
+  feeding_interval_hours_min REAL,
+  feeding_interval_hours_max REAL,
+
+  -- 飲食備註
+  diet_note TEXT,
+
+  -- 維生素 D3 的補充週期（每 X～Y 小時一次）
+  vitamin_d3_interval_hours_min REAL,
+  vitamin_d3_interval_hours_max REAL,
+
+  -- 可選的細分溫區設定（保留以兼容既有資料/規則）
+  temp_ranges_json TEXT,                       -- 例：{"basking":[35,40],"cool":[24,28]}
+
+  -- 其他自由欄（濕度/基質/uvb_unit等）
+  extra_json TEXT,
+
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+
+  -- 合理性約束（min ≤ max、非負）
+  CHECK (
+    uvb_intensity_min IS NULL OR uvb_intensity_max IS NULL OR
+    uvb_intensity_min <= uvb_intensity_max
+  ),
+  CHECK (
+    uvb_daily_hours_min IS NULL OR uvb_daily_hours_max IS NULL OR
+    uvb_daily_hours_min <= uvb_daily_hours_max
+  ),
+  CHECK (
+    ambient_temp_c_min IS NULL OR ambient_temp_c_max IS NULL OR
+    ambient_temp_c_min <= ambient_temp_c_max
+  ),
+  CHECK (
+    feeding_interval_hours_min IS NULL OR feeding_interval_hours_max IS NULL OR
+    feeding_interval_hours_min <= feeding_interval_hours_max
+  ),
+  CHECK (
+    vitamin_d3_interval_hours_min IS NULL OR vitamin_d3_interval_hours_max IS NULL OR
+    vitamin_d3_interval_hours_min <= vitamin_d3_interval_hours_max
+  ),
+  CHECK (
+    uvb_daily_hours_min IS NULL OR uvb_daily_hours_min >= 0
+  ),
+  CHECK (
+    photoperiod_hours_min IS NULL OR photoperiod_hours_min >= 0
+  ),
+
   UNIQUE (species_key, life_stage)
 );
 CREATE INDEX IF NOT EXISTS idx_species_targets_species ON species_targets(species_key);
@@ -82,31 +142,29 @@ CREATE INDEX IF NOT EXISTS idx_species_targets_species ON species_targets(specie
 -- 天氣/UVI 快取（支援逐小時資料）
 CREATE TABLE IF NOT EXISTS weather_cache (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  location_key TEXT NOT NULL,                 -- 建議 "lat,lon"（緯度、經度各保留 3 位小數）
+  location_key TEXT NOT NULL,                 -- 建議 "lat,lon"
   date TEXT NOT NULL,                         -- YYYY-MM-DD（以本地日為 key）
   tz TEXT,                                    -- 來源 API 的時區（例: 'Asia/Taipei'）
-  lat REAL,                                   -- 實際請求使用的緯度
-  lon REAL,                                   -- 實際請求使用的經度
+  lat REAL,
+  lon REAL,
 
   -- 日彙總
-  uvi_max REAL,                               -- 當日最大 UVI（可為 null）
+  uvi_max REAL,
 
   -- 逐小時快取（JSON 陣列；通常長度 24）
   hourly_temp_c_json TEXT NOT NULL DEFAULT '[]',       -- [23.1, 22.8, ...]
   hourly_cloudcover_json TEXT NOT NULL DEFAULT '[]',   -- [0..100 的百分比]
   hourly_uv_index_json TEXT NOT NULL DEFAULT '[]',     -- [0..11+]
 
-  raw_json TEXT,                                       -- 完整 API 回應（備查）
+  raw_json TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
 
   UNIQUE (location_key, date)
 );
-
--- 查詢加速
 CREATE INDEX IF NOT EXISTS idx_weather_location_date ON weather_cache(location_key, date);
 
--- 警報 & 規則
+-- 警報
 CREATE TABLE IF NOT EXISTS alerts (
   id TEXT PRIMARY KEY,
   pet_id TEXT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
@@ -122,6 +180,7 @@ CREATE TABLE IF NOT EXISTS alerts (
 CREATE INDEX IF NOT EXISTS idx_alerts_pet_at ON alerts(pet_id, at);
 CREATE INDEX IF NOT EXISTS idx_alerts_code   ON alerts(code);
 
+-- 規則（以 YAML 為來源）
 CREATE TABLE IF NOT EXISTS rules (
   id TEXT PRIMARY KEY,             -- matches YAML id
   species_key TEXT REFERENCES species(key),
@@ -162,7 +221,7 @@ CREATE TABLE IF NOT EXISTS article_products (
   PRIMARY KEY (article_id, product_id)
 );
 
--- 點數與任務定義
+-- 點數與任務
 CREATE TABLE IF NOT EXISTS points_ledger (
   id TEXT PRIMARY KEY,
   pet_id TEXT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
@@ -212,7 +271,7 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TEXT NOT NULL
 );
 
--- migration runner 的紀錄表（若你的程式會另外建，也 OK）
+-- migration runner 的紀錄表
 CREATE TABLE IF NOT EXISTS migrations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -221,5 +280,10 @@ CREATE TABLE IF NOT EXISTS migrations (
 
 -- 預設任務（存在則略過）
 INSERT OR IGNORE INTO tasks (key, title, description, points, created_at, updated_at) VALUES
-  ('vitamin','維他命補充','含 D3 或綜合維他命補充',5, datetime('now'), datetime('now')),
-  ('heat',   '加熱設備管理','Basking 燈/加熱墊開關與維護',3, datetime('now'), datetime('now'));
+  ('feed',   '餵食',           '飲食管理與餵食紀錄',                    5, datetime('now'), datetime('now')),
+  ('calcium','鈣質補充',       '純鈣或含 D3 補充取決於物種與頻率',        5, datetime('now'), datetime('now')),
+  ('vitamin','維他命補充',     '含 D3 或綜合維他命補充',                5, datetime('now'), datetime('now')),
+  ('uvb',    'UVB 管理',       'UVB 燈具開關/維護/耗材更換',            3, datetime('now'), datetime('now')),
+  ('heat',   '加熱設備管理',   'Basking 燈/加熱墊開關與維護',           3, datetime('now'), datetime('now')),
+  ('clean',  '環境清潔',       ' enclosure/水盆/基質清潔',               2, datetime('now'), datetime('now')),
+  ('weigh',  '體重紀錄',       '定期量測與追蹤',                         2, datetime('now'), datetime('now'));

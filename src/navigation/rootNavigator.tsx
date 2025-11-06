@@ -1,4 +1,5 @@
 // src/navigation/rootNavigator.tsx
+import React from 'react';
 import { View, Pressable, Platform } from 'react-native';
 import { createBottomTabNavigator, type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -14,6 +15,7 @@ import SpeciesEditorScreen from '../screens/SpeciesEditorScreen';
 import PetSelectScreen from '../screens/PetSelectScreen';
 import SpeciesNeedsScreen from '../screens/SpeciesNeedsScreen';
 import PetsAddScreen from '../screens/PetsAddScreen';
+import WeighScreen from '../screens/WeighScreen';
 
 // ===== 型別 =====
 export type RootStackParamList = {
@@ -23,6 +25,10 @@ export type RootStackParamList = {
   PetSelect: undefined;
   SpeciesNeeds: { petId: string };
   PetsAdd: undefined;
+
+  // ✅ 新增：體重記錄畫面（允許不帶或帶 petId）
+  WeighScreen: { petId?: string } | undefined;
+
   // 預留
   UVBLogScreen?: { petId: string };
   HeatControlScreen?: { petId: string };
@@ -33,7 +39,6 @@ export type RootStackParamList = {
   CalciumPlainScreen?: { petId: string };
   CalciumD3Screen?: { petId: string };
   VitaminMultiScreen?: { petId: string };
-  WeighScreen?: { petId: string };
   CleanScreen?: { petId: string };
   TempMonitorScreen?: { petId: string };
 };
@@ -126,7 +131,7 @@ function MainTabs() {
         }}
       />
 
-      {/* 中間＋：直接導航到 RootStack 的 PetSelect（不取 parent） */}
+      {/* 中間＋：從 Tabs 導航到 RootStack 的 PetSelect */}
       <Tab.Screen
         name="Plus"
         component={NoopScreen}
@@ -136,8 +141,8 @@ function MainTabs() {
             <PlusTabButton
               {...p}
               onPressCustom={() => {
-                // 直接在根導航樹解析路由名稱
-                navigation.navigate('PetSelect' as never);
+                // 確保呼叫到最外層 Root Navigator
+                navigation.getParent()?.navigate('PetSelect' as never);
               }}
             />
           ),
@@ -194,6 +199,13 @@ export default function RootNavigator() {
         name="PetsAdd"
         component={PetsAddScreen}
         options={{ headerShown: true, title: '新增寵物' }}
+      />
+
+      {/* ✅ 新增：體重記錄頁（與 navigate('WeighScreen', ...) 對齊） */}
+      <Stack.Screen
+        name="WeighScreen"
+        component={WeighScreen}
+        options={{ headerShown: true, title: '體重記錄' }}
       />
     </Stack.Navigator>
   );

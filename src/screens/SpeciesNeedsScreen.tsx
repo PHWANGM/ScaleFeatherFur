@@ -8,17 +8,12 @@ import { getPetWithSpeciesById } from '../lib/db/repos/pets.repo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SpeciesNeeds'>;
 
-/** 需求卡片會導向的目標路由（已在 rootNavigator 註冊的那些 Placeholder 名稱） */
+/** 需求卡片會導向的目標路由（請依你的實際註冊為準） */
 type DemandRoute =
   | 'UVBLogScreen'
   | 'HeatControlScreen'
-  | 'FeedGreensScreen'
-  | 'FeedInsectScreen'
-  | 'FeedMeatScreen'
-  | 'FeedFruitScreen'
-  | 'CalciumPlainScreen'
-  | 'CalciumD3Screen'
-  | 'VitaminMultiScreen'
+  | 'FeedGreensScreen'     // 這裡沿用既有路由作為「餵食頻率」頁面，如有專屬頁面可替換
+  | 'VitaminMultiScreen'   // 這裡沿用既有路由顯示「維他命 D3」補充頻率，如有專屬頁面可替換
   | 'WeighScreen'
   | 'CleanScreen'
   | 'TempMonitorScreen';
@@ -30,6 +25,15 @@ type NeedCard = {
   color: string;
   route: DemandRoute;
 };
+
+function fmtHoursRange(min?: number | null, max?: number | null): string | null {
+  if (min == null && max == null) return null;
+  const a = min ?? max ?? 0;
+  const b = max ?? min ?? a;
+  // 人性化：≥48 小時以天表示
+  const toHuman = (h: number) => (h >= 48 ? `${(h / 24).toFixed(h % 24 === 0 ? 0 : 1)} 天` : `${h} 小時`);
+  return `${toHuman(a)}–${toHuman(b)}`;
+}
 
 export default function SpeciesNeedsScreen({ route, navigation }: Props) {
   const { petId } = route.params;
@@ -50,108 +54,104 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
 
   const needs: NeedCard[] = useMemo(() => {
     const cards: NeedCard[] = [];
+    if (!target) return cards;
 
-    // UVB（photoperiod）
-    if (target?.photoperiod_hours_min != null && target?.photoperiod_hours_max != null) {
+    // ==== UVB / 日照 ====
+    const uvbHours = fmtHoursRange(target.uvb_daily_hours_min, target.uvb_daily_hours_max)
+      ?? fmtHoursRange(target.photoperiod_hours_min, target.photoperiod_hours_max);
+    const uvbUnit = (target.extra && (target.extra as any).uvb_unit) || '%';
+    const uvbIntensity =
+      target.uvb_intensity_min != null || target.uvb_intensity_max != null
+        ? `${target.uvb_intensity_min ?? target.uvb_intensity_max}-${target.uvb_intensity_max ?? target.uvb_intensity_min}${uvbUnit}`
+        : null;
+
+    if (uvbHours || uvbIntensity) {
       cards.push({
         key: 'uvb',
         title: 'UVB / 日照',
-        subtitle:
-          `${target.photoperiod_hours_min}-${target.photoperiod_hours_max} 小時/天` +
-          (target.uvb_spec ? ` · UVB ${target.uvb_spec}` : ''),
+        subtitle: [uvbHours ? `${uvbHours}/天` : null, uvbIntensity ? `強度 ${uvbIntensity}` : null]
+          .filter(Boolean)
+          .join(' · '),
         color: '#FFEFD5',
         route: 'UVBLogScreen',
       });
     }
 
-    // Heat（若物種有 basking/熱區）
-    const hasHeat =
-      !!target?.temp_ranges?.basking ||
-      !!target?.temp_ranges?.hot ||
-      !!target?.temp_ranges?.ambient_day;
-    if (hasHeat) {
-      const b = target?.temp_ranges?.basking
-        ? `${target.temp_ranges.basking[0]}-${target.temp_ranges.basking[1]}°C`
-        : '';
+    // ==== Heat（優先使用 temp_ranges；否則退回 ambient 範圍） ====
+    const hasTempRanges =
+      !!target.temp_ranges?.basking ||
+      !!target.temp_ranges?.hot ||
+      !!target.temp_ranges?.ambient_day;
+
+    if (hasTempRanges) {
+      const basking = target.temp_ranges?.basking
+        ? `${target.temp_ranges.basking[0]}–${target.temp_ranges.basking[1]}°C`
+        : null;
+      const hot = target.temp_ranges?.hot
+        ? `${target.temp_ranges.hot[0]}–${target.temp_ranges.hot[1]}°C`
+        : null;
+
+      const subtitle = basking
+        ? `熱點 ${basking}`
+        : hot
+          ? `熱區 ${hot}`
+          : '管理加熱時數與熱區溫度';
+
       cards.push({
         key: 'heat',
         title: '加熱 / 熱點',
-        subtitle: b ? `熱點 ${b}` : '管理加熱時數與熱區溫度',
+        subtitle,
+        color: '#E6FCF4',
+        route: 'HeatControlScreen',
+      });
+    } else if (target.ambient_temp_c_min != null || target.ambient_temp_c_max != null) {
+      const ambMin = target.ambient_temp_c_min ?? target.ambient_temp_c_max;
+      const ambMax = target.ambient_temp_c_max ?? target.ambient_temp_c_min ?? ambMin;
+      cards.push({
+        key: 'heat_ambient',
+        title: '環境溫度',
+        subtitle: `${ambMin}–${ambMax}°C`,
         color: '#E6FCF4',
         route: 'HeatControlScreen',
       });
     }
 
-    // Diet（依 diet_split 產生 feed_*）
-    const ds = target?.diet_split ?? undefined;
-    if (ds?.greens != null) {
+    // ==== Diet（餵食頻率 + 備註） ====
+    if (target.feeding_interval_hours_min != null || target.feeding_interval_hours_max != null || target.diet_note) {
+      const freq = fmtHoursRange(target.feeding_interval_hours_min, target.feeding_interval_hours_max);
+      const subtitle = [freq ? `每 ${freq} / 次` : null, target.diet_note || null]
+        .filter(Boolean)
+        .join(' · ');
       cards.push({
-        key: 'feed_greens',
-        title: '餵食：綠餌/牧草',
-        subtitle: `${Math.round(ds.greens * 100)}%`,
+        key: 'feed_frequency',
+        title: '餵食頻率 / 飲食',
+        subtitle,
         color: '#E8F5E9',
+        // 暫用 FeedGreensScreen 做為泛用餵食設定頁；若有專屬設定頁，請替換 route
         route: 'FeedGreensScreen',
       });
     }
-    if (ds?.insect != null) {
-      cards.push({
-        key: 'feed_insect',
-        title: '餵食：昆蟲',
-        subtitle: `${Math.round(ds.insect * 100)}%`,
-        color: '#FFF8E1',
-        route: 'FeedInsectScreen',
-      });
-    }
-    if (ds?.meat != null) {
-      cards.push({
-        key: 'feed_meat',
-        title: '餵食：肉類',
-        subtitle: `${Math.round(ds.meat * 100)}%`,
-        color: '#FFEFEF',
-        route: 'FeedMeatScreen',
-      });
-    }
-    if (ds?.fruit != null) {
-      cards.push({
-        key: 'feed_fruit',
-        title: '餵食：水果',
-        subtitle: `${Math.round(ds.fruit * 100)}%`,
-        color: '#FFF0F6',
-        route: 'FeedFruitScreen',
-      });
-    }
 
-    // Supplements（D3 / 純鈣 / 維他命）
-    const s = target?.supplement_rules ?? null;
-    if (s?.calcium_plain) {
+    // ==== 維他命 D3（補充頻率） ====
+    if (
+      target.vitamin_d3_interval_hours_min != null ||
+      target.vitamin_d3_interval_hours_max != null
+    ) {
+      const d3 = fmtHoursRange(
+        target.vitamin_d3_interval_hours_min,
+        target.vitamin_d3_interval_hours_max
+      );
       cards.push({
-        key: 'calcium_plain',
-        title: '補充：純鈣（無 D3）',
-        subtitle: s.calcium_plain,
-        color: '#F0F9FF',
-        route: 'CalciumPlainScreen',
-      });
-    }
-    if (s?.calcium_d3) {
-      cards.push({
-        key: 'calcium_d3',
-        title: '補充：含 D3 鈣粉',
-        subtitle: s.calcium_d3,
-        color: '#EDE7F6',
-        route: 'CalciumD3Screen',
-      });
-    }
-    if (s?.vitamin_multi) {
-      cards.push({
-        key: 'vitamin',
-        title: '補充：綜合維他命',
-        subtitle: s.vitamin_multi,
+        key: 'vitamin_d3',
+        title: '補充：維他命 D3',
+        subtitle: d3 ? `每 ${d3} / 次` : undefined,
         color: '#FFFDE7',
+        // 若你有 VitaminD3Screen，請改成該 route；這裡沿用既有 VitaminMultiScreen
         route: 'VitaminMultiScreen',
       });
     }
 
-    // Generic：體重 / 清潔 / 溫度監測
+    // ==== Generic：體重 / 清潔 / 溫度監測 ====
     cards.push({ key: 'weigh', title: '量體重', color: '#E3F2FD', route: 'WeighScreen' });
     cards.push({ key: 'clean', title: '清潔/消毒', color: '#F5EEFC', route: 'CleanScreen' });
     cards.push({ key: 'temps', title: '溫度/環境監測', color: '#E6EDFA', route: 'TempMonitorScreen' });
@@ -160,7 +160,7 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
   }, [target]);
 
   const onPressNeed = (routeName: DemandRoute) => {
-    navigation.navigate(routeName, { petId });
+    navigation.navigate(routeName as any, { petId });
   };
 
   return (

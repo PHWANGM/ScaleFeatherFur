@@ -1,12 +1,14 @@
 // src/components/modals/PetPickerModal.tsx
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   Modal, View, Text, Pressable, StyleSheet, FlatList, Image,
   RefreshControl, ActivityIndicator, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useDispatch, useSelector } from 'react-redux';
 import { listPetsWithSpecies, type PetWithSpeciesRow } from '../../lib/db/repos/pets.repo';
 import { useThemeColors } from '../../styles/themesColors';
+import { setCurrentPetId, selectCurrentPetId } from '../../state/slices/petsSlice';
 
 type Props = {
   visible: boolean;
@@ -21,24 +23,35 @@ type Props = {
 
 export default function PetPickerModal({ visible, onClose, onSelect, filter }: Props) {
   const { colors } = useThemeColors();
-  const palette = {
+  const dispatch = useDispatch();
+  const currentPetId = useSelector(selectCurrentPetId); // ← Redux state
+
+  const palette = useMemo(() => ({
     bg: colors.bg,
     card: colors.card,
     text: colors.text,
     subText: colors.subText ?? colors.textDim ?? '#97A3B6',
     border: colors.border,
     primary: colors.primary ?? '#38e07b',
-  };
+  }), [colors]);
 
   const [pets, setPets] = useState<PetWithSpeciesRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectingId, setSelectingId] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  // ✅ 每次 currentPetId 改變時，輸出目前選擇的寵物 ID
+  useEffect(() => {
+    if (currentPetId) {
+      console.log('[PetPickerModal] Current pet ID changed:', currentPetId);
+    }
+  }, [currentPetId]);
 
   const loadPets = useCallback(async () => {
     setLoading(true);
@@ -81,6 +94,27 @@ export default function PetPickerModal({ visible, onClose, onSelect, filter }: P
     if (visible) loadPets();
   }, [visible, loadPets]);
 
+  const handleSelect = useCallback(
+    async (pet: PetWithSpeciesRow) => {
+      try {
+        const idStr = String(pet.id);
+        setSelectingId(idStr); // 防止連點
+        const res: any = dispatch(setCurrentPetId(idStr));
+        if (res && typeof res.then === 'function') {
+          await res;
+        }
+        onSelect(pet);
+        console.log('[PetPickerModal] Current pet ID changed:', currentPetId);
+      } catch (e) {
+        console.warn('[PetPickerModal] handleSelect failed:', e);
+      } finally {
+        setSelectingId(null);
+        onClose();
+      }
+    },
+    [dispatch, onSelect, onClose]
+  );
+
   return (
     <Modal
       visible={visible}
@@ -121,7 +155,7 @@ export default function PetPickerModal({ visible, onClose, onSelect, filter }: P
           ) : (
             <FlatList
               data={pets}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => String(item.id)}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
@@ -135,11 +169,20 @@ export default function PetPickerModal({ visible, onClose, onSelect, filter }: P
               )}
               contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 24 : 12 }}
               renderItem={({ item }) => {
+
+                const idStr = String(item.id);
+                const selected = currentPetId === idStr;
+                const disabled = selectingId === idStr;
+
                 const speciesLabel = item.species_name ?? item.species_key ?? '—';
                 return (
                   <Pressable
-                    style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-                    onPress={() => onSelect(item)}
+                    style={({ pressed }) => [
+                      styles.row,
+                      pressed && { opacity: 0.7 },
+                      selected && { backgroundColor: 'rgba(56, 224, 123, 0.08)' },
+                    ]}
+                    onPress={() => (disabled ? null : handleSelect(item))}
                   >
                     <Image
                       source={{ uri: item.avatar_uri || 'https://placekitten.com/200/200' }}
@@ -154,7 +197,12 @@ export default function PetPickerModal({ visible, onClose, onSelect, filter }: P
                         {item.location_city ? ` · ${item.location_city}` : ''}
                       </Text>
                     </View>
-                    <Feather name="chevron-right" size={18} color={palette.subText} />
+
+                    {selected ? (
+                      <Feather name="check" size={18} color={palette.primary} />
+                    ) : (
+                      <Feather name="chevron-right" size={18} color={palette.subText} />
+                    )}
                   </Pressable>
                 );
               }}
@@ -185,7 +233,13 @@ const styles = StyleSheet.create({
   centerBox: { padding: 24, alignItems: 'center', justifyContent: 'center' },
   emptyBox: { padding: 24, alignItems: 'center', justifyContent: 'center', gap: 8 },
   emptyText: { fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 70 },
   avatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12, backgroundColor: '#ddd' },
   name: { fontSize: 16, fontWeight: '600' },

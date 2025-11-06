@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import {
   setSelectedDate,
+  setCurrentPetId,
   selectCurrentPetId,
   selectSelectedDate,
 } from '../../state/slices/petsSlice';
@@ -17,6 +18,7 @@ import {
   type CareLogRow,
   type CareLogType,
 } from '../../lib/db/repos/care.logs';
+import { query } from '../../lib/db/db.client'; // ✅ 用來做診斷查詢
 
 // ==== 型別 ====
 type CalDateObject = {
@@ -57,13 +59,8 @@ const DOTS: Record<CareLogType, { color: string }> = {
 };
 
 // ==== 小工具 ====
-const toISODate = (d: Date) => d.toISOString().slice(0, 10);
-
-const ensureISODateTime = (isoLike: string) =>
-  isoLike.includes('T') ? isoLike : `${isoLike}T${new Date().toISOString().split('T')[1]}`;
-
+// 用「UTC 明日 00:00」往回 6 個月；若你要用本地日界，請改成下方 buildQueryWindowLocal。
 const buildQueryWindow = () => {
-  // 6 個月內到明日 00:00
   const end = new Date();
   end.setUTCDate(end.getUTCDate() + 1);
   end.setUTCHours(0, 0, 0, 0);
@@ -72,14 +69,24 @@ const buildQueryWindow = () => {
   return { startISO: start.toISOString(), endISO: end.toISOString() };
 };
 
-// 確保 map[day] 一定存在（避免 'never' 問題）
+// （可選）本地日界版本，若你懷疑 UTC 導致 off-by-one，可以改用這個。
+// const buildQueryWindowLocal = () => {
+//   const endLocal = new Date();
+//   endLocal.setHours(24, 0, 0, 0); // 明日本地 00:00
+//   const startLocal = new Date(endLocal);
+//   startLocal.setMonth(startLocal.getMonth() - 6);
+//   return { startISO: startLocal.toISOString(), endISO: endLocal.toISOString() };
+// };
+
+const ensureISODateTime = (isoLike: string) =>
+  isoLike.includes('T') ? isoLike : `${isoLike}T${new Date().toISOString().split('T')[1]}`;
+
 function ensureDay(map: MarkedDatesMap, day: string): MultiDotMark {
   if (!map[day]) map[day] = { selected: false, dots: [] };
   else if (!map[day].dots) map[day].dots = [];
   return map[day];
 }
 
-// 建構 markedDates（含去重）
 function buildMarkedDates(
   rows: CareLogRow[],
   todayISO: string,
@@ -88,25 +95,21 @@ function buildMarkedDates(
   const selectedDay = selectedISO ? selectedISO.slice(0, 10) : todayISO;
   const map: MarkedDatesMap = {};
 
-  // 先標記 selected 日（若當天沒有資料也能被選取）
   ensureDay(map, selectedDay).selected = true;
 
   for (const log of rows) {
     const day = log.at.slice(0, 10);
     const color = DOTS[log.type]?.color;
     if (!color) continue;
-
     const entry = ensureDay(map, day);
     entry.selected = day === selectedDay;
-
     const key = `${log.type}:${color}`;
-    const exists = (entry.dots ?? []).some(d => (d.key ?? '') === key && d.color === color);
-    if (!exists) {
-      entry.dots!.push({ color, key });
-    }
+    const exists = (entry.dots ?? []).some(
+      (d) => (d.key ?? '') === key && d.color === color
+    );
+    if (!exists) entry.dots!.push({ color, key });
   }
 
-  // 確保今天存在（避免沒有任何日期 selected 的狀況）
   if (!map[todayISO]) {
     const e = ensureDay(map, todayISO);
     e.selected = todayISO === selectedDay;
@@ -128,6 +131,15 @@ const CustomCalendar: React.FC = () => {
 
   const effectiveSelectedISO = useMemo(() => selectedDate ?? nowIso(), [selectedDate]);
 
+  // ===== Debug logs =====
+  useEffect(() => {
+    console.log('[CustomCalendar] selectedDate (from store) =', selectedDate);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    console.log('[CustomCalendar] currentPetId =', currentPetId);
+  }, [currentPetId]);
+
   // 初始化 visibleMonth
   useEffect(() => {
     const d = new Date(effectiveSelectedISO);
@@ -142,22 +154,82 @@ const CustomCalendar: React.FC = () => {
     const d = new Date(Date.UTC(visibleMonth.year, visibleMonth.month - 1, 1));
     return {
       year: String(d.getUTCFullYear()),
-      month: d.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }).toUpperCase(),
+      month: d
+        .toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
+        .toUpperCase(),
     };
   }, [visibleMonth]);
 
-  // 點選日期：只更新 selected，不直接動 dots
-  const setSelectedDateAndMark = useCallback((dateISODate: string) => {
-    dispatch(setSelectedDate(ensureISODateTime(dateISODate)));
-    setMarked(prev => {
-      const next: MarkedDatesMap = {};
-      for (const [k, v] of Object.entries(prev)) {
-        next[k] = { ...v, selected: k === dateISODate };
+  // 點選日期
+  const setSelectedDateAndMark = useCallback(
+    (dateISODate: string) => {
+      const nextSelected = ensureISODateTime(dateISODate);
+      console.log('[CustomCalendar] onDayPress -> dispatch setSelectedDate:', nextSelected);
+      dispatch(setSelectedDate(nextSelected));
+
+      setMarked((prev) => {
+        const next: MarkedDatesMap = {};
+        for (const [k, v] of Object.entries(prev)) {
+          next[k] = { ...v, selected: k === dateISODate };
+        }
+        if (!next[dateISODate]) next[dateISODate] = { selected: true, dots: [] };
+        return next;
+      });
+    },
+    [dispatch]
+  );
+
+  // ✅ 診斷：統計 care_logs 是否有資料、是否在視窗範圍內
+  const debugScanLogs = useCallback(async (petId: string | null) => {
+    try {
+      const total = await query<{ c: number }>('SELECT COUNT(*) AS c FROM care_logs', []);
+      const minMax = await query<{ min_at: string | null; max_at: string | null }>(
+        'SELECT MIN(at) AS min_at, MAX(at) AS max_at FROM care_logs',
+        []
+      );
+
+      console.log('[Debug] care_logs total =', total[0]?.c ?? 0);
+      console.log('[Debug] care_logs min_at =', minMax[0]?.min_at, ', max_at =', minMax[0]?.max_at);
+
+      if (petId) {
+        const totalByPet = await query<{ c: number }>(
+          'SELECT COUNT(*) AS c FROM care_logs WHERE pet_id = ?',
+          [petId]
+        );
+        const minMaxByPet = await query<{ min_at: string | null; max_at: string | null }>(
+          'SELECT MIN(at) AS min_at, MAX(at) AS max_at FROM care_logs WHERE pet_id = ?',
+          [petId]
+        );
+        console.log('[Debug] pet_id =', petId, ' care_logs =', totalByPet[0]?.c ?? 0);
+        console.log('[Debug] pet min_at =', minMaxByPet[0]?.min_at, ', max_at =', minMaxByPet[0]?.max_at);
       }
-      if (!next[dateISODate]) next[dateISODate] = { selected: true, dots: [] };
-      return next;
-    });
-  }, [dispatch]);
+    } catch (e) {
+      console.warn('[Debug] scan logs failed:', e);
+    }
+  }, []);
+
+  // ✅ 若 currentPetId 為 null，嘗試自動 bootstrap 第一筆寵物
+  const ensurePetId = useCallback(async () => {
+    if (currentPetId) return currentPetId;
+    try {
+      const pets = await query<{ id: string }>(
+        'SELECT id FROM pets ORDER BY created_at ASC LIMIT 1',
+        []
+      );
+      const id = pets[0]?.id ?? null;
+      if (id) {
+        console.log('[CustomCalendar] bootstrap currentPetId =', id);
+        dispatch(setCurrentPetId(id));
+        return id;
+      } else {
+        console.log('[CustomCalendar] no pets found in DB');
+        return null;
+      }
+    } catch (e) {
+      console.warn('[CustomCalendar] ensurePetId failed:', e);
+      return null;
+    }
+  }, [currentPetId, dispatch]);
 
   // 載入資料並轉成 marked map
   const fetchAndMark = useCallback(async () => {
@@ -165,25 +237,36 @@ const CustomCalendar: React.FC = () => {
     setLoading(true);
     try {
       const { startISO, endISO } = buildQueryWindow();
-      const today = toISODate(new Date());
+      const today = new Date().toISOString().slice(0, 10);
 
-      const rows: CareLogRow[] = currentPetId
-        ? await listCareLogsByPetBetween(currentPetId, startISO, endISO)
+      console.log('[CustomCalendar] fetch window =', startISO, '→', endISO);
+
+      // 先確保 petId
+      const petId = await ensurePetId();
+
+      // 診斷掃描（可看到資料庫到底有沒有資料 & 範圍）
+      await debugScanLogs(petId);
+
+      const rows: CareLogRow[] = petId
+        ? await listCareLogsByPetBetween(petId, startISO, endISO)
         : [];
+
+      console.log('[CustomCalendar] fetched care_logs rows =', rows.length);
 
       const map = buildMarkedDates(rows, today, selectedDate);
       setMarked(map);
 
       if (!selectedDate) {
-        // 同步 Store 的 selectedDate（ISO DateTime）
-        dispatch(setSelectedDate(nowIso()));
+        const now = nowIso();
+        console.log('[CustomCalendar] selectedDate is empty, init with nowIso =', now);
+        dispatch(setSelectedDate(now));
       }
     } catch (e) {
       console.warn('[CustomCalendar] care_logs fetch failed:', e);
     } finally {
       setLoading(false);
     }
-  }, [currentPetId, selectedDate, isFocused, dispatch]);
+  }, [isFocused, ensurePetId, debugScanLogs, selectedDate, dispatch]);
 
   useEffect(() => {
     fetchAndMark();
@@ -193,9 +276,11 @@ const CustomCalendar: React.FC = () => {
     <View style={styles.container}>
       <Calendar
         renderArrow={(direction) =>
-          direction === 'left'
-            ? <Ionicons name="chevron-back-outline" size={24} color="#000" />
-            : <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+          direction === 'left' ? (
+            <Ionicons name="chevron-back-outline" size={24} color="#000" />
+          ) : (
+            <Ionicons name="chevron-forward-outline" size={24} color="#000" />
+          )
         }
         hideExtraDays
         disableMonthChange={false}
@@ -206,19 +291,21 @@ const CustomCalendar: React.FC = () => {
         onPressArrowRight={(cb) => cb()}
         onMonthChange={(m) => setVisibleMonth({ year: m.year, month: m.month })}
         onDayPress={(d: CalDateObject) => {
+          console.log('[CustomCalendar] onDayPress raw date =', d.dateString);
           setSelectedDateAndMark(d.dateString);
           setVisibleMonth({ year: d.year, month: d.month });
         }}
         disableAllTouchEventsForDisabledDays
         renderHeader={() => (
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 8 }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', marginRight: 10 }}>{header.year}</Text>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', marginRight: 10 }}>
+              {header.year}
+            </Text>
             <Text style={{ fontSize: 20, fontWeight: 'bold' }}>{header.month}</Text>
           </View>
         )}
         enableSwipeMonths
         markingType="multi-dot"
-        // react-native-calendars 的型別較寬，安全轉型一次
         markedDates={marked as unknown as Record<string, any>}
         displayLoadingIndicator={loading}
         monthFormat="yyyy MM"

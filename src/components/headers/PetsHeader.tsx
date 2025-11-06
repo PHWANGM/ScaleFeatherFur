@@ -1,5 +1,5 @@
 // src/components/headers/PetsHeader.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -36,52 +36,58 @@ export default function PetsHeader({ onAddPress }: Props) {
     [colors]
   );
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const [pet, setPet] = useState<PetWithSpeciesRow | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [showPicker, setShowPicker] = useState(false);
 
-  const loadPet = useCallback(async () => {
+  /** 核心：完全由 slice 的 currentPetId 驅動 UI */
+  const loadFromSlice = useCallback(async () => {
     setLoading(true);
     try {
       if (currentPetId) {
-        const row = await getPetWithSpeciesById(currentPetId);
-        setPet(row);
+        const row = await getPetWithSpeciesById(String(currentPetId));
+        if (mountedRef.current) setPet(row ?? null);
       } else {
-        const rows = await listPetsWithSpecies({ limit: 1 });
+        // 若還沒有 currentPetId，自動抓第一筆並寫回 slice
+        const rows = await listPetsWithSpecies({ limit: 1, offset: 0 });
         if (rows.length > 0) {
-          dispatch(setCurrentPetId(rows[0].id));
-          setPet(rows[0]);
+          dispatch(setCurrentPetId(String(rows[0].id)));
+          if (mountedRef.current) setPet(rows[0]);
         } else {
-          setPet(null);
+          if (mountedRef.current) setPet(null);
         }
       }
+      console.log('[PetPickerModal] Current pet ID changed:', currentPetId);
     } catch (e: any) {
-      console.warn('[PetsHeader] loadPet failed:', e?.message ?? e);
-      setPet(null);
+      console.warn('[PetsHeader] loadFromSlice failed:', e?.message ?? e);
+      if (mountedRef.current) setPet(null);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [currentPetId, dispatch]);
 
   useEffect(() => {
-    loadPet();
-  }, [loadPet]);
+    loadFromSlice();
+  }, [loadFromSlice]);
 
-  const handleSelectPet = useCallback(
-    (p: PetWithSpeciesRow) => {
-      dispatch(setCurrentPetId(p.id));
-      setPet(p);
-      setShowPicker(false);
-    },
-    [dispatch]
-  );
+  /** 只關閉 Picker；真正的切換由 Modal 內部 dispatch → slice → 此處 useEffect 觸發重載 */
+  const handleSelectPet = useCallback(() => {
+    setShowPicker(false);
+  }, []);
 
   const goToAdd = useCallback(() => {
     if (onAddPress) {
       onAddPress();
       return;
     }
-    // 在巢狀導航（Tab 內）時優先使用 parent，否則退回自己
     const parent = (navigation as any)?.getParent?.();
     if (parent?.navigate) {
       parent.navigate('PetsAdd' as never);

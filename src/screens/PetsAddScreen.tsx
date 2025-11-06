@@ -122,17 +122,16 @@ export default function PetsAddScreen() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-          // 🔧 只在調試階段使用
-          const snap = await debugSpeciesSnapshot();
-          Alert.alert(
-            'Species Debug',
-            [
-              `tables: ${snap.tables.join(', ') || '(none)'}`,
-              `species count: ${snap.speciesCount}`,
-              `sample: ${JSON.stringify(snap.sample, null, 2)}`
-            ].join('\n')
-          );
-
+          // // 🔧 只在調試階段使用
+          // const snap = await debugSpeciesSnapshot();
+          // Alert.alert(
+          //   'Species Debug',
+          //   [
+          //     `tables: ${snap.tables.join(', ') || '(none)'}`,
+          //     `species count: ${snap.speciesCount}`,
+          //     `sample: ${JSON.stringify(snap.sample, null, 2)}`
+          //   ].join('\n')
+          // );
       const [sp] = await Promise.all([listSpecies()]);
       setSpecies(sp);
 

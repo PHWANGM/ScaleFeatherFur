@@ -3,7 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export type MyPetState = {
   currentPetId: string | null;
-  calendar: { selectedDate: string | null }; // ✅ 正確拼字 calendar
+  calendar: { selectedDate: string | null };
 };
 
 const initialState: MyPetState = {
@@ -12,7 +12,7 @@ const initialState: MyPetState = {
 };
 
 const myPetSlice = createSlice({
-  name: 'myPet',
+  name: 'pets', // ←名稱隨意，重要的是 store 的 key；下方 selectors 會同時支援 pets/myPet
   initialState,
   reducers: {
     setCurrentPetId(state, action: PayloadAction<string | null>) {
@@ -27,7 +27,10 @@ const myPetSlice = createSlice({
 export const { setCurrentPetId, setSelectedDate } = myPetSlice.actions;
 export default myPetSlice.reducer;
 
-// 型別安全 selectors（建議用這些）
-export const selectCurrentPetId = (s: any) => (s?.myPet?.currentPetId ?? null);
-export const selectSelectedDate = (s: any) =>
-  (s?.myPet?.calendar?.selectedDate ?? s?.myPet?.calendar?.selectedDate ?? null);
+// --------- 型別安全 selectors（同時容忍 store key = pets 或 myPet）---------
+type RootLike = { pets?: MyPetState; myPet?: MyPetState };
+
+const getSlice = (s: RootLike): MyPetState => (s.pets ?? s.myPet ?? initialState);
+
+export const selectCurrentPetId = (s: RootLike) => getSlice(s).currentPetId;
+export const selectSelectedDate = (s: RootLike) => getSlice(s).calendar.selectedDate;

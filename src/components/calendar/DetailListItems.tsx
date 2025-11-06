@@ -1,5 +1,5 @@
-// src/components/DetailListItem.tsx
-import React, { useMemo } from 'react';
+// src/components/DetailListItems.tsx
+import React, { useMemo, useCallback } from 'react';
 import {
   Alert,
   StyleSheet,
@@ -7,24 +7,29 @@ import {
   TouchableHighlight,
   View,
 } from 'react-native';
-import { useCallback } from 'react';
 import {
   deleteCareLog,
   type CareLogRow,
   type CareLogType,
-} from '../../lib/db/repos/care.logs'; // ← 依你的實際路徑調整
+} from '../../lib/db/repos/care.logs'; // ← 若你的結構是 src/components → src/lib，請改成 ../lib/...
 
-// ——— 顏色對應 care_logs 的 type ———
+// 顏色對應 care_logs.type
 const typeColor = (t: CareLogType): string => {
   switch (t) {
     case 'feed':
       return '#FC3090';
     case 'calcium':
       return '#8D8DAA';
+    case 'vitamin':
+      return '#FFB703';
     case 'uvb_on':
       return '#2871C8';
     case 'uvb_off':
       return '#1DA8B1';
+    case 'heat_on':
+      return '#E76F51';
+    case 'heat_off':
+      return '#2A9D8F';
     case 'clean':
       return '#9B51E0';
     case 'weigh':
@@ -34,11 +39,10 @@ const typeColor = (t: CareLogType): string => {
   }
 };
 
-// ——— 時間格式工具 ———
+// 時間格式（24h：HH:mm），無效 ISO 顯示 --:--
 function formatHM(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  // 24h 格式 HH:mm
+  if (Number.isNaN(d.getTime())) return '--:--';
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -49,12 +53,13 @@ function truncate(s: string | null | undefined, n = 30): string {
 
 export type DetailListItemProps = {
   item: CareLogRow;
-  /** 刪除成功後的回呼（讓父層刷新列表等） */
+  /** 刪除成功後的回呼（讓父層移除項目或重刷） */
   onDeleted?: (id: string) => void;
 };
 
 const DetailListItem: React.FC<DetailListItemProps> = ({ item, onDeleted }) => {
   const color = useMemo(() => typeColor(item.type), [item.type]);
+
   const isPastTime = useMemo(() => {
     const at = new Date(item.at).getTime();
     const now = Date.now();
@@ -62,27 +67,28 @@ const DetailListItem: React.FC<DetailListItemProps> = ({ item, onDeleted }) => {
   }, [item.at]);
 
   const onPress = useCallback(() => {
-    // 依 type 顯示重點資訊
-    const time = `Time: ${formatHM(item.at)}`;
-    const type = `\nActivity: ${item.type}`;
+    // 依 type 顯示重點資訊（注意：weight 的 value 已以 kg 存入）
+    const time = `時間：${formatHM(item.at)}`;
+    const typeLine = `\n類型：${item.type}`;
     const valueLine =
       item.type === 'feed'
-        ? `\n\nFeed (g): ${item.value ?? 0}`
+        ? `\n\n餵食量 (g)：${item.value ?? 0}`
         : item.type === 'weigh'
-        ? `\n\nWeight (kg): ${item.value ?? 0}`
-        : ''; // 其他型別暫不顯示數值
-    const note = item.note ? `\n\nNote: ${item.note}` : '';
+        ? `\n\n體重 (kg)：${item.value ?? 0}`
+        : '';
+    const note = item.note ? `\n\n備註：${item.note}` : '';
 
-    Alert.alert('Activity Detail', `${time}${type}${valueLine}${note}`, [
+    Alert.alert('紀錄細節', `${time}${typeLine}${valueLine}${note}`, [
       { text: 'OK', style: 'cancel' },
     ]);
   }, [item]);
 
   const onLongPress = useCallback(() => {
-    Alert.alert('Delete Activity', 'Are you sure you want to delete this activity?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('刪除紀錄', '確定要刪除此筆紀錄嗎？', [
+      { text: '取消', style: 'cancel' },
       {
-        text: 'OK',
+        text: '刪除',
+        style: 'destructive',
         onPress: async () => {
           try {
             await deleteCareLog(item.id);
@@ -91,7 +97,6 @@ const DetailListItem: React.FC<DetailListItemProps> = ({ item, onDeleted }) => {
             console.warn('[DetailListItem] deleteCareLog failed:', e);
           }
         },
-        style: 'destructive',
       },
     ]);
   }, [item.id, onDeleted]);
@@ -118,7 +123,7 @@ const DetailListItem: React.FC<DetailListItemProps> = ({ item, onDeleted }) => {
           </View>
         )}
 
-        {/* 圖片區塊改為純色方塊徽章（依 type 上色） */}
+        {/* 類型色塊徽章 */}
         <View style={styles.iconBoxWrap}>
           <View style={[styles.iconBox, { backgroundColor: color }]} />
         </View>
@@ -177,7 +182,7 @@ const styles = StyleSheet.create({
   activityName: {
     fontSize: 16,
     fontWeight: 'bold',
-    textTransform: 'capitalize', // feed → Feed（美觀）
+    textTransform: 'capitalize', // feed → Feed
   },
   activityTime: {
     fontSize: 12,
