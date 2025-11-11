@@ -2,9 +2,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import LineChartTemp from './LineChartTemp';
+import LineChart from './LineChart';
 import { useThemeColors } from '../../styles/themesColors';
 import type { Next24hTempRiskResult } from '../../lib/compliance/envTempForecast.service';
+import type { Next24hUvbRiskResult } from '../../lib/compliance/uvbForecast.service';
 
 type Props = {
   locationName: string;
@@ -12,8 +13,11 @@ type Props = {
   tempHourly: number[];
   uviHourly: number[];
   currentCloud: number | null;
-  /** 可選：接下來 24h 的溫度風險（用來顯示 species 對應的預警） */
+
+  /** 接下來 24h 的溫度風險（ambient_temp_c_min/max） */
   tempRisk?: Next24hTempRiskResult | null;
+  /** 接下來 24h 的 UVB 風險（uvb_intensity_min/max，以 uviHourly 為輸入） */
+  uvbRisk?: Next24hUvbRiskResult | null;
 };
 
 export default function EnvironmentSection({
@@ -23,6 +27,7 @@ export default function EnvironmentSection({
   uviHourly,
   currentCloud,
   tempRisk,
+  uvbRisk,
 }: Props) {
   const { colors, isDark } = useThemeColors();
 
@@ -35,8 +40,11 @@ export default function EnvironmentSection({
     primary: colors.primary ?? '#38e07b',
   };
 
-  const hasRiskInfo = !!tempRisk;
-  const shouldWarn = tempRisk?.shouldWarn ?? false;
+  const hasTempRiskInfo = !!tempRisk;
+  const tempShouldWarn = tempRisk?.shouldWarn ?? false;
+
+  const hasUvbRiskInfo = !!uvbRisk;
+  const uvbShouldWarn = uvbRisk?.shouldWarn ?? false;
 
   return (
     <View>
@@ -110,49 +118,20 @@ export default function EnvironmentSection({
               </View>
             </View>
 
-            {/* 若有 species 溫度風險資訊，顯示一行摘要 */}
-            {hasRiskInfo && (
-              <View style={{ marginBottom: 10 }}>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: shouldWarn ? '#f97373' : palette.subText,
-                  }}
-                >
-                  {shouldWarn
-                    ? `⚠ 接下來 ${tempRisk?.hoursChecked ?? 0} 小時內，環境溫度有可能過冷或過熱。`
-                    : `✅ 接下來 ${tempRisk?.hoursChecked ?? 0} 小時內，環境溫度大致落在安全範圍。`}
-                </Text>
-                {tempRisk?.ambientMin != null &&
-                  tempRisk?.ambientMax != null && (
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        marginTop: 2,
-                        color: palette.subText,
-                      }}
-                    >
-                      Target ambient: {tempRisk.ambientMin}–
-                      {tempRisk.ambientMax} °C
-                    </Text>
-                  )}
-              </View>
-            )}
-
             {/* 溫度與 UV 折線圖 */}
-            <LineChartTemp
-              title="Temperature (°C)"
+            <LineChart
+              title="Temperature"
               values={tempHourly}
               unit="°C"
               color={palette.primary}
-              tempRisk={tempRisk} // ✅ 加這行
+              tempRisk={tempRisk}
             />
             <View style={{ height: 10 }} />
-            <LineChartTemp
+            <LineChart
               title="UV Index"
               values={uviHourly}
               color={isDark ? '#fbbf24' : '#b45309'}
+              uvbRisk={uvbRisk} // ✅ 這裡讓 UV 圖也用 risk 背景著色
             />
           </>
         )}

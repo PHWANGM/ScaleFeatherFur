@@ -152,9 +152,10 @@ CREATE TABLE IF NOT EXISTS weather_cache (
   uvi_max REAL,
 
   -- 逐小時快取（JSON 陣列；通常長度 24）
-  hourly_temp_c_json TEXT NOT NULL DEFAULT '[]',       -- [23.1, 22.8, ...]
-  hourly_cloudcover_json TEXT NOT NULL DEFAULT '[]',   -- [0..100 的百分比]
-  hourly_uv_index_json TEXT NOT NULL DEFAULT '[]',     -- [0..11+]
+  hourly_times_local_json TEXT NOT NULL DEFAULT '[]',   -- ["2025-11-11T17:00+08:00", ...]
+  hourly_temp_c_json      TEXT NOT NULL DEFAULT '[]',   -- [23.1, 22.8, ...]
+  hourly_cloudcover_json  TEXT NOT NULL DEFAULT '[]',   -- [0..100 的百分比]
+  hourly_uv_index_json    TEXT NOT NULL DEFAULT '[]',   -- [0..11+]
 
   raw_json TEXT,
   created_at TEXT NOT NULL,

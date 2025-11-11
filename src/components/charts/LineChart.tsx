@@ -1,3 +1,4 @@
+// src/components/charts/LineChart.tsx
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import Svg, {
@@ -5,11 +6,19 @@ import Svg, {
   Polyline,
   Text as SvgText,
   Rect,
+  Defs,
+  LinearGradient,
+  Stop,
 } from 'react-native-svg';
 import type {
   Next24hTempRiskResult,
   TempRiskKind,
 } from '../../lib/compliance/envTempForecast.service';
+import type {
+  Next24hUvbRiskResult,
+  UvbRiskKind,
+} from '../../lib/compliance/uvbForecast.service';
+import { theme } from '../../styles/tokens';
 
 type Props = {
   title: string;
@@ -19,10 +28,16 @@ type Props = {
   maxY?: number;
   minY?: number;
   color?: string;
+
+  /** 溫度風險（ambient_temp_c_min/max） */
   tempRisk?: Next24hTempRiskResult | null;
+  /** UVB 風險（uvb_intensity_min/max，以 UVI 序列為輸入） */
+  uvbRisk?: Next24hUvbRiskResult | null;
 };
 
-export default function LineChartTemp({
+type AnyRiskKind = TempRiskKind | UvbRiskKind;
+
+export default function LineChart({
   title,
   values,
   unit = '',
@@ -31,13 +46,14 @@ export default function LineChartTemp({
   minY,
   color = '#38e07b',
   tempRisk = null,
+  uvbRisk = null,
 }: Props) {
   const width = 340;
   const scheme = useColorScheme();
   const isDark = scheme === 'dark';
 
   // 🎨 Grid / Axis / Label 顏色設定
-  const GRID_COLOR = isDark ? '#374151' : '#f1f3f5'; // 淺灰格線
+  const GRID_COLOR = isDark ? '#374151' : '#f1f3f5';
   const AXIS_COLOR = isDark ? '#4b5563' : '#d1d5db';
   const TICK_TEXT = isDark ? '#9ca3af' : '#6b7280';
 
@@ -73,7 +89,7 @@ export default function LineChartTemp({
     yMin + ((yMax - yMin) / (yTicks - 1)) * i
   );
 
-  // X 軸刻度：每 6 小時 + +24h
+  // X 軸刻度（每 6 小時）
   const hoursPerTick = 6;
   const tickIdxs = Array.from(
     { length: Math.floor(24 / hoursPerTick) + 1 },
@@ -82,89 +98,73 @@ export default function LineChartTemp({
 
   const xAxisY = paddingTop + plotHeight;
 
-  // 🎨 顏色表
-  const COLORS: Record<TempRiskKind, string> = {
-    too_cold: '#1d4ed8',
-    ok: '#16a34a',
-    too_hot: '#dc2626',
-    unknown: '#6b7280',
+  // 背景顏色：同時支援 temp & uvb 的 risk kind
+  const BG_COLORS: Record<AnyRiskKind, string> = {
+    too_cold: 'rgba(29, 79, 216, 0.30)', // 溫度過冷／UVB 太低 → 淺藍
+    too_low: 'rgba(29, 79, 216, 0.30)',  // UVB too_low
+    ok: 'rgba(22, 163, 74, 0.30)',       // 安全範圍 → 淺綠
+    too_hot: 'rgba(220,38,38,0.30)',     // 溫度過熱／UVB 太高 → 淺紅
+    too_high: 'rgba(220,38,38,0.30)',    // UVB too_high
+    unknown: 'rgba(107,114,128,0.08)',   // 無資料 → 淺灰
   };
 
-  const BG_COLORS: Record<TempRiskKind, string> = {
-    too_cold: 'rgba(29,78,216,0.1)', // 淺藍
-    ok: 'rgba(22,163,74,0.08)', // 淺綠
-    too_hot: 'rgba(220,38,38,0.1)', // 淺紅
-    unknown: 'rgba(107,114,128,0.08)', // 灰
-  };
+  type BgSegment = { risk: AnyRiskKind; fromX: number; toX: number };
 
-  type ColoredSegments = {
-    lines: { color: string; path: string }[];
-    bgs: { risk: TempRiskKind; fromX: number; toX: number }[];
-  };
+  const bgSegments: BgSegment[] = useMemo(() => {
+    const source = uvbRisk ?? tempRisk;
+    if (!source || !source.hourly?.length || !coords.length) return [];
 
-  const coloredSegments: ColoredSegments = useMemo(() => {
-    if (!tempRisk || !tempRisk.hourly?.length || !coords.length) {
-      return {
-        lines: [
-          {
-            color,
-            path: coords.map(p => `${p.x},${p.y}`).join(' '),
-          },
-        ],
-        bgs: [],
-      };
-    }
-
-    const lineSegments: { color: string; pts: { x: number; y: number }[] }[] = [];
-    const bgSegments: { risk: TempRiskKind; fromX: number; toX: number }[] = [];
-
-    let currentRisk: TempRiskKind = tempRisk.hourly[0].risk;
-    let currentPts: { x: number; y: number }[] = [coords[0]];
+    const segments: BgSegment[] = [];
+    let currentRisk: AnyRiskKind = (source.hourly[0].risk ??
+      'ok') as AnyRiskKind;
     let segmentStartX = coords[0].x;
 
     for (let i = 1; i < coords.length; i++) {
-      const risk: TempRiskKind = tempRisk.hourly[i]?.risk ?? 'ok';
+      const risk = (source.hourly[i]?.risk ?? 'ok') as AnyRiskKind;
       const pt = coords[i];
-      if (risk === currentRisk) {
-        currentPts.push(pt);
-      } else {
-        lineSegments.push({ color: COLORS[currentRisk], pts: currentPts });
-        bgSegments.push({
+      if (risk !== currentRisk) {
+        segments.push({
           risk: currentRisk,
           fromX: segmentStartX,
           toX: pt.x,
         });
         currentRisk = risk;
-        currentPts = [coords[i - 1], pt];
-        segmentStartX = coords[i - 1].x;
+        segmentStartX = pt.x;
       }
     }
+    // 最後一段
+    segments.push({
+      risk: currentRisk,
+      fromX: segmentStartX,
+      toX: coords[coords.length - 1].x,
+    });
+    return segments;
+  }, [coords, tempRisk, uvbRisk]);
 
-    if (currentPts.length) {
-      lineSegments.push({ color: COLORS[currentRisk], pts: currentPts });
-      bgSegments.push({
-        risk: currentRisk,
-        fromX: segmentStartX,
-        toX: coords[coords.length - 1].x,
-      });
-    }
-
-    return {
-      lines: lineSegments.map(seg => ({
-        color: seg.color,
-        path: seg.pts.map(p => `${p.x},${p.y}`).join(' '),
-      })),
-      bgs: bgSegments,
-    };
-  }, [coords, tempRisk, color]);
+  // 單一漸層折線
+  const linePoints = useMemo(
+    () => coords.map(p => `${p.x},${p.y}`).join(' '),
+    [coords]
+  );
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title}>
+        {title}
+        {unit ? ` (${unit})` : ''}
+      </Text>
 
       <Svg width={width} height={height}>
-        {/* 🎨 背景區塊 */}
-        {coloredSegments.bgs.map((seg, i) => (
+        {/* 🌈 漸層定義（與 ChartLineWeight 相同） */}
+        <Defs>
+          <LinearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#ef4444" stopOpacity="1" />
+            <Stop offset="1" stopColor="#3b82f6" stopOpacity="1" />
+          </LinearGradient>
+        </Defs>
+
+        {/* 🎨 背景區塊（依 risk 區間著色） */}
+        {bgSegments.map((seg, i) => (
           <Rect
             key={`bg-${i}`}
             x={seg.fromX}
@@ -175,11 +175,9 @@ export default function LineChartTemp({
           />
         ))}
 
-        {/* 🔳 整個灰色 GRID */}
-        {/* 垂直線（每 6 小時） */}
+        {/* 🔳 GRID：垂直線 */}
         {tickIdxs.map((hour, i) => {
-          const x =
-            paddingLeft + (Math.min(hour, 24) / 24) * plotWidth;
+          const x = paddingLeft + (Math.min(hour, 24) / 24) * plotWidth;
           return (
             <Line
               key={`grid-x-${i}`}
@@ -192,7 +190,8 @@ export default function LineChartTemp({
             />
           );
         })}
-        {/* 水平線（每 y tick） */}
+
+        {/* 🔳 GRID：水平線 */}
         {yLabels.map((_, i) => {
           const ratio = i / (yTicks - 1);
           const yCoord = paddingTop + (plotHeight - ratio * plotHeight);
@@ -229,8 +228,7 @@ export default function LineChartTemp({
 
         {/* X 軸刻度（Now ~ +24h） */}
         {tickIdxs.map((hour, i) => {
-          const x =
-            paddingLeft + (Math.min(hour, 24) / 24) * plotWidth;
+          const x = paddingLeft + (Math.min(hour, 24) / 24) * plotWidth;
           const label = i === 0 ? 'Now' : `+${hour}h`;
           return (
             <SvgText
@@ -264,16 +262,15 @@ export default function LineChartTemp({
           strokeWidth={1}
         />
 
-        {/* 折線：分段上色 */}
-        {coloredSegments.lines.map((seg, i) => (
+        {/* 🌈 單一漸層折線 */}
+        {coords.length > 0 && (
           <Polyline
-            key={`seg-${i}`}
-            points={seg.path}
+            points={linePoints}
             fill="none"
-            stroke={seg.color}
+            stroke="url(#tempGrad)"
             strokeWidth={2.5}
           />
-        ))}
+        )}
       </Svg>
     </View>
   );

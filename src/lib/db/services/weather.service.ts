@@ -2,6 +2,8 @@
 import { query, execute } from '../db.client';
 
 export type CachedHourly = {
+  /** 當地絕對時間 ISO 字串（含 offset），長度與其他 hourly 陣列相同 */
+  timesLocal: string[];
   temperature: number[];
   cloudcover: number[];
   uvIndex: number[];
@@ -20,6 +22,8 @@ type WeatherHourly = {
   tz: string;
   lat: number;
   lon: number;
+  /** 當地絕對時間 ISO 字串（含 offset） */
+  timesLocal: string[];
   temperature: number[];
   cloudcover: number[];
   uvIndex: number[];
@@ -29,12 +33,61 @@ type WeatherHourly = {
   raw: any;
 };
 
-function toKey(lat: number, lon: number) {
+/** 使用 GPS 座標建立一個 location key（目前保留三位小數） */
+function toKey(lat: number, lon: number): string {
   return `${lat.toFixed(3)},${lon.toFixed(3)}`;
 }
 
-function todayYYYYMMDD() {
-  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+function todayYYYYMMDD(): string {
+  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"（UTC 日期）
+}
+
+/**
+ * 將 Open-Meteo 回傳的「當地時間字串」 + utc_offset_seconds
+ * 轉成「UTC 毫秒 timestamp」，完全不依賴裝置時區。
+ *
+ * e.g.
+ *   timeStr = "2025-11-11T17:00"
+ *   utc_offset_seconds = 28800 (+8h)
+ *   → 對應 UTC 時間為 2025-11-11T09:00:00Z
+ */
+function localTimeStrToUtcMs(
+  timeStr: string,
+  utcOffsetSeconds: number
+): number {
+  // timeStr 格式通常為 "YYYY-MM-DDTHH:MM"
+  const [datePart, timePart] = timeStr.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = (timePart || '00:00').split(':').map(Number);
+
+  // 先當成「這個年月日的 HH:MM 在 UTC」，再減 offset 得到真正 UTC
+  const localAsUtcMs = Date.UTC(year, month - 1, day, hour, minute || 0);
+  return localAsUtcMs - utcOffsetSeconds * 1000;
+}
+
+/**
+ * 將 "YYYY-MM-DDTHH:MM" 的當地時間字串 + utc_offset_seconds
+ * 轉成「當地絕對時間 ISO 字串（含 offset）」
+ *
+ * 例：
+ *   timeStr = "2025-11-11T17:00"
+ *   utc_offset_seconds = 28800 (+8h)
+ *   → "2025-11-11T17:00+08:00"
+ */
+function localTimeStrToLocalIso(
+  timeStr: string,
+  utcOffsetSeconds: number
+): string {
+  const absSeconds = Math.abs(utcOffsetSeconds);
+  const offsetHours = Math.floor(absSeconds / 3600);
+  const offsetMinutes = Math.floor((absSeconds % 3600) / 60);
+
+  const sign = utcOffsetSeconds >= 0 ? '+' : '-';
+  const hh = String(offsetHours).padStart(2, '0');
+  const mm = String(offsetMinutes).padStart(2, '0');
+
+  // Open-Meteo 給的是 "YYYY-MM-DDTHH:MM"，直接補上 offset 即可形成合法 ISO 8601
+  return `${timeStr}${sign}${hh}:${mm}`;
 }
 
 /**
@@ -43,6 +96,7 @@ function todayYYYYMMDD() {
  *
  * - 不做 DB cache、不知道 maxAge
  * - 回傳的 temperature/cloudcover/uvIndex 長度最多為 24
+ * - 時間的對齊完全使用 API 的 utc_offset_seconds，避免裝置時區干擾
  */
 export async function fetchHourlyFromAPI(
   lat: number,
@@ -52,35 +106,45 @@ export async function fetchHourlyFromAPI(
     latitude: String(lat),
     longitude: String(lon),
     hourly: 'temperature_2m,cloudcover,uv_index',
-    timezone: 'auto',
+    timezone: 'auto', // 依 GPS (lat/lon) 自動決定當地時區
   });
-  const url = `https://api.open-meteo.com/v1/forecast?${params}`;
+
+  // ✅ 正確帶入 query string
+  const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
 
   const json = await res.json();
 
-  const tz = json.timezone ?? 'UTC';
+  const tz: string = json.timezone ?? 'UTC';
+  const utcOffsetSeconds: number = json.utc_offset_seconds ?? 0;
+
   const times: string[] = json.hourly?.time ?? [];
   const temperatureAll: number[] = json.hourly?.temperature_2m ?? [];
   const cloudcoverAll: number[] = json.hourly?.cloudcover ?? [];
   const uvIndexAll: number[] = json.hourly?.uv_index ?? [];
 
   // 依 API 給的時間列，找出「最接近現在」的 index，往後取 24 小時
-  const now = Date.now();
-  // 找最後一個 <= now 的時間點當作起點（或 0）
+  const nowUtcMs = Date.now(); // 這本來就是 UTC 毫秒
+
+  // 找最後一個 <= 現在時間（UTC）對應的 index
   let idx = -1;
   for (let i = 0; i < times.length; i++) {
-    const t = new Date(times[i]).getTime();
-    if (t <= now) idx = i;
+    const tUtcMs = localTimeStrToUtcMs(times[i], utcOffsetSeconds);
+    if (tUtcMs <= nowUtcMs) idx = i;
     else break;
   }
+
   const startIdx = Math.max(0, idx);
   const END = startIdx + 24;
 
   const temperature = temperatureAll.slice(startIdx, END);
   const cloudcover = cloudcoverAll.slice(startIdx, END);
   const uvIndex = uvIndexAll.slice(startIdx, END);
+  const timesLocal = times
+    .slice(startIdx, END)
+    .map((t) => localTimeStrToLocalIso(t, utcOffsetSeconds));
 
   const uviMax = uvIndex.length ? Math.max(...uvIndex) : null;
 
@@ -88,32 +152,38 @@ export async function fetchHourlyFromAPI(
     tz,
     lat,
     lon,
+    timesLocal,
     temperature,
     cloudcover,
     uvIndex,
     uviMax,
     date: todayYYYYMMDD(),
     locationKey: toKey(lat, lon),
-    raw: json, // 保留完整原始回應以備除錯
+    raw: json, // 保留完整原始回應以備除錯（含 timezone, utc_offset_seconds, hourly.time 等）
   };
 }
 
 /**
  * 將一筆 WeatherHourly 寫入 / 更新到 weather_cache
+ *
+ * ⚠️ 需要 weather_cache 有欄位：
+ *   hourly_times_local_json TEXT
  */
 export async function upsertWeatherCache(row: WeatherHourly): Promise<void> {
   const nowIso = new Date().toISOString();
   await execute(
     `INSERT INTO weather_cache
       (location_key, date, tz, lat, lon, uvi_max,
+       hourly_times_local_json,
        hourly_temp_c_json, hourly_cloudcover_json, hourly_uv_index_json,
        raw_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(location_key, date) DO UPDATE SET
        tz = excluded.tz,
        lat = excluded.lat,
        lon = excluded.lon,
        uvi_max = excluded.uvi_max,
+       hourly_times_local_json = excluded.hourly_times_local_json,
        hourly_temp_c_json = excluded.hourly_temp_c_json,
        hourly_cloudcover_json = excluded.hourly_cloudcover_json,
        hourly_uv_index_json = excluded.hourly_uv_index_json,
@@ -126,6 +196,7 @@ export async function upsertWeatherCache(row: WeatherHourly): Promise<void> {
       row.lat,
       row.lon,
       row.uviMax,
+      JSON.stringify(row.timesLocal),
       JSON.stringify(row.temperature),
       JSON.stringify(row.cloudcover),
       JSON.stringify(row.uvIndex),
@@ -144,13 +215,15 @@ export async function getCachedHourly(
   dateStr: string
 ): Promise<CachedHourly | null> {
   const rows = await query<{
+    hourly_times_local_json: string | null;
     hourly_temp_c_json: string;
     hourly_cloudcover_json: string;
     hourly_uv_index_json: string;
     uvi_max: number | null;
     tz: string | null;
   }>(
-    `SELECT hourly_temp_c_json, hourly_cloudcover_json,
+    `SELECT hourly_times_local_json,
+            hourly_temp_c_json, hourly_cloudcover_json,
             hourly_uv_index_json, uvi_max, tz
      FROM weather_cache
      WHERE location_key = ? AND date = ?
@@ -160,6 +233,7 @@ export async function getCachedHourly(
   if (rows.length === 0) return null;
   const r = rows[0];
   return {
+    timesLocal: JSON.parse(r.hourly_times_local_json || '[]'),
     temperature: JSON.parse(r.hourly_temp_c_json || '[]'),
     cloudcover: JSON.parse(r.hourly_cloudcover_json || '[]'),
     uvIndex: JSON.parse(r.hourly_uv_index_json || '[]'),
@@ -176,6 +250,8 @@ export async function getCachedHourly(
  * - 檢查 cache 是否存在 / 是否過期
  * - 視情況重抓並更新 weather_cache
  * - 回傳的 hourly.* 一律視為「從現在起往後 24 小時」的序列
+ *
+ * hourly.timesLocal 會對應到每一筆 temperature/cloudcover/uvIndex 的當地絕對時間
  */
 export async function ensureTodayHourly(options: {
   lat: number;
@@ -200,7 +276,11 @@ export async function ensureTodayHourly(options: {
       const ageHours = (Date.now() - updatedAt) / 36e5;
       if (ageHours <= maxAge) {
         const cached = await getCachedHourly(locationKey, date);
-        if (cached && cached.temperature.length) {
+        if (
+          cached &&
+          cached.temperature.length &&
+          cached.timesLocal.length === cached.temperature.length
+        ) {
           return { locationKey, date, hourly: cached };
         }
       }
@@ -208,7 +288,11 @@ export async function ensureTodayHourly(options: {
   } else {
     // 沒有年齡限制：只要今天有 cache 就直接用
     const cached = await getCachedHourly(locationKey, date);
-    if (cached && cached.temperature.length) {
+    if (
+      cached &&
+      cached.temperature.length &&
+      cached.timesLocal.length === cached.temperature.length
+    ) {
       return { locationKey, date, hourly: cached };
     }
   }

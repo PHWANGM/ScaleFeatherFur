@@ -64,10 +64,11 @@ export default function HomeScreen({ navigation }: Props) {
     loading: locationLoading,
   } = useCurrentLocation();
 
-  // 🌤 Weather + 溫度風險判斷
+  // 🌤 Weather + 溫度 / UVB 風險判斷
   const {
     loading: weatherLoading,
     tempRisk,
+    uvbRisk,
     next24Temp,
     uviHourly,
     currentCloud,
@@ -105,6 +106,19 @@ export default function HomeScreen({ navigation }: Props) {
 
   const speciesLabel = pet?.species_name ?? pet?.species_key ?? '—';
   const environmentLoading = locationLoading || weatherLoading;
+
+  // 小工具：從 localIso 取出 "HH:MM"
+  const formatLocalTime = useCallback((iso: string | null | undefined) => {
+    if (!iso) return '--:--';
+    // 期待格式類似 "2025-11-11T17:00+08:00"
+    const daypart = iso.split('T')[0];
+    if (!daypart) return '--:--';
+    const timePart = iso.split('T')[1];
+    if (!timePart) return '--:--';
+    // 先取前 5 個字元（HH:MM），避免帶到秒或 offset
+    const hhmm = daypart.slice(-5) + " " + timePart.slice(0, 5);
+    return hhmm;
+  }, []);
 
   return (
     <SafeAreaView
@@ -178,14 +192,60 @@ export default function HomeScreen({ navigation }: Props) {
                     <Text style={[styles.alertTitle, { color: '#ff6363' }]}>
                       Temperature Alert
                     </Text>
-                    {tempRisk.segments.map(seg => (
-                      <Text
-                        key={`${seg.fromHour}-${seg.toHour}-${seg.risk}`}
-                        style={[styles.alertSub, { color: palette.subText }]}
-                      >
-                        {seg.fromHour}:00–{seg.toHour + 1}:00 → {seg.risk}
-                      </Text>
-                    ))}
+                    {tempRisk.segments.map((seg, idx) => {
+                      // 根據 fromOffset / toOffset，從 hourly 拿對應的 localIso
+                      const fromIso =
+                        tempRisk.hourly[seg.fromOffset]?.localIso ?? null;
+                      const toIso =
+                        tempRisk.hourly[seg.toOffset]?.localIso ?? null;
+                      const fromTime = formatLocalTime(fromIso);
+                      const toTime = formatLocalTime(toIso);
+                      return (
+                        <Text
+                          key={`temp-${idx}-${seg.risk}`}
+                          style={[styles.alertSub, { color: palette.subText }]}
+                        >
+                          {fromTime}–{toTime} → {seg.risk}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* 🌞 UVB Warning */}
+              {uvbRisk && uvbRisk.shouldWarn && (
+                <View style={[styles.alertRow, { marginBottom: 8 }]}>
+                  <View
+                    style={[
+                      styles.alertIconBox,
+                      { backgroundColor: 'rgba(250,204,21,0.25)' },
+                    ]}
+                  >
+                    <Feather name="sun" size={22} color="#facc15" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.alertTitle, { color: '#facc15' }]}>
+                      UVB Alert
+                    </Text>
+                    {uvbRisk.segments.map((seg, idx) => {
+                      const fromIso =
+                        uvbRisk.hourly[seg.fromOffset]?.localIso ?? null;
+                      const toIso =
+                        uvbRisk.hourly[seg.toOffset]?.localIso ?? null;
+
+                      const fromTime = formatLocalTime(fromIso);
+                      const toTime = formatLocalTime(toIso);
+
+                      return (
+                        <Text
+                          key={`uvb-${idx}-${seg.risk}`}
+                          style={[styles.alertSub, { color: palette.subText }]}
+                        >
+                          {fromTime}–{toTime} → {seg.risk}
+                        </Text>
+                      );
+                    })}
                   </View>
                 </View>
               )}
@@ -244,6 +304,7 @@ export default function HomeScreen({ navigation }: Props) {
               uviHourly={uviHourly}
               currentCloud={currentCloud}
               tempRisk={tempRisk}
+              uvbRisk={uvbRisk}
             />
           </View>
 
