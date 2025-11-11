@@ -2,8 +2,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import LineChartSimple from './LineChartSimple';
+import LineChartTemp from './LineChartTemp';
 import { useThemeColors } from '../../styles/themesColors';
+import type { Next24hTempRiskResult } from '../../lib/compliance/envTempForecast.service';
 
 type Props = {
   locationName: string;
@@ -11,6 +12,8 @@ type Props = {
   tempHourly: number[];
   uviHourly: number[];
   currentCloud: number | null;
+  /** 可選：接下來 24h 的溫度風險（用來顯示 species 對應的預警） */
+  tempRisk?: Next24hTempRiskResult | null;
 };
 
 export default function EnvironmentSection({
@@ -19,6 +22,7 @@ export default function EnvironmentSection({
   tempHourly,
   uviHourly,
   currentCloud,
+  tempRisk,
 }: Props) {
   const { colors, isDark } = useThemeColors();
 
@@ -30,6 +34,9 @@ export default function EnvironmentSection({
     border: colors.border,
     primary: colors.primary ?? '#38e07b',
   };
+
+  const hasRiskInfo = !!tempRisk;
+  const shouldWarn = tempRisk?.shouldWarn ?? false;
 
   return (
     <View>
@@ -59,6 +66,7 @@ export default function EnvironmentSection({
           </View>
         ) : (
           <>
+            {/* 上方：雲量 & 溫度是否在安全範圍 */}
             <View
               style={{
                 flexDirection: 'row',
@@ -77,35 +85,71 @@ export default function EnvironmentSection({
               >
                 <Feather name="cloud" size={22} color={palette.primary} />
               </View>
-              <Text
-                style={{
-                  color: palette.text,
-                  fontSize: 16,
-                  fontWeight: '700',
-                }}
-              >
-                Current Cloud Cover:
-              </Text>
-              <Text
-                style={{
-                  color: palette.text,
-                  fontSize: 16,
-                  fontWeight: '800',
-                  marginLeft: 6,
-                }}
-              >
-                {currentCloud !== null ? `${Math.round(currentCloud)}%` : '—'}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: palette.text,
+                    fontSize: 16,
+                    fontWeight: '700',
+                  }}
+                >
+                  Current Cloud Cover:
+                </Text>
+                <Text
+                  style={{
+                    color: palette.text,
+                    fontSize: 16,
+                    fontWeight: '800',
+                    marginTop: 2,
+                  }}
+                >
+                  {currentCloud !== null
+                    ? `${Math.round(currentCloud)}%`
+                    : '—'}
+                </Text>
+              </View>
             </View>
 
-            <LineChartSimple
+            {/* 若有 species 溫度風險資訊，顯示一行摘要 */}
+            {hasRiskInfo && (
+              <View style={{ marginBottom: 10 }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: shouldWarn ? '#f97373' : palette.subText,
+                  }}
+                >
+                  {shouldWarn
+                    ? `⚠ 接下來 ${tempRisk?.hoursChecked ?? 0} 小時內，環境溫度有可能過冷或過熱。`
+                    : `✅ 接下來 ${tempRisk?.hoursChecked ?? 0} 小時內，環境溫度大致落在安全範圍。`}
+                </Text>
+                {tempRisk?.ambientMin != null &&
+                  tempRisk?.ambientMax != null && (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        marginTop: 2,
+                        color: palette.subText,
+                      }}
+                    >
+                      Target ambient: {tempRisk.ambientMin}–
+                      {tempRisk.ambientMax} °C
+                    </Text>
+                  )}
+              </View>
+            )}
+
+            {/* 溫度與 UV 折線圖 */}
+            <LineChartTemp
               title="Temperature (°C)"
               values={tempHourly}
               unit="°C"
               color={palette.primary}
+              tempRisk={tempRisk} // ✅ 加這行
             />
             <View style={{ height: 10 }} />
-            <LineChartSimple
+            <LineChartTemp
               title="UV Index"
               values={uviHourly}
               color={isDark ? '#fbbf24' : '#b45309'}

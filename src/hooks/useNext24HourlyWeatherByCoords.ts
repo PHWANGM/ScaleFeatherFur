@@ -1,32 +1,52 @@
-// src/hooks/useTodayHourlyWeatherByCoords.ts
+// src/hooks/useNext24HourlyWeatherByCoords.ts
 import { useCallback, useEffect, useState } from 'react';
-import { ensureTodayHourly } from '../lib/db/services/weather.service'; // ✅ 乾淨的 service 層
+import { ensureTodayHourly } from '../lib/db/services/weather.service';
 import type { Coords } from './useCurrentLocation';
 
-export type TodayHourlyWeatherState = {
+import {
+  evaluateNext24hAmbientTempForPetFromTodayHourly,
+  type Next24hTempRiskResult,
+} from '../lib/compliance/envTempForecast.service';
+
+export type Next24HourlyWeatherState = {
   loading: boolean;
+
+  /** API + cache 回來的「接下來 24 小時」溫度序列 */
   tempHourly: number[];
   uviHourly: number[];
   cloudHourly: number[];
   currentCloud: number | null;
+
+  /** 從現在開始的 24 小時溫度（通常等於 tempHourly） */
+  next24Temp: number[];
+
+  /** 和 species target 比較後的結果；若沒有 petId 或沒有 target 就是 null */
+  tempRisk: Next24hTempRiskResult | null;
+
   error?: string;
 };
 
-export type UseTodayHourlyWeatherByCoordsOptions = {
+export type UseNext24HourlyWeatherByCoordsOptions = {
   maxAgeHours?: number;
 };
 
-
-export function useTodayHourlyWeatherByCoords(
+/**
+ * 1) 用 coords 取得「接下來 24 小時」的 hourly 天氣。
+ * 2) 直接把這 24h 溫度拿去跟該 pet 的 species ambient 溫度需求比較。
+ */
+export function useNext24HourlyWeatherByCoords(
   coords: Coords | null,
-  options: UseTodayHourlyWeatherByCoordsOptions = {}
-): TodayHourlyWeatherState & { reload: () => void } {
-  const [state, setState] = useState<TodayHourlyWeatherState>({
+  petId: string | null,
+  options: UseNext24HourlyWeatherByCoordsOptions = {}
+): Next24HourlyWeatherState & { reload: () => void } {
+  const [state, setState] = useState<Next24HourlyWeatherState>({
     loading: false,
     tempHourly: [],
     uviHourly: [],
     cloudHourly: [],
     currentCloud: null,
+    next24Temp: [],
+    tempRisk: null,
     error: undefined,
   });
 
@@ -34,7 +54,6 @@ export function useTodayHourlyWeatherByCoords(
 
   const loadWeather = useCallback(async () => {
     if (!coords) {
-      // 沒有座標 → 不打 API，直接維持非 loading 狀態
       setState(prev => ({
         ...prev,
         loading: false,
@@ -42,6 +61,8 @@ export function useTodayHourlyWeatherByCoords(
         uviHourly: [],
         cloudHourly: [],
         currentCloud: null,
+        next24Temp: [],
+        tempRisk: null,
         error: undefined,
       }));
       return;
@@ -56,7 +77,7 @@ export function useTodayHourlyWeatherByCoords(
         maxAgeHours,
       });
 
-      const nowHour = new Date().getHours();
+      const now = new Date();
 
       const tempHourly: number[] = Array.isArray(hourly.temperature)
         ? hourly.temperature
@@ -68,8 +89,21 @@ export function useTodayHourlyWeatherByCoords(
         ? hourly.cloudcover
         : [];
 
-      const currentCloud =
-        cloudHourly.length > nowHour ? cloudHourly[nowHour] : null;
+      // 這裡的陣列已經代表「從現在起往後 24 小時」
+      const next24Temp = tempHourly.slice(0, 24);
+
+      // 目前的雲量就抓第 0 小時（最接近現在）
+      const currentCloud = cloudHourly.length > 0 ? cloudHourly[0] : null;
+
+      let tempRisk: Next24hTempRiskResult | null = null;
+
+      if (petId && next24Temp.length > 0) {
+        tempRisk = await evaluateNext24hAmbientTempForPetFromTodayHourly(
+          petId,
+          next24Temp,
+          now
+        );
+      }
 
       setState({
         loading: false,
@@ -77,6 +111,8 @@ export function useTodayHourlyWeatherByCoords(
         uviHourly,
         cloudHourly,
         currentCloud,
+        next24Temp,
+        tempRisk,
         error: undefined,
       });
     } catch (e: any) {
@@ -87,10 +123,12 @@ export function useTodayHourlyWeatherByCoords(
         uviHourly: [],
         cloudHourly: [],
         currentCloud: null,
+        next24Temp: [],
+        tempRisk: null,
         error: String(e?.message ?? e),
       });
     }
-  }, [coords, maxAgeHours]);
+  }, [coords, maxAgeHours, petId]);
 
   useEffect(() => {
     loadWeather();
@@ -101,7 +139,6 @@ export function useTodayHourlyWeatherByCoords(
 
 /**
  * 小工具：依雲量百分比做分類
- * 之後你要寫規則（清空度/多雲/陰天）時可以直接用。
  */
 export function classifyCloudCover(
   cloudPercent: number | null

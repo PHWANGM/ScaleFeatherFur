@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, Switch } from 'react-native';
 import { useSelector } from 'react-redux';
 
-import ChartLine from './ChartLine';
+import ChartLine from './ChartLineWeight';
 import {
   listCareLogsByPetBetween,
   type CareLogRow,

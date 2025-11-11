@@ -1,4 +1,4 @@
-// src/lib/weather.service.ts
+// src/lib/db/services/weather.service.ts
 import { query, execute } from '../db.client';
 
 export type CachedHourly = {
@@ -12,6 +12,7 @@ export type CachedHourly = {
 export type EnsureResult = {
   locationKey: string;
   date: string;
+  /** 這裡的 hourly.* 都是「從現在起往後 24 小時」的序列 */
   hourly: CachedHourly;
 };
 
@@ -37,11 +38,16 @@ function todayYYYYMMDD() {
 }
 
 /**
- * 直接呼叫 Open-Meteo API 取得逐小時資料。
- * - 只負責打 API + 轉成 WeatherHourly 結構
+ * 直接呼叫 Open-Meteo API 取得逐小時資料，並切出
+ * 「從現在起往後 24 小時」。
+ *
  * - 不做 DB cache、不知道 maxAge
+ * - 回傳的 temperature/cloudcover/uvIndex 長度最多為 24
  */
-export async function fetchHourlyFromAPI(lat: number, lon: number): Promise<WeatherHourly> {
+export async function fetchHourlyFromAPI(
+  lat: number,
+  lon: number
+): Promise<WeatherHourly> {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -62,7 +68,13 @@ export async function fetchHourlyFromAPI(lat: number, lon: number): Promise<Weat
 
   // 依 API 給的時間列，找出「最接近現在」的 index，往後取 24 小時
   const now = Date.now();
-  const idx = times.findIndex((iso) => new Date(iso).getTime() <= now);
+  // 找最後一個 <= now 的時間點當作起點（或 0）
+  let idx = -1;
+  for (let i = 0; i < times.length; i++) {
+    const t = new Date(times[i]).getTime();
+    if (t <= now) idx = i;
+    else break;
+  }
   const startIdx = Math.max(0, idx);
   const END = startIdx + 24;
 
@@ -157,12 +169,13 @@ export async function getCachedHourly(
 }
 
 /**
- * ✅ 單一入口：依 lat/lon 確保「今天」逐小時天氣資料存在
+ * ✅ 單一入口：依 lat/lon 確保「接下來 24 小時」逐小時天氣資料存在
  *
  * 呼叫者要自己決定 coords 來源（例如用 useCurrentLocation hook），
  * 這裡只負責：
  * - 檢查 cache 是否存在 / 是否過期
  * - 視情況重抓並更新 weather_cache
+ * - 回傳的 hourly.* 一律視為「從現在起往後 24 小時」的序列
  */
 export async function ensureTodayHourly(options: {
   lat: number;

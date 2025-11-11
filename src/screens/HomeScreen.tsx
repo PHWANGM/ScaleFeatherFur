@@ -14,7 +14,6 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { RootTabParamList } from '../navigation/rootNavigator';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import PetsHeader from '../components/headers/PetsHeader';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCurrentPetId, selectCurrentPetId } from '../state/slices/petsSlice';
@@ -27,7 +26,7 @@ import { useThemeColors } from '../styles/themesColors';
 
 // 🆕 hooks
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
-import { useTodayHourlyWeatherByCoords } from '../hooks/useTodayHourlyWeatherByCoords';
+import { useNext24HourlyWeatherByCoords } from '../hooks/useNext24HourlyWeatherByCoords';
 
 // 🆕 Environment component
 import EnvironmentSection from '../components/charts/EnvironmentSection';
@@ -64,15 +63,16 @@ export default function HomeScreen({ navigation }: Props) {
     locationName,
     loading: locationLoading,
   } = useCurrentLocation();
-  
 
-  // 🌤 Weather based on coords
+  // 🌤 Weather + 溫度風險判斷
   const {
     loading: weatherLoading,
-    tempHourly,
+    tempRisk,
+    next24Temp,
     uviHourly,
     currentCloud,
-  } = useTodayHourlyWeatherByCoords(coords, { maxAgeHours: 2 });
+    error: weatherError,
+  } = useNext24HourlyWeatherByCoords(coords, currentPetId, { maxAgeHours: 2 });
 
   /** 🦎 讀取寵物資料 */
   const loadPet = useCallback(async () => {
@@ -156,12 +156,41 @@ export default function HomeScreen({ navigation }: Props) {
                 {speciesLabel}
               </Text>
             </View>
+
             <View
               style={[
                 styles.card,
                 { backgroundColor: palette.card, borderColor: palette.border },
               ]}
             >
+              {/* 🌡 Temp Warning */}
+              {tempRisk && tempRisk.shouldWarn && (
+                <View style={[styles.alertRow, { marginBottom: 8 }]}>
+                  <View
+                    style={[
+                      styles.alertIconBox,
+                      { backgroundColor: 'rgba(255,99,99,0.2)' },
+                    ]}
+                  >
+                    <Feather name="thermometer" size={22} color="#ff6363" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.alertTitle, { color: '#ff6363' }]}>
+                      Temperature Alert
+                    </Text>
+                    {tempRisk.segments.map(seg => (
+                      <Text
+                        key={`${seg.fromHour}-${seg.toHour}-${seg.risk}`}
+                        style={[styles.alertSub, { color: palette.subText }]}
+                      >
+                        {seg.fromHour}:00–{seg.toHour + 1}:00 → {seg.risk}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 🧩 Feeding */}
               <View style={styles.alertRow}>
                 <View
                   style={[
@@ -211,9 +240,10 @@ export default function HomeScreen({ navigation }: Props) {
             <EnvironmentSection
               locationName={locationName}
               loading={environmentLoading}
-              tempHourly={tempHourly}
+              tempHourly={next24Temp}
               uviHourly={uviHourly}
               currentCloud={currentCloud}
+              tempRisk={tempRisk}
             />
           </View>
 
