@@ -11,7 +11,7 @@ import {
   deleteCareLog,
   type CareLogRow,
   type CareLogType,
-} from '../../lib/db/repos/care.logs'; // ← 若你的結構是 src/components → src/lib，請改成 ../lib/...
+} from '../../lib/db/repos/care.logs';
 
 // 顏色對應 care_logs.type
 const typeColor = (t: CareLogType): string => {

@@ -1,5 +1,4 @@
 // src/lib/weather.service.ts
-import * as Location from 'expo-location';
 import { query, execute } from '../db.client';
 
 export type CachedHourly = {
@@ -32,22 +31,16 @@ type WeatherHourly = {
 function toKey(lat: number, lon: number) {
   return `${lat.toFixed(3)},${lon.toFixed(3)}`;
 }
+
 function todayYYYYMMDD() {
   return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
 }
 
-export async function getCurrentCoords(): Promise<{ lat: number; lon: number }> {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
-    // fallback: 台北車站；可改為上次成功定位
-    return { lat: 25.0478, lon: 121.5170 };
-  }
-  const pos = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
-  });
-  return { lat: pos.coords.latitude, lon: pos.coords.longitude };
-}
-
+/**
+ * 直接呼叫 Open-Meteo API 取得逐小時資料。
+ * - 只負責打 API + 轉成 WeatherHourly 結構
+ * - 不做 DB cache、不知道 maxAge
+ */
 export async function fetchHourlyFromAPI(lat: number, lon: number): Promise<WeatherHourly> {
   const params = new URLSearchParams({
     latitude: String(lat),
@@ -58,37 +51,44 @@ export async function fetchHourlyFromAPI(lat: number, lon: number): Promise<Weat
   const url = `https://api.open-meteo.com/v1/forecast?${params}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+
   const json = await res.json();
 
   const tz = json.timezone ?? 'UTC';
   const times: string[] = json.hourly?.time ?? [];
   const temperatureAll: number[] = json.hourly?.temperature_2m ?? [];
-  const cloudcoverAll: number[]  = json.hourly?.cloudcover ?? [];
-  const uvIndexAll: number[]     = json.hourly?.uv_index ?? [];
+  const cloudcoverAll: number[] = json.hourly?.cloudcover ?? [];
+  const uvIndexAll: number[] = json.hourly?.uv_index ?? [];
 
-  // 以 API 給的時間列，找出 <= 現在 的第一個 index
+  // 依 API 給的時間列，找出「最接近現在」的 index，往後取 24 小時
   const now = Date.now();
-  const startIdx = Math.max(
-    0,
-    times.findIndex((iso) => new Date(iso).getTime() <= now)
-  );
-  const END = startIdx + 24; // 只要未來 48 小時
+  const idx = times.findIndex((iso) => new Date(iso).getTime() <= now);
+  const startIdx = Math.max(0, idx);
+  const END = startIdx + 24;
 
   const temperature = temperatureAll.slice(startIdx, END);
-  const cloudcover  = cloudcoverAll.slice(startIdx, END);
-  const uvIndex     = uvIndexAll.slice(startIdx, END);
+  const cloudcover = cloudcoverAll.slice(startIdx, END);
+  const uvIndex = uvIndexAll.slice(startIdx, END);
 
   const uviMax = uvIndex.length ? Math.max(...uvIndex) : null;
 
   return {
-    tz, lat, lon,
-    temperature, cloudcover, uvIndex, uviMax,
+    tz,
+    lat,
+    lon,
+    temperature,
+    cloudcover,
+    uvIndex,
+    uviMax,
     date: todayYYYYMMDD(),
     locationKey: toKey(lat, lon),
     raw: json, // 保留完整原始回應以備除錯
   };
 }
 
+/**
+ * 將一筆 WeatherHourly 寫入 / 更新到 weather_cache
+ */
 export async function upsertWeatherCache(row: WeatherHourly): Promise<void> {
   const nowIso = new Date().toISOString();
   await execute(
@@ -124,7 +124,13 @@ export async function upsertWeatherCache(row: WeatherHourly): Promise<void> {
   );
 }
 
-export async function getCachedHourly(locationKey: string, dateStr: string): Promise<CachedHourly | null> {
+/**
+ * 從 weather_cache 讀出一筆指定 locationKey + date 的逐小時資料
+ */
+export async function getCachedHourly(
+  locationKey: string,
+  dateStr: string
+): Promise<CachedHourly | null> {
   const rows = await query<{
     hourly_temp_c_json: string;
     hourly_cloudcover_json: string;
@@ -143,20 +149,34 @@ export async function getCachedHourly(locationKey: string, dateStr: string): Pro
   const r = rows[0];
   return {
     temperature: JSON.parse(r.hourly_temp_c_json || '[]'),
-    cloudcover:  JSON.parse(r.hourly_cloudcover_json || '[]'),
-    uvIndex:     JSON.parse(r.hourly_uv_index_json || '[]'),
+    cloudcover: JSON.parse(r.hourly_cloudcover_json || '[]'),
+    uvIndex: JSON.parse(r.hourly_uv_index_json || '[]'),
     uviMax: r.uvi_max ?? null,
     tz: r.tz,
   };
 }
 
-/** 主要入口：確保「今天」逐小時資料 */
-export async function ensureTodayHourly(options?: { maxAgeHours?: number }): Promise<EnsureResult> {
-  const { lat, lon } = await getCurrentCoords();
+/**
+ * ✅ 單一入口：依 lat/lon 確保「今天」逐小時天氣資料存在
+ *
+ * 呼叫者要自己決定 coords 來源（例如用 useCurrentLocation hook），
+ * 這裡只負責：
+ * - 檢查 cache 是否存在 / 是否過期
+ * - 視情況重抓並更新 weather_cache
+ */
+export async function ensureTodayHourly(options: {
+  lat: number;
+  lon: number;
+  maxAgeHours?: number;
+}): Promise<EnsureResult> {
+  const { lat, lon, maxAgeHours } = options;
+
   const locationKey = toKey(lat, lon);
   const date = todayYYYYMMDD();
 
-  const maxAge = options?.maxAgeHours ?? null;
+  const maxAge = maxAgeHours ?? null;
+
+  // 有設定 maxAgeHours 的情況下，先檢查 updated_at
   if (maxAge != null) {
     const freshRows = await query<{ updated_at: string }>(
       `SELECT updated_at FROM weather_cache WHERE location_key = ? AND date = ? LIMIT 1`,
@@ -173,25 +193,19 @@ export async function ensureTodayHourly(options?: { maxAgeHours?: number }): Pro
       }
     }
   } else {
+    // 沒有年齡限制：只要今天有 cache 就直接用
     const cached = await getCachedHourly(locationKey, date);
     if (cached && cached.temperature.length) {
       return { locationKey, date, hourly: cached };
     }
   }
 
+  // cache 不存在或太舊 → 打 API + upsert
   const fresh = await fetchHourlyFromAPI(lat, lon);
   await upsertWeatherCache(fresh);
+
   const hourly = await getCachedHourly(locationKey, date);
   if (!hourly) throw new Error('weather_cache upsert failed');
-  return { locationKey, date, hourly };
-}
 
-export async function ensureTodayWithCurrentCloud(): Promise<EnsureResult & { currentCloudPct: number | null }> {
-  const base = await ensureTodayHourly();
-  const hr = new Date().getHours();
-  const currentCloudPct =
-    Array.isArray(base.hourly.cloudcover) && base.hourly.cloudcover.length > hr
-      ? base.hourly.cloudcover[hr]
-      : null;
-  return { ...base, currentCloudPct };
+  return { locationKey, date, hourly };
 }
