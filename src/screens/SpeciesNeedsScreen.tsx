@@ -8,12 +8,10 @@ import { getPetWithSpeciesById } from '../lib/db/repos/pets.repo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SpeciesNeeds'>;
 
-/** 需求卡片會導向的目標路由（請依你的實際註冊為準） */
 type DemandRoute =
   | 'UVBLogScreen'
   | 'HeatControlScreen'
-  | 'FeedGreensScreen'     // 這裡沿用既有路由作為「餵食頻率」頁面，如有專屬頁面可替換
-  | 'VitaminMultiScreen'   // 這裡沿用既有路由顯示「維他命 D3」補充頻率，如有專屬頁面可替換
+  | 'FeedGreensScreen'   // 餵食設定頁（之後在這頁合併 D3 / 鈣粉週期）
   | 'WeighScreen'
   | 'CleanScreen'
   | 'TempMonitorScreen';
@@ -30,7 +28,6 @@ function fmtHoursRange(min?: number | null, max?: number | null): string | null 
   if (min == null && max == null) return null;
   const a = min ?? max ?? 0;
   const b = max ?? min ?? a;
-  // 人性化：≥48 小時以天表示
   const toHuman = (h: number) => (h >= 48 ? `${(h / 24).toFixed(h % 24 === 0 ? 0 : 1)} 天` : `${h} 小時`);
   return `${toHuman(a)}–${toHuman(b)}`;
 }
@@ -57,8 +54,9 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
     if (!target) return cards;
 
     // ==== UVB / 日照 ====
-    const uvbHours = fmtHoursRange(target.uvb_daily_hours_min, target.uvb_daily_hours_max)
-      ?? fmtHoursRange(target.photoperiod_hours_min, target.photoperiod_hours_max);
+    const uvbHours =
+      fmtHoursRange(target.uvb_daily_hours_min, target.uvb_daily_hours_max) ??
+      fmtHoursRange(target.photoperiod_hours_min, target.photoperiod_hours_max);
     const uvbUnit = (target.extra && (target.extra as any).uvb_unit) || '%';
     const uvbIntensity =
       target.uvb_intensity_min != null || target.uvb_intensity_max != null
@@ -77,19 +75,18 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
       });
     }
 
-    // ==== Heat（優先使用 temp_ranges；否則退回 ambient 範圍） ====
+    // ==== Heat（優先 temp_ranges；否則 ambient 範圍） ====
     const hasTempRanges =
-      !!target.temp_ranges?.basking ||
-      !!target.temp_ranges?.hot ||
-      !!target.temp_ranges?.ambient_day;
+      !!(target as any)?.temp_ranges?.basking ||
+      !!(target as any)?.temp_ranges?.hot ||
+      !!(target as any)?.temp_ranges?.ambient_day;
 
     if (hasTempRanges) {
-      const basking = target.temp_ranges?.basking
-        ? `${target.temp_ranges.basking[0]}–${target.temp_ranges.basking[1]}°C`
-        : null;
-      const hot = target.temp_ranges?.hot
-        ? `${target.temp_ranges.hot[0]}–${target.temp_ranges.hot[1]}°C`
-        : null;
+      const tr = (target as any).temp_ranges as
+        | { basking?: [number, number]; hot?: [number, number]; ambient_day?: [number, number] }
+        | undefined;
+      const basking = tr?.basking ? `${tr.basking[0]}–${tr.basking[1]}°C` : null;
+      const hot = tr?.hot ? `${tr.hot[0]}–${tr.hot[1]}°C` : null;
 
       const subtitle = basking
         ? `熱點 ${basking}`
@@ -116,7 +113,7 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
       });
     }
 
-    // ==== Diet（餵食頻率 + 備註） ====
+    // ==== Diet（只顯示餵食頻率 + 備註；鈣粉週期與 D3 週期改到餵食設定頁處理） ====
     if (target.feeding_interval_hours_min != null || target.feeding_interval_hours_max != null || target.diet_note) {
       const freq = fmtHoursRange(target.feeding_interval_hours_min, target.feeding_interval_hours_max);
       const subtitle = [freq ? `每 ${freq} / 次` : null, target.diet_note || null]
@@ -127,35 +124,13 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
         title: '餵食頻率 / 飲食',
         subtitle,
         color: '#E8F5E9',
-        // 暫用 FeedGreensScreen 做為泛用餵食設定頁；若有專屬設定頁，請替換 route
-        route: 'FeedGreensScreen',
-      });
-    }
-
-    // ==== 維他命 D3（補充頻率） ====
-    if (
-      target.vitamin_d3_interval_hours_min != null ||
-      target.vitamin_d3_interval_hours_max != null
-    ) {
-      const d3 = fmtHoursRange(
-        target.vitamin_d3_interval_hours_min,
-        target.vitamin_d3_interval_hours_max
-      );
-      cards.push({
-        key: 'vitamin_d3',
-        title: '補充：維他命 D3',
-        subtitle: d3 ? `每 ${d3} / 次` : undefined,
-        color: '#FFFDE7',
-        // 若你有 VitaminD3Screen，請改成該 route；這裡沿用既有 VitaminMultiScreen
-        route: 'VitaminMultiScreen',
+        route: 'FeedGreensScreen', // 若你有專屬餵食設定頁，改這個 route
       });
     }
 
     // ==== Generic：體重 / 清潔 / 溫度監測 ====
     cards.push({ key: 'weigh', title: '量體重', color: '#E3F2FD', route: 'WeighScreen' });
     cards.push({ key: 'clean', title: '清潔/消毒', color: '#F5EEFC', route: 'CleanScreen' });
-    cards.push({ key: 'temps', title: '溫度/環境監測', color: '#E6EDFA', route: 'TempMonitorScreen' });
-
     return cards;
   }, [target]);
 
@@ -167,23 +142,35 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <Text style={styles.headerText}>{petName} 的需求</Text>
       <ScrollView contentContainerStyle={{ paddingVertical: 12 }}>
-        {needs.map((n, idx) => (
-          <TouchableOpacity
-            key={n.key}
-            activeOpacity={0.85}
-            onPress={() => onPressNeed(n.route)}
-            style={[
-              styles.card,
-              { backgroundColor: n.color, flexDirection: idx % 2 === 1 ? 'row-reverse' : 'row' },
-            ]}
-          >
+        {needs.length === 0 ? (
+          <View style={[styles.card, { backgroundColor: '#FFF6E5' }]}>
             <View style={styles.textWrap}>
-              <Text style={styles.cardTitle}>{n.title}</Text>
-              {!!n.subtitle && <Text style={styles.cardSubtitle}>{n.subtitle}</Text>}
+              <Text style={styles.cardTitle}>尚未有可顯示的需求</Text>
+              <Text style={styles.cardSubtitle}>
+                請在 species_targets 中填入 UVB、溫度或餵食頻率等欄位。
+              </Text>
             </View>
             <View style={styles.rightSlot} />
-          </TouchableOpacity>
-        ))}
+          </View>
+        ) : (
+          needs.map((n, idx) => (
+            <TouchableOpacity
+              key={n.key}
+              activeOpacity={0.85}
+              onPress={() => onPressNeed(n.route)}
+              style={[
+                styles.card,
+                { backgroundColor: n.color, flexDirection: idx % 2 === 1 ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <View style={styles.textWrap}>
+                <Text style={styles.cardTitle}>{n.title}</Text>
+                {!!n.subtitle && <Text style={styles.cardSubtitle}>{n.subtitle}</Text>}
+              </View>
+              <View style={styles.rightSlot} />
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -211,5 +198,5 @@ const styles = StyleSheet.create({
   textWrap: { width: '60%', paddingHorizontal: 6 },
   cardTitle: { fontSize: 22, fontWeight: '700', color: '#2D3748' },
   cardSubtitle: { marginTop: 6, color: '#4A5568' },
-  rightSlot: { width: '35%' }, // 未來可放 icon / 圖片
+  rightSlot: { width: '35%' },
 });

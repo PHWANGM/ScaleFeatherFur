@@ -1,12 +1,20 @@
 -- V1__init.sql
 -- 初始化資料庫（SQLite）
+-- 單位說明：
+-- - UVB 強度：百分比（%）
+-- - UVB 每日照射：小時（hr）
+-- - 溫度：攝氏（°C）
+-- - 餵食頻率：每 X~Y 小時餵一次（依 life_stage）
+-- - 含 D3 補充週期：小時（本檔使用 vitamin_d3_interval_hours_min/max）
+-- - 鈣粉週期（calcium_every_meals）：每幾餐灑粉 1 次（1 = 每餐）
 
+PRAGMA foreign_keys = ON;
 
 -- === Core tables ===
 
 -- 物種清單
 CREATE TABLE IF NOT EXISTS species (
-  key TEXT PRIMARY KEY,            -- 'sulcata', 'leopard_gecko', ...
+  key TEXT PRIMARY KEY,            -- 'sulcata', 'argentine_tegu', 'fat_tailed_gecko', ...
   common_name TEXT NOT NULL,
   scientific_name TEXT,
   notes TEXT,
@@ -30,15 +38,13 @@ CREATE TABLE IF NOT EXISTS pets (
 CREATE INDEX IF NOT EXISTS idx_pets_species    ON pets(species_key);
 CREATE INDEX IF NOT EXISTS idx_pets_updated_at ON pets(updated_at);
 
--- 照護紀錄（最終版）
+-- 照護紀錄
 CREATE TABLE IF NOT EXISTS care_logs (
   id TEXT PRIMARY KEY,
   pet_id TEXT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  -- 放寬 type 並納入 vitamin/heat/light 開關
   type TEXT CHECK (type IN (
     'feed','calcium','vitamin','uvb_on','uvb_off','heat_on','heat_off','clean','weigh'
   )) NOT NULL,
-  -- 更精細的分類
   subtype  TEXT,   -- 'calcium_plain','calcium_d3','vitamin_multi','feed_greens','feed_meat','feed_insect','feed_fruit','uvb','basking_heat','heat_mat','insect_dusting'...
   category TEXT,   -- 'supplement','feed_insect','feed_meat','feed_greens','feed_fruit','light','heat','maint'...
   value REAL,      -- 數值（g/kg/分鐘/顆數等）
@@ -67,73 +73,68 @@ CREATE TABLE IF NOT EXISTS env_readings (
 CREATE INDEX IF NOT EXISTS idx_env_readings_pet_at      ON env_readings(pet_id, at);
 CREATE INDEX IF NOT EXISTS idx_env_readings_metric_zone ON env_readings(metric, zone);
 
--- 物種/生命階段的合規目標（v2）
+-- 物種/生命階段的合規目標（以百分比/小時/餐數）
 CREATE TABLE IF NOT EXISTS species_targets (
   id TEXT PRIMARY KEY,
   species_key TEXT NOT NULL REFERENCES species(key),
   life_stage TEXT CHECK (life_stage IN ('juvenile','adult')) NOT NULL,
 
-  -- UVB：強度與每日照射時數（單位小時；強度單位請在 extra_json 或規則層統一）
+  -- UVB（%）與每日照射（hr）
   uvb_intensity_min REAL,
   uvb_intensity_max REAL,
   uvb_daily_hours_min REAL,
   uvb_daily_hours_max REAL,
 
-  -- 昼夜光照（沿用原欄位）
+  -- 光週期（hr）
   photoperiod_hours_min REAL,
   photoperiod_hours_max REAL,
 
-  -- 適應（環境/常溫）溫度（°C）
+  -- 環境（°C）
   ambient_temp_c_min REAL,
   ambient_temp_c_max REAL,
 
-  -- 餵食頻率（每 X～Y 小時一次；每列已對應 life_stage）
+  -- 餵食頻率（hr）
   feeding_interval_hours_min REAL,
   feeding_interval_hours_max REAL,
 
-  -- 飲食備註
+  -- 飲食備註（可放長文配方）
   diet_note TEXT,
 
-  -- 維生素 D3 的補充週期（每 X～Y 小時一次）
-  vitamin_d3_interval_hours_min REAL,
-  vitamin_d3_interval_hours_max REAL,
+  -- ★ 含 D3 週期（hr）
+  vitamin_d3_interval_hours_min INTEGER,
+  vitamin_d3_interval_hours_max INTEGER,
 
-  -- 可選的細分溫區設定（保留以兼容既有資料/規則）
-  temp_ranges_json TEXT,                       -- 例：{"basking":[35,40],"cool":[24,28]}
+  -- ★ 鈣粉週期（幾餐 1 次；1=每餐）
+  calcium_every_meals INTEGER,
 
-  -- 其他自由欄（濕度/基質/uvb_unit等）
+  -- ★ 飲食組成（%）
+  diet_veg_pct_min REAL,
+  diet_veg_pct_max REAL,
+  diet_meat_pct_min REAL,
+  diet_meat_pct_max REAL,
+  diet_fruit_pct_min REAL,
+  diet_fruit_pct_max REAL,
+
+  -- 可選細分
+  temp_ranges_json TEXT, -- {"ambient":[min,max], "basking":[...]}
   extra_json TEXT,
 
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
 
-  -- 合理性約束（min ≤ max、非負）
-  CHECK (
-    uvb_intensity_min IS NULL OR uvb_intensity_max IS NULL OR
-    uvb_intensity_min <= uvb_intensity_max
-  ),
-  CHECK (
-    uvb_daily_hours_min IS NULL OR uvb_daily_hours_max IS NULL OR
-    uvb_daily_hours_min <= uvb_daily_hours_max
-  ),
-  CHECK (
-    ambient_temp_c_min IS NULL OR ambient_temp_c_max IS NULL OR
-    ambient_temp_c_min <= ambient_temp_c_max
-  ),
-  CHECK (
-    feeding_interval_hours_min IS NULL OR feeding_interval_hours_max IS NULL OR
-    feeding_interval_hours_min <= feeding_interval_hours_max
-  ),
-  CHECK (
-    vitamin_d3_interval_hours_min IS NULL OR vitamin_d3_interval_hours_max IS NULL OR
-    vitamin_d3_interval_hours_min <= vitamin_d3_interval_hours_max
-  ),
-  CHECK (
-    uvb_daily_hours_min IS NULL OR uvb_daily_hours_min >= 0
-  ),
-  CHECK (
-    photoperiod_hours_min IS NULL OR photoperiod_hours_min >= 0
-  ),
+  -- 合理性約束
+  CHECK (uvb_intensity_min IS NULL OR uvb_intensity_max IS NULL OR uvb_intensity_min <= uvb_intensity_max),
+  CHECK (uvb_daily_hours_min IS NULL OR uvb_daily_hours_max IS NULL OR uvb_daily_hours_min <= uvb_daily_hours_max),
+  CHECK (ambient_temp_c_min IS NULL OR ambient_temp_c_max IS NULL OR ambient_temp_c_min <= ambient_temp_c_max),
+  CHECK (feeding_interval_hours_min IS NULL OR feeding_interval_hours_max IS NULL OR feeding_interval_hours_min <= feeding_interval_hours_max),
+
+  -- 百分比 0..100
+  CHECK (diet_veg_pct_min IS NULL OR (diet_veg_pct_min BETWEEN 0 AND 100)),
+  CHECK (diet_veg_pct_max IS NULL OR (diet_veg_pct_max BETWEEN 0 AND 100)),
+  CHECK (diet_meat_pct_min IS NULL OR (diet_meat_pct_min BETWEEN 0 AND 100)),
+  CHECK (diet_meat_pct_max IS NULL OR (diet_meat_pct_max BETWEEN 0 AND 100)),
+  CHECK (diet_fruit_pct_min IS NULL OR (diet_fruit_pct_min BETWEEN 0 AND 100)),
+  CHECK (diet_fruit_pct_max IS NULL OR (diet_fruit_pct_max BETWEEN 0 AND 100)),
 
   UNIQUE (species_key, life_stage)
 );
@@ -286,5 +287,5 @@ INSERT OR IGNORE INTO tasks (key, title, description, points, created_at, update
   ('vitamin','維他命補充',     '含 D3 或綜合維他命補充',                5, datetime('now'), datetime('now')),
   ('uvb',    'UVB 管理',       'UVB 燈具開關/維護/耗材更換',            3, datetime('now'), datetime('now')),
   ('heat',   '加熱設備管理',   'Basking 燈/加熱墊開關與維護',           3, datetime('now'), datetime('now')),
-  ('clean',  '環境清潔',       ' enclosure/水盆/基質清潔',               2, datetime('now'), datetime('now')),
+  ('clean',  '環境清潔',       'enclosure/水盆/基質清潔',               2, datetime('now'), datetime('now')),
   ('weigh',  '體重紀錄',       '定期量測與追蹤',                         2, datetime('now'), datetime('now'));

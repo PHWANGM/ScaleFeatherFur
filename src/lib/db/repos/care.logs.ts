@@ -31,10 +31,17 @@ export type CareLogRow = {
   id: string;
   pet_id: string;
   type: CareLogType;
-  subtype: CareLogSubtype | null; // ★ 新增
-  category: string | null;        // ★ 新增（彙整分類用：'supplement','feed_insect',...）
-  value: number | null;           // grams / kg / ...
-  unit: string | null;            // ★ 新增：'g','kg','pcs','min','h'...
+  subtype: CareLogSubtype | null; // 可選：'calcium_plain' | 'calcium_d3' 等
+  category: string | null;        // 彙整分類：'supplement','feed_insect','feed_meat','feed_greens','feed_fruit','light','heat','maint'...
+  value: number | null;           // 數值（g/kg/分鐘/顆數/百分比等）
+  /**
+   * 單位：'g','kg','pcs','min','h','%' 等
+   * - 餵食重量：g / kg
+   * - 開關時數：min / h（由 on/off 配對計算）
+   * - 次數：pcs
+   * - 配方比例：%
+   */
+  unit: string | null;
   note: string | null;
   at: string;                     // ISO datetime
   created_at: string;
@@ -43,7 +50,6 @@ export type CareLogRow = {
 
 // ========= CRUD =========
 
-/** 新增 care_log；自動填 id / created_at / updated_at */
 export async function insertCareLog(
   data: Omit<CareLogRow, 'id' | 'created_at' | 'updated_at'>
 ): Promise<string> {
@@ -70,7 +76,6 @@ export async function insertCareLog(
   return id;
 }
 
-/** 局部更新；自動補 updated_at */
 export async function updateCareLog(
   id: string,
   patch: Partial<Omit<CareLogRow, 'id' | 'created_at' | 'updated_at'>>
@@ -139,24 +144,14 @@ export async function getLatestWeighOnOrBefore(
 export type DailyAggregates = {
   feed_grams: number;           // 當日餵食總克數
   calcium_count: number;        // 當日補鈣（不分 D3）
-  calcium_plain_count: number;  // ★ 當日純鈣次數
-  calcium_d3_count: number;     // ★ 當日含 D3 次數
-  vitamin_count: number;        // ★ 當日維他命次數
+  calcium_plain_count: number;  // 當日純鈣次數
+  calcium_d3_count: number;     // 當日含 D3 次數
+  vitamin_count: number;        // 當日維他命次數
   uvb_hours: number;            // 當日 UVB 時數（on/off 配對）
-  heat_hours: number;           // ★ 當日加熱時數（on/off 配對）
+  heat_hours: number;           // 當日加熱時數（on/off 配對）
   weight_kg: number;            // 當日結束前最近一次體重
 };
 
-/**
- * 以單一 SQL 回傳多個欄位：
- * feed_grams / calcium_count / calcium_plain_count / calcium_d3_count / vitamin_count
- * uvb_hours / heat_hours / weight_kg
- *
- * 參數：
- * - petId：指定寵物
- * - dayStartISO：該日 00:00:00（含）
- * - dayEndISO：次日 00:00:00（不含）
- */
 export async function getDailyAggregatesSQL(
   petId: string,
   dayStartISO: string,
@@ -205,7 +200,6 @@ export async function getDailyAggregatesSQL(
     WHERE type IN ('uvb_on','uvb_off')
   ),
   uvb AS (
-    -- 僅計算「off 且前一筆是 on」的配對區段；未配對 on 尾段不計入
     SELECT COALESCE(SUM((julianday(at) - julianday(prev_at)) * 24.0), 0.0) AS uvb_hours
     FROM uvb_pairs
     WHERE type = 'uvb_off' AND prev_type = 'uvb_on'
@@ -234,14 +228,14 @@ export async function getDailyAggregatesSQL(
     LIMIT 1
   )
   SELECT
-    (SELECT feed_grams              FROM feed)            AS feed_grams,
-    (SELECT calcium_count           FROM calcium)         AS calcium_count,
-    (SELECT calcium_plain_count     FROM calcium_plain)   AS calcium_plain_count,
-    (SELECT calcium_d3_count        FROM calcium_d3)      AS calcium_d3_count,
-    (SELECT vitamin_count           FROM vitamin)         AS vitamin_count,
-    (SELECT uvb_hours               FROM uvb)             AS uvb_hours,
-    (SELECT heat_hours              FROM heat)            AS heat_hours,
-    COALESCE((SELECT weight_kg FROM weigh), 0.0)          AS weight_kg;
+    (SELECT feed_grams            FROM feed)          AS feed_grams,
+    (SELECT calcium_count         FROM calcium)       AS calcium_count,
+    (SELECT calcium_plain_count   FROM calcium_plain) AS calcium_plain_count,
+    (SELECT calcium_d3_count      FROM calcium_d3)    AS calcium_d3_count,
+    (SELECT vitamin_count         FROM vitamin)       AS vitamin_count,
+    (SELECT uvb_hours             FROM uvb)           AS uvb_hours,
+    (SELECT heat_hours            FROM heat)          AS heat_hours,
+    COALESCE((SELECT weight_kg FROM weigh), 0.0)      AS weight_kg;
   `;
 
   const rows = await query<DailyAggregates>(sql, [
@@ -264,7 +258,6 @@ export async function getDailyAggregatesSQL(
   };
 }
 
-/** （範例）統計一段期間內的補充品分布，可用來對照 species_targets 的規則 */
 export async function getSupplementCounts(
   petId: string,
   fromISO: string,

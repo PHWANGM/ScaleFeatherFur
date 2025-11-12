@@ -10,8 +10,7 @@ export type MigrationEntry =
 /** 正式註冊：依執行順序排列 */
 export const MIGRATIONS: MigrationEntry[] = [
   { name: 'V1__init.sql', asset: require('./V1__init.sql') },
-  { name: 'V2__seed_species_targets.sql', asset: require('./V2__seed_species_targets.sql') },
-  { name: 'V3__seed_species.sql', asset: require('./V3__seed_species.sql') },
+  { name: 'V2__seed_species_information.sql', asset: require('./V2__seed_species_information.sql') },
 ];
 
 /** 讀取 Migration 的 SQL 文字 */

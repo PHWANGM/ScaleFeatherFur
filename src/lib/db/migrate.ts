@@ -1,6 +1,6 @@
 // src/lib/db/migrate.ts
 import { execute, query } from './db.client';
-import { MIGRATIONS, readMigrationSql } from './migrations';
+import { MIGRATIONS, readMigrationSql } from './migrations/index';
 
 type Applied = { name: string };
 
