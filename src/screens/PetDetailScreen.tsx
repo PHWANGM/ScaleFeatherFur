@@ -2,7 +2,7 @@
 import { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import ChartLine from '../components/charts/ChartLine';
+import ChartLineWeight from '../components/charts/ChartLineWeight';
 import Card from '../components/cards/Card';
 import EmptyState from '../components/EmptyState';
 import { theme } from '../styles/tokens';
@@ -54,7 +54,7 @@ export default function PetDetailScreen({ route }: any) {
         <Text style={styles.h2}>體重趨勢</Text>
         <View style={{ height: theme.spacing.md }} />
         {weightSeries.length >= 2 ? (
-          <ChartLine data={weightSeries} width={340} height={140} />
+          <ChartLineWeight data={weightSeries} width={340} height={140} />
         ) : (
           <EmptyState title="尚無足夠體重紀錄" hint="新增 weigh 紀錄後即可查看趨勢" />
         )}

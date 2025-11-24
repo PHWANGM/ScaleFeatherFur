@@ -11,7 +11,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SpeciesNeeds'>;
 type DemandRoute =
   | 'UVBLogScreen'
   | 'HeatControlScreen'
-  | 'FeedGreensScreen'   // 餵食設定頁（之後在這頁合併 D3 / 鈣粉週期）
+  | 'FeedInputScreen'   // 餵食設定頁（之後在這頁合併 D3 / 鈣粉週期）
   | 'WeighScreen'
   | 'CleanScreen'
   | 'TempMonitorScreen';
@@ -124,7 +124,7 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
         title: '餵食頻率 / 飲食',
         subtitle,
         color: '#E8F5E9',
-        route: 'FeedGreensScreen', // 若你有專屬餵食設定頁，改這個 route
+        route: 'FeedInputScreen', // 若你有專屬餵食設定頁，改這個 route
       });
     }
 
