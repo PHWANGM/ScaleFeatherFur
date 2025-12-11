@@ -25,7 +25,7 @@ type Props = {
   yTicks?: number;                    // Y 軸刻度數量（預設 4）
 };
 
-export default function ChartLine({
+export default function ChartLineWeight({
   data,
   width = 320,
   height = 140,

@@ -38,6 +38,8 @@ import Field from '../components/fields/Field';
 import { useImagePicker } from '../lib/ui/useImagePicker';
 import { useThemeColors } from '../styles/themesColors';
 import PrimaryButton from '../components/buttons/PrimaryButton';
+// 🔽 新增：下拉式物種選擇器
+import PetSpeciesDropdown from '../components/PetSpeciesDropdown';
 
 // === 本畫面路由參數（可同時當作新增/編輯頁） ===
 type LocalStackParamList = {
@@ -92,6 +94,18 @@ export default function PetsAddScreen() {
     [isDark, palette.bg, palette.text]
   );
 
+  // 🔽 專門給 PetSpeciesDropdown 用的 palette
+  const dropdownPalette = useMemo(
+    () => ({
+      inputBg: ui.inputBg,
+      border: palette.border,
+      text: palette.text,
+      subText: palette.subText,
+      link: palette.primary,
+    }),
+    [ui.inputBg, palette.border, palette.text, palette.subText, palette.primary]
+  );
+
   const editingId = route.params?.id;
 
   const [loading, setLoading] = useState(true);
@@ -122,16 +136,6 @@ export default function PetsAddScreen() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-          // // 🔧 只在調試階段使用
-          // const snap = await debugSpeciesSnapshot();
-          // Alert.alert(
-          //   'Species Debug',
-          //   [
-          //     `tables: ${snap.tables.join(', ') || '(none)'}`,
-          //     `species count: ${snap.speciesCount}`,
-          //     `sample: ${JSON.stringify(snap.sample, null, 2)}`
-          //   ].join('\n')
-          // );
       const [sp] = await Promise.all([listSpecies()]);
       setSpecies(sp);
 
@@ -376,52 +380,16 @@ export default function PetsAddScreen() {
             />
           </Field>
 
-          {/* Species + Add Species */}
-          <Field label="Species">
-            <View style={[styles.select, { backgroundColor: ui.inputBg }]}>
-              <View style={styles.speciesRow}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ paddingRight: 8 }}
-                >
-                  {speciesOptions.map((opt) => {
-                    const selected = opt.value === speciesKey;
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        onPress={() => setSpeciesKey(opt.value)}
-                        style={[
-                          styles.chip,
-                          { borderColor: ui.chipBorder },
-                          selected && { backgroundColor: ui.inverseBg, borderColor: ui.inverseBg },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.chipText,
-                            { color: palette.text },
-                            selected && { color: ui.inverseText, fontWeight: '600' },
-                          ]}
-                        >
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('SpeciesEditor')}
-                  style={[styles.addSpeciesBtn, { backgroundColor: ui.inverseBg }]}
-                >
-                  <Text style={[styles.addSpeciesBtnText, { color: ui.inverseText }]}>
-                    ＋ Add Species
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+          {/* 🔽 Species：改成 Dropdown + Add Species */}
+          <Field label="">
+            <PetSpeciesDropdown
+              label="Species"
+              palette={dropdownPalette}
+              value={speciesKey}
+              onChange={setSpeciesKey}
+              onAddSpecies={goToSpeciesEditor}
+              options={speciesOptions}
+            />
           </Field>
 
           {/* Habitat */}
@@ -576,7 +544,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    position: 'relative',      // 讓右下角按鈕以此定位
+    position: 'relative',
     width: 96,
     height: 96,
     alignSelf: 'center',
@@ -598,7 +566,7 @@ const styles = StyleSheet.create({
 
   input: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12 },
 
-  // species row
+  // species row（現在只剩 Habitat 在用）
   speciesRow: { flexDirection: 'row', alignItems: 'center' },
   addSpeciesBtn: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
   addSpeciesBtnText: { fontWeight: '600', fontSize: 12 },

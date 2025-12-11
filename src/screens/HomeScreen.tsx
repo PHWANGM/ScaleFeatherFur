@@ -14,8 +14,9 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { RootTabParamList } from '../navigation/rootNavigator';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import PetsHeader from '../components/headers/PetsHeader';
 import { useDispatch, useSelector } from 'react-redux';
+
+import PetsHeader from '../components/headers/PetsHeader';
 import { setCurrentPetId, selectCurrentPetId } from '../state/slices/petsSlice';
 import {
   getPetWithSpeciesById,
@@ -33,6 +34,11 @@ import EnvironmentSection from '../components/charts/EnvironmentSection';
 
 // 🆕 Weight chart
 import WeightHistoryChart from '../components/charts/WeightHistoryChart';
+
+// 🆕 Warning components
+import TemperatureWarning from '../components/warning/TemperatureWarning';
+import UVBWarning from '../components/warning/UVBWarning';
+import FeedingWarning from '../components/warning/FeedingWarning';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
 
@@ -107,19 +113,6 @@ export default function HomeScreen({ navigation }: Props) {
   const speciesLabel = pet?.species_name ?? pet?.species_key ?? '—';
   const environmentLoading = locationLoading || weatherLoading;
 
-  // 小工具：從 localIso 取出 "HH:MM"
-  const formatLocalTime = useCallback((iso: string | null | undefined) => {
-    if (!iso) return '--:--';
-    // 期待格式類似 "2025-11-11T17:00+08:00"
-    const daypart = iso.split('T')[0];
-    if (!daypart) return '--:--';
-    const timePart = iso.split('T')[1];
-    if (!timePart) return '--:--';
-    // 先取前 5 個字元（HH:MM），避免帶到秒或 offset
-    const hhmm = daypart.slice(-5) + " " + timePart.slice(0, 5);
-    return hhmm;
-  }, []);
-
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: palette.bg }]}
@@ -178,98 +171,15 @@ export default function HomeScreen({ navigation }: Props) {
               ]}
             >
               {/* 🌡 Temp Warning */}
-              {tempRisk && tempRisk.shouldWarn && (
-                <View style={[styles.alertRow, { marginBottom: 8 }]}>
-                  <View
-                    style={[
-                      styles.alertIconBox,
-                      { backgroundColor: 'rgba(255,99,99,0.2)' },
-                    ]}
-                  >
-                    <Feather name="thermometer" size={22} color="#ff6363" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.alertTitle, { color: '#ff6363' }]}>
-                      Temperature Alert
-                    </Text>
-                    {tempRisk.segments.map((seg, idx) => {
-                      // 根據 fromOffset / toOffset，從 hourly 拿對應的 localIso
-                      const fromIso =
-                        tempRisk.hourly[seg.fromOffset]?.localIso ?? null;
-                      const toIso =
-                        tempRisk.hourly[seg.toOffset]?.localIso ?? null;
-                      const fromTime = formatLocalTime(fromIso);
-                      const toTime = formatLocalTime(toIso);
-                      return (
-                        <Text
-                          key={`temp-${idx}-${seg.risk}`}
-                          style={[styles.alertSub, { color: palette.subText }]}
-                        >
-                          {fromTime}–{toTime} → {seg.risk}
-                        </Text>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
+              <TemperatureWarning tempRisk={tempRisk} />
 
               {/* 🌞 UVB Warning */}
-              {uvbRisk && uvbRisk.shouldWarn && (
-                <View style={[styles.alertRow, { marginBottom: 8 }]}>
-                  <View
-                    style={[
-                      styles.alertIconBox,
-                      { backgroundColor: 'rgba(250,204,21,0.25)' },
-                    ]}
-                  >
-                    <Feather name="sun" size={22} color="#facc15" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.alertTitle, { color: '#facc15' }]}>
-                      UVB Alert
-                    </Text>
-                    {uvbRisk.segments.map((seg, idx) => {
-                      const fromIso =
-                        uvbRisk.hourly[seg.fromOffset]?.localIso ?? null;
-                      const toIso =
-                        uvbRisk.hourly[seg.toOffset]?.localIso ?? null;
+              <UVBWarning uvbRisk={uvbRisk} />
 
-                      const fromTime = formatLocalTime(fromIso);
-                      const toTime = formatLocalTime(toIso);
+              {/* 🧩 Feeding：時間相關提醒 */}
+              <FeedingWarning petId={currentPetId} />
 
-                      return (
-                        <Text
-                          key={`uvb-${idx}-${seg.risk}`}
-                          style={[styles.alertSub, { color: palette.subText }]}
-                        >
-                          {fromTime}–{toTime} → {seg.risk}
-                        </Text>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-
-              {/* 🧩 Feeding */}
-              <View style={styles.alertRow}>
-                <View
-                  style={[
-                    styles.alertIconBox,
-                    { backgroundColor: 'rgba(56,224,123,0.2)' },
-                  ]}
-                >
-                  <Feather name="cloud" size={22} color={palette.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.alertTitle, { color: palette.text }]}>
-                    Feeding
-                  </Text>
-                  <Text style={[styles.alertSub, { color: palette.subText }]}>
-                    Next feeding: coming soon
-                  </Text>
-                </View>
-              </View>
-
+              {/* 🩺 Vet Checkup：暫時靜態文案 */}
               <View style={[styles.alertRow, { marginTop: 10 }]}>
                 <View
                   style={[

@@ -270,3 +270,21 @@ export async function getSupplementCounts(
     GROUP BY subtype
   `, [petId, fromISO, toISO]);
 }
+
+// 最近一次餵食紀錄（不限制日期）
+export async function getLatestFeedLogForPet(
+  petId: string
+): Promise<CareLogRow | null> {
+  const rows = await query<CareLogRow>(
+    `
+    SELECT *
+    FROM care_logs
+    WHERE pet_id = ?
+      AND type = 'feed'
+    ORDER BY at DESC
+    LIMIT 1
+    `,
+    [petId]
+  );
+  return rows[0] ?? null;
+}

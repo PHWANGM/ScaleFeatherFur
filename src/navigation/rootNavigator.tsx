@@ -9,7 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import HomeScreen from '../screens/HomeScreen';
 import LogsScreen from '../screens/LogsScreen';
-import CommunityScreen from '../screens/CommunityScreen';
+import PetForumScreen from '../screens/PetForumScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SpeciesEditorScreen from '../screens/SpeciesEditorScreen';
 import PetSelectScreen from '../screens/PetSelectScreen';
@@ -48,7 +48,7 @@ export type RootTabParamList = {
   Home: undefined;
   Care: undefined;
   Plus: undefined;
-  Community: undefined;
+  PetForum: undefined;
   Profile: undefined;
 };
 
@@ -151,10 +151,10 @@ function MainTabs() {
       />
 
       <Tab.Screen
-        name="Community"
-        component={CommunityScreen}
+        name="PetForum"
+        component={PetForumScreen}
         options={{
-          tabBarLabel: 'Community',
+          tabBarLabel: 'PetForum',
           tabBarIcon: ({ color, size }) => <Feather name="users" color={color} size={size} />,
         }}
       />

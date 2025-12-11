@@ -10,7 +10,7 @@ import CalendarDateDetail from '../components/calendar/CalendarDateDetail';
 import PetsHeader from '../components/headers/PetsHeader';
 
 import { selectCurrentPetId, selectSelectedDate, setCurrentPetId, setSelectedDate } from '../state/slices/petsSlice';
-import { query } from '../lib/db/db.client'; // ← 你專案的 db client 匯入路徑
+import { query } from '../lib/db/db.client'; 
 
 type ActivitiesProps = {
   route?: { params?: { redirectToNewActivity?: boolean } };
