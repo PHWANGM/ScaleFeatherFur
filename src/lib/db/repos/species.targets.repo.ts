@@ -25,9 +25,19 @@ export type SpeciesTargetRowRaw = {
 
   diet_note: string | null;
 
-  /* 現有 schema：以小時存 D3 週期 */
+  // 現有 schema：以「小時」存 D3 週期
   vitamin_d3_interval_hours_min: number | null;
   vitamin_d3_interval_hours_max: number | null;
+
+  // 直接對應 DB 欄位（餐數與飲食百分比）
+  calcium_every_meals: number | null;
+
+  diet_veg_pct_min: number | null;
+  diet_veg_pct_max: number | null;
+  diet_meat_pct_min: number | null;
+  diet_meat_pct_max: number | null;
+  diet_fruit_pct_min: number | null;
+  diet_fruit_pct_max: number | null;
 
   temp_ranges_json: string | null;
   extra_json: string | null;
@@ -86,7 +96,7 @@ export type SpeciesTarget = {
   uvb_unit?: string | null;
 
   temp_ranges: TempRanges;
-  /** 原樣保留的 extra（含上述鍵） */
+  /** 原樣保留的 extra（只作輔助設定） */
   extra?: Record<string, unknown> | null;
 
   created_at: string;
@@ -95,46 +105,59 @@ export type SpeciesTarget = {
 
 function safeParse<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback;
-  try { return JSON.parse(raw) as T; } catch { return fallback; }
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 function cleanTempRanges(r: TempRanges): TempRanges {
   const out: TempRanges = {};
   const ok = (x: unknown): x is [number, number] =>
-    Array.isArray(x) && x.length === 2 && x.every(n => typeof n === 'number' && isFinite(n)) && x[0] <= x[1];
-  for (const [k, v] of Object.entries(r)) if (ok(v)) out[k] = v;
-  return out;
-}
+    Array.isArray(x) &&
+    x.length === 2 &&
+    x.every(n => typeof n === 'number' && isFinite(n)) &&
+    x[0] <= x[1];
 
-function pickNumber(obj: any, path: string[]): number | null {
-  try {
-    let cur: any = obj;
-    for (const k of path) cur = cur?.[k];
-    return typeof cur === 'number' && isFinite(cur) ? cur : null;
-  } catch { return null; }
+  for (const [k, v] of Object.entries(r)) {
+    if (ok(v)) out[k] = v;
+  }
+  return out;
 }
 
 function parseTargetRow(r: SpeciesTargetRowRaw): SpeciesTarget {
   const extra = safeParse<Record<string, unknown> | null>(r.extra_json, null);
-  const temp_ranges = cleanTempRanges(safeParse<TempRanges>(r.temp_ranges_json, {}));
+  const temp_ranges = cleanTempRanges(
+    safeParse<TempRanges>(r.temp_ranges_json, {})
+  );
 
-  // 以 extra_json 為主，沒有才用 hours 換算
+  // D3：直接用「小時欄位 / 24」換算成天數給 App
   const d3_days_min =
-    pickNumber(extra, ['vitamin_d3_interval_days','min']) ??
-    (typeof r.vitamin_d3_interval_hours_min === 'number' ? Math.round(r.vitamin_d3_interval_hours_min / 24) : null);
+    typeof r.vitamin_d3_interval_hours_min === 'number'
+      ? Math.round(r.vitamin_d3_interval_hours_min / 24)
+      : null;
 
   const d3_days_max =
-    pickNumber(extra, ['vitamin_d3_interval_days','max']) ??
-    (typeof r.vitamin_d3_interval_hours_max === 'number' ? Math.round(r.vitamin_d3_interval_hours_max / 24) : null);
+    typeof r.vitamin_d3_interval_hours_max === 'number'
+      ? Math.round(r.vitamin_d3_interval_hours_max / 24)
+      : null;
 
-  const diet_veg_min  = pickNumber(extra, ['diet_percentages','veg','min']);
-  const diet_veg_max  = pickNumber(extra, ['diet_percentages','veg','max']);
-  const diet_meat_min = pickNumber(extra, ['diet_percentages','meat','min']);
-  const diet_meat_max = pickNumber(extra, ['diet_percentages','meat','max']);
-  const diet_fruit_min= pickNumber(extra, ['diet_percentages','fruit','min']);
-  const diet_fruit_max= pickNumber(extra, ['diet_percentages','fruit','max']);
+  // 飲食百分比：直接吃欄位
+  const diet_veg_min = r.diet_veg_pct_min;
+  const diet_veg_max = r.diet_veg_pct_max;
+  const diet_meat_min = r.diet_meat_pct_min;
+  const diet_meat_max = r.diet_meat_pct_max;
+  const diet_fruit_min = r.diet_fruit_pct_min;
+  const diet_fruit_max = r.diet_fruit_pct_max;
 
-  const calcium_every_meals = pickNumber(extra, ['calcium_every_meals']);
+  // 鈣粉頻率：直接吃欄位
+  const calcium_every_meals =
+    typeof r.calcium_every_meals === 'number'
+      ? r.calcium_every_meals
+      : null;
+
+  // UVB 單位：仍然從 extra 拿，沒有就預設 percent
   const uvb_unit = (extra?.['uvb_unit'] as string) ?? 'percent';
 
   return {
@@ -179,7 +202,9 @@ function parseTargetRow(r: SpeciesTargetRowRaw): SpeciesTarget {
 }
 
 /** === 查詢 === */
-export async function listTargetsBySpecies(speciesKey: string): Promise<SpeciesTarget[]> {
+export async function listTargetsBySpecies(
+  speciesKey: string
+): Promise<SpeciesTarget[]> {
   const rows = await query<SpeciesTargetRowRaw>(
     `SELECT * FROM species_targets WHERE species_key = ? ORDER BY life_stage ASC`,
     [speciesKey]
@@ -187,7 +212,10 @@ export async function listTargetsBySpecies(speciesKey: string): Promise<SpeciesT
   return rows.map(parseTargetRow);
 }
 
-export async function getTarget(speciesKey: string, lifeStage: LifeStage): Promise<SpeciesTarget | null> {
+export async function getTarget(
+  speciesKey: string,
+  lifeStage: LifeStage
+): Promise<SpeciesTarget | null> {
   const rows = await query<SpeciesTargetRowRaw>(
     `SELECT * FROM species_targets WHERE species_key = ? AND life_stage = ? LIMIT 1`,
     [speciesKey, lifeStage]
@@ -196,8 +224,13 @@ export async function getTarget(speciesKey: string, lifeStage: LifeStage): Promi
 }
 
 /** 依寵物取得對應 life_stage 的 target；若無則退回另一階段 */
-export async function getEffectiveTargetForPet(petId: string): Promise<SpeciesTarget | null> {
-  const petRows = await query<{ species_key: string; life_stage: LifeStage | null }>(
+export async function getEffectiveTargetForPet(
+  petId: string
+): Promise<SpeciesTarget | null> {
+  const petRows = await query<{
+    species_key: string;
+    life_stage: LifeStage | null;
+  }>(
     `SELECT species_key, life_stage FROM pets WHERE id = ? LIMIT 1`,
     [petId]
   );
@@ -212,7 +245,7 @@ export async function getEffectiveTargetForPet(petId: string): Promise<SpeciesTa
   return getTarget(pet.species_key, alt);
 }
 
-/** === upsert：把新欄位都塞進 extra_json，D3(天) 轉小時寫回舊欄位 === */
+/** === upsert：D3(天) -> 小時寫回舊欄位；calcium/diet 直接寫欄位 === */
 export type UpsertSpeciesTargetInput = {
   id: string;
   species_key: string;
@@ -251,49 +284,36 @@ export type UpsertSpeciesTargetInput = {
   uvb_unit?: string | null;
 };
 
-function buildExtraFromInput(input: UpsertSpeciesTargetInput): Record<string, unknown> | null {
+function buildExtraFromInput(
+  input: UpsertSpeciesTargetInput
+): Record<string, unknown> | null {
   const extra: Record<string, unknown> = { ...(input.extra ?? {}) };
 
+  // 只保留 uvb_unit 在 extra 裡，其它都直接用欄位
   if (input.uvb_unit) extra['uvb_unit'] = input.uvb_unit;
   else if (extra['uvb_unit'] == null) extra['uvb_unit'] = 'percent';
-
-  // 鈣粉每幾餐一次
-  if (typeof input.calcium_every_meals === 'number') extra['calcium_every_meals'] = input.calcium_every_meals;
-
-  // D3 以天
-  if (input.vitamin_d3_interval_days_min != null || input.vitamin_d3_interval_days_max != null) {
-    extra['vitamin_d3_interval_days'] = {
-      min: input.vitamin_d3_interval_days_min ?? null,
-      max: input.vitamin_d3_interval_days_max ?? null,
-    };
-  }
-
-  // 飲食百分比
-  const diet: any = {};
-  if (input.diet_veg_pct_min != null || input.diet_veg_pct_max != null) {
-    diet.veg = { min: input.diet_veg_pct_min ?? null, max: input.diet_veg_pct_max ?? null };
-  }
-  if (input.diet_meat_pct_min != null || input.diet_meat_pct_max != null) {
-    diet.meat = { min: input.diet_meat_pct_min ?? null, max: input.diet_meat_pct_max ?? null };
-  }
-  if (input.diet_fruit_pct_min != null || input.diet_fruit_pct_max != null) {
-    diet.fruit = { min: input.diet_fruit_pct_min ?? null, max: input.diet_fruit_pct_max ?? null };
-  }
-  if (Object.keys(diet).length > 0) extra['diet_percentages'] = diet;
 
   return Object.keys(extra).length > 0 ? extra : null;
 }
 
-export async function upsertSpeciesTarget(input: UpsertSpeciesTargetInput): Promise<void> {
+export async function upsertSpeciesTarget(
+  input: UpsertSpeciesTargetInput
+): Promise<void> {
   const now = nowIso();
   const exists = await query<{ id: string }>(
     `SELECT id FROM species_targets WHERE id = ? LIMIT 1`,
     [input.id]
   );
 
-  // 以天 -> 以小時（存回 DB 舊欄位）
-  const d3hMin = input.vitamin_d3_interval_days_min != null ? input.vitamin_d3_interval_days_min * 24 : null;
-  const d3hMax = input.vitamin_d3_interval_days_max != null ? input.vitamin_d3_interval_days_max * 24 : null;
+  // 以天 -> 以小時（存回 DB 小時欄位）
+  const d3hMin =
+    input.vitamin_d3_interval_days_min != null
+      ? input.vitamin_d3_interval_days_min * 24
+      : null;
+  const d3hMax =
+    input.vitamin_d3_interval_days_max != null
+      ? input.vitamin_d3_interval_days_max * 24
+      : null;
 
   const tempRangesJson = JSON.stringify(input.temp_ranges ?? {});
   const extraJson = buildExtraFromInput(input);
@@ -321,6 +341,15 @@ export async function upsertSpeciesTarget(input: UpsertSpeciesTargetInput): Prom
     d3hMin,
     d3hMax,
 
+    input.calcium_every_meals ?? null,
+
+    input.diet_veg_pct_min ?? null,
+    input.diet_veg_pct_max ?? null,
+    input.diet_meat_pct_min ?? null,
+    input.diet_meat_pct_max ?? null,
+    input.diet_fruit_pct_min ?? null,
+    input.diet_fruit_pct_max ?? null,
+
     tempRangesJson,
     extraJson ? JSON.stringify(extraJson) : null,
   ];
@@ -335,10 +364,14 @@ export async function upsertSpeciesTarget(input: UpsertSpeciesTargetInput): Prom
          feeding_interval_hours_min, feeding_interval_hours_max,
          diet_note,
          vitamin_d3_interval_hours_min, vitamin_d3_interval_hours_max,
+         calcium_every_meals,
+         diet_veg_pct_min, diet_veg_pct_max,
+         diet_meat_pct_min, diet_meat_pct_max,
+         diet_fruit_pct_min, diet_fruit_pct_max,
          temp_ranges_json, extra_json,
          created_at, updated_at)
        VALUES
-        (?,  ?, ?,  ?, ?, ?, ?,  ?, ?,  ?, ?,  ?, ?,  ?,  ?, ?,  ?, ?,  ?, ?)`,
+        (?,  ?, ?,  ?, ?, ?, ?,  ?, ?,  ?, ?,  ?, ?,  ?,  ?, ?,  ?,  ?, ?, ?, ?, ?,  ?, ?,  ?, ?)`,
       [input.id, ...baseParams, now, now]
     );
   } else {
@@ -351,6 +384,10 @@ export async function upsertSpeciesTarget(input: UpsertSpeciesTargetInput): Prom
            feeding_interval_hours_min = ?, feeding_interval_hours_max = ?,
            diet_note = ?,
            vitamin_d3_interval_hours_min = ?, vitamin_d3_interval_hours_max = ?,
+           calcium_every_meals = ?,
+           diet_veg_pct_min = ?, diet_veg_pct_max = ?,
+           diet_meat_pct_min = ?, diet_meat_pct_max = ?,
+           diet_fruit_pct_min = ?, diet_fruit_pct_max = ?,
            temp_ranges_json = ?, extra_json = ?,
            updated_at = ?
        WHERE id = ?`,

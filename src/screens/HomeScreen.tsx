@@ -39,6 +39,8 @@ import WeightHistoryChart from '../components/charts/WeightHistoryChart';
 import TemperatureWarning from '../components/warning/TemperatureWarning';
 import UVBWarning from '../components/warning/UVBWarning';
 import FeedingWarning from '../components/warning/FeedingWarning';
+import CalciumWarning from '../components/warning/CalciumWarning';
+import VitaminD3Warning from '../components/warning/VitaminD3Warning';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
 
@@ -78,7 +80,6 @@ export default function HomeScreen({ navigation }: Props) {
     next24Temp,
     uviHourly,
     currentCloud,
-    error: weatherError,
   } = useNext24HourlyWeatherByCoords(coords, currentPetId, { maxAgeHours: 2 });
 
   /** 🦎 讀取寵物資料 */
@@ -176,8 +177,14 @@ export default function HomeScreen({ navigation }: Props) {
               {/* 🌞 UVB Warning */}
               <UVBWarning uvbRisk={uvbRisk} />
 
-              {/* 🧩 Feeding：時間相關提醒 */}
+              {/* 🍽 Feeding：時間相關提醒 */}
               <FeedingWarning petId={currentPetId} />
+
+              {/* 🦴 Calcium：每幾餐一次的提醒 */}
+              <CalciumWarning petId={currentPetId} />
+
+              {/* 💊 Vitamin D3 Reminder */}
+              <VitaminD3Warning petId={currentPetId} />
 
               {/* 🩺 Vet Checkup：暫時靜態文案 */}
               <View style={[styles.alertRow, { marginTop: 10 }]}>
