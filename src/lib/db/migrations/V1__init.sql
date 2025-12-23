@@ -201,6 +201,11 @@ CREATE TABLE IF NOT EXISTS products (
   tags TEXT,                       -- JSON array ['UVB','sulcata','high_uvi_alt']
   affiliate_url TEXT,
   region TEXT,                     -- 'TW','US'
+
+  -- ✅ NEW
+  image_url TEXT,                  -- 產品小圖
+  description TEXT,                -- 簡介
+
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );

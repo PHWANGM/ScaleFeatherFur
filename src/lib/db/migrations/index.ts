@@ -11,6 +11,9 @@ export type MigrationEntry =
 export const MIGRATIONS: MigrationEntry[] = [
   { name: 'V1__init.sql', asset: require('./V1__init.sql') },
   { name: 'V2__seed_species_information.sql', asset: require('./V2__seed_species_information.sql') },
+
+  // ✅ NEW: Products seed
+  { name: 'V3__productSeed.sql', asset: require('./V3__productSeed.sql') },
 ];
 
 /** 讀取 Migration 的 SQL 文字 */

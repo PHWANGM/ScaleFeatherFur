@@ -8,6 +8,11 @@ export type ProductRow = {
   tags: string | null;
   affiliate_url: string | null;
   region: string | null;
+
+  // ✅ NEW
+  image_url: string | null;
+  description: string | null;
+
   created_at: string;
   updated_at: string;
 };
@@ -40,13 +45,19 @@ export async function createProduct(input: {
   tags?: string | null;
   affiliate_url?: string | null;
   region?: string | null;
+
+  // ✅ NEW
+  image_url?: string | null;
+  description?: string | null;
 }): Promise<ProductRow> {
   const now = new Date().toISOString();
   const id = generateId('prod');
 
   await execute(
-    `INSERT INTO products (id, name, brand, tags, affiliate_url, region, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO products (
+      id, name, brand, tags, affiliate_url, region, image_url, description, created_at, updated_at
+    )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.name,
@@ -54,6 +65,8 @@ export async function createProduct(input: {
       input.tags ?? null,
       input.affiliate_url ?? null,
       input.region ?? null,
+      input.image_url ?? null,
+      input.description ?? null,
       now,
       now,
     ]
@@ -86,7 +99,7 @@ export async function createArticle(input: {
   title: string;
   body_md: string;
   species_key?: string | null;
-  tags?: string | null;  // 放 imageUrl / productLink / likes 的 JSON
+  tags?: string | null; // 放 imageUrl / productLink / likes 的 JSON
 }): Promise<ArticleRow> {
   const now = new Date().toISOString();
   const id = generateId('art');

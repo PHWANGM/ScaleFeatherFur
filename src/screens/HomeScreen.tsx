@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.tsx
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  AppState,
+  type AppStateStatus,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -25,17 +27,15 @@ import {
 } from '../lib/db/repos/pets.repo';
 import { useThemeColors } from '../styles/themesColors';
 
-// 🆕 hooks
+// hooks
 import { useCurrentLocation } from '../hooks/useCurrentLocation';
 import { useNext24HourlyWeatherByCoords } from '../hooks/useNext24HourlyWeatherByCoords';
 
-// 🆕 Environment component
+// components
 import EnvironmentSection from '../components/charts/EnvironmentSection';
-
-// 🆕 Weight chart
 import WeightHistoryChart from '../components/charts/WeightHistoryChart';
 
-// 🆕 Warning components
+// warnings
 import TemperatureWarning from '../components/warning/TemperatureWarning';
 import UVBWarning from '../components/warning/UVBWarning';
 import FeedingWarning from '../components/warning/FeedingWarning';
@@ -43,6 +43,30 @@ import CalciumWarning from '../components/warning/CalciumWarning';
 import VitaminD3Warning from '../components/warning/VitaminD3Warning';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
+
+/**
+ * ✅ 每次「App 打開 / 從背景回前景」才會 +1
+ * 用它來保證：同一個 session 不重抓天氣
+ */
+function useAppActiveSessionId() {
+  const [sessionId, setSessionId] = useState(1);
+
+  useEffect(() => {
+    let prev: AppStateStatus = AppState.currentState;
+
+    const sub = AppState.addEventListener('change', (next) => {
+      const wasBg = prev === 'background' || prev === 'inactive';
+      const isActive = next === 'active';
+      prev = next;
+
+      if (wasBg && isActive) setSessionId((s) => s + 1);
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  return sessionId;
+}
 
 export default function HomeScreen({ navigation }: Props) {
   const dispatch = useDispatch();
@@ -61,18 +85,17 @@ export default function HomeScreen({ navigation }: Props) {
     [colors]
   );
 
+  // ✅ sessionId：每次開 App / 回前景 +1（同一 session 不重抓天氣）
+  const sessionId = useAppActiveSessionId();
+
   // 🐾 Pet state
   const [pet, setPet] = useState<PetWithSpeciesRow | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 📍 Location
-  const {
-    coords,
-    locationName,
-    loading: locationLoading,
-  } = useCurrentLocation();
+  // 📍 Location（你原本的 hook，不用改）
+  const { coords, locationName, loading: locationLoading } = useCurrentLocation();
 
-  // 🌤 Weather + 溫度 / UVB 風險判斷
+  // 🌤 Weather（✅ 傳 sessionId 進去）
   const {
     loading: weatherLoading,
     tempRisk,
@@ -80,7 +103,10 @@ export default function HomeScreen({ navigation }: Props) {
     next24Temp,
     uviHourly,
     currentCloud,
-  } = useNext24HourlyWeatherByCoords(coords, currentPetId, { maxAgeHours: 2 });
+  } = useNext24HourlyWeatherByCoords(coords, currentPetId, {
+    maxAgeHours: 2,
+    sessionId,
+  });
 
   /** 🦎 讀取寵物資料 */
   const loadPet = useCallback(async () => {
@@ -139,9 +165,7 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       {loading ? (
-        <View
-          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-        >
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator />
           <Text style={{ marginTop: 8, color: palette.subText }}>
             Loading from database…
@@ -171,22 +195,12 @@ export default function HomeScreen({ navigation }: Props) {
                 { backgroundColor: palette.card, borderColor: palette.border },
               ]}
             >
-              {/* 🌡 Temp Warning */}
               <TemperatureWarning tempRisk={tempRisk} />
-
-              {/* 🌞 UVB Warning */}
               <UVBWarning uvbRisk={uvbRisk} />
-
-              {/* 🍽 Feeding：時間相關提醒 */}
               <FeedingWarning petId={currentPetId} />
-
-              {/* 🦴 Calcium：每幾餐一次的提醒 */}
               <CalciumWarning petId={currentPetId} />
-
-              {/* 💊 Vitamin D3 Reminder */}
               <VitaminD3Warning petId={currentPetId} />
 
-              {/* 🩺 Vet Checkup：暫時靜態文案 */}
               <View style={[styles.alertRow, { marginTop: 10 }]}>
                 <View
                   style={[
@@ -212,7 +226,7 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           </View>
 
-          {/* 🌤 Environment：改用 component */}
+          {/* 🌤 Environment */}
           <View style={{ marginTop: 16 }}>
             <EnvironmentSection
               locationName={locationName}
