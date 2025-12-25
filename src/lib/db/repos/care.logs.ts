@@ -19,6 +19,7 @@ export type CareLogSubtype =
   | 'calcium_d3'
   | 'vitamin_multi'
   | 'feed_greens'
+  | 'feed_hay'
   | 'feed_insect'
   | 'feed_meat'
   | 'feed_fruit'

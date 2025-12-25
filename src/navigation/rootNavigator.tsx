@@ -18,6 +18,7 @@ import PetsAddScreen from '../screens/PetsAddScreen';
 import WeighScreen from '../screens/WeighScreen';
 import { StackScreen } from 'react-native-screens';
 import FeedInputScreen from '../screens/FeedInputScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 // ===== 型別 =====
 export type RootStackParamList = {
@@ -31,6 +32,7 @@ export type RootStackParamList = {
   // ✅ 新增：體重記錄畫面（允許不帶或帶 petId）
   WeighScreen: { petId?: string } | undefined;
   FeedInputScreen?: { petId: string };
+  Settings: undefined;
   // 預留
   UVBLogScreen?: { petId: string };
   HeatControlScreen?: { petId: string };
@@ -212,6 +214,11 @@ export default function RootNavigator() {
         name="FeedInputScreen"
         component={FeedInputScreen}
         options={{ headerShown: true, title: '餵食記錄' }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ headerShown: true, title: '設定' }}
       />
     </Stack.Navigator>
   );
