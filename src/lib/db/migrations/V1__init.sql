@@ -293,4 +293,5 @@ INSERT OR IGNORE INTO tasks (key, title, description, points, created_at, update
   ('uvb',    'UVB 管理',       'UVB 燈具開關/維護/耗材更換',            3, datetime('now'), datetime('now')),
   ('heat',   '加熱設備管理',   'Basking 燈/加熱墊開關與維護',           3, datetime('now'), datetime('now')),
   ('clean',  '環境清潔',       'enclosure/水盆/基質清潔',               2, datetime('now'), datetime('now')),
-  ('weigh',  '體重紀錄',       '定期量測與追蹤',                         2, datetime('now'), datetime('now'));
+  ('weigh',  '體重紀錄',       '定期量測與追蹤',                         2, datetime('now'), datetime('now')),
+  ('post', '發文', '分享你的寵物故事與經驗',  1, datetime('now'), datetime('now'));

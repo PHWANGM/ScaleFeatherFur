@@ -24,10 +24,8 @@ export type NutritionalSuggestion = {
   /** 各類食物推薦比例 */
   recommendations: {
     vegetables: DietRecommendation;
-    hay: DietRecommendation; // 乾草與蔬菜同屬纖維來源
     meat: DietRecommendation;
     fruit: DietRecommendation;
-    insects: DietRecommendation; // 通常與 meat 相同（蛋白質來源）
   };
   /** 警告訊息列表 */
   warnings: string[];
@@ -39,10 +37,8 @@ export type NutritionalSuggestion = {
 
 const FOOD_TYPE_LABELS: Record<FoodType, string> = {
   vegetables: '蔬菜',
-  hay: '乾草',
   meat: '肉類',
   fruit: '水果',
-  insects: '昆蟲',
   mixed: '混合食物',
   unknown: '未知食物',
 };
@@ -69,11 +65,6 @@ export async function generateNutritionalSuggestion(
       min: target?.diet_veg_pct_min ?? null,
       max: target?.diet_veg_pct_max ?? null,
     },
-    // 乾草與蔬菜同屬纖維來源（草食動物主食）
-    hay: {
-      min: target?.diet_veg_pct_min ?? null,
-      max: target?.diet_veg_pct_max ?? null,
-    },
     meat: {
       min: target?.diet_meat_pct_min ?? null,
       max: target?.diet_meat_pct_max ?? null,
@@ -81,11 +72,6 @@ export async function generateNutritionalSuggestion(
     fruit: {
       min: target?.diet_fruit_pct_min ?? null,
       max: target?.diet_fruit_pct_max ?? null,
-    },
-    // 昆蟲通常與肉類同屬蛋白質來源
-    insects: {
-      min: target?.diet_meat_pct_min ?? null,
-      max: target?.diet_meat_pct_max ?? null,
     },
   };
 
@@ -170,18 +156,16 @@ export async function quickCheckFoodType(
   }
 
   switch (foodType) {
-    case 'vegetables':
-    case 'hay': {
+    case 'vegetables': {
       const min = target.diet_veg_pct_min ?? 0;
-      const label = foodType === 'hay' ? '乾草' : '蔬菜';
+      const label = '蔬菜';
       if (min >= 70) {
         return { ok: true, message: `${speciesName}是草食性動物，${label}是主食` };
       }
       return { ok: true, message: `${label}是健康的選擇` };
     }
 
-    case 'meat':
-    case 'insects': {
+    case 'meat': {
       const meatMax = target.diet_meat_pct_max ?? 100;
       const vegMin = target.diet_veg_pct_min ?? 0;
 
@@ -242,18 +226,16 @@ function generateFeedback(
 
   switch (foodType) {
     case 'vegetables':
-    case 'hay':
-      // 草食動物吃蔬菜/乾草總是好的
+      // 草食動物吃蔬菜總是好的
       if (vegMin >= 70) {
         return {
-          tip: `${speciesName}是草食性動物，${foodType === 'hay' ? '乾草' : '蔬菜'}應佔飲食的主要部分`,
+          tip: `${speciesName}是草食性動物，蔬菜應佔飲食的主要部分`,
           isOk: true,
         };
       }
       return { isOk: true };
 
     case 'meat':
-    case 'insects':
       // 檢查是否為草食動物
       if (vegMin >= 80 && meatMax <= 10) {
         return {

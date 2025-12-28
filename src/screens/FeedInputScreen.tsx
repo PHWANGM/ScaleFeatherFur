@@ -27,7 +27,7 @@ import {
   type CareLogRow,
 } from '../lib/db/repos/care.logs';
 import { useThemeColors } from '../styles/themesColors';
-import { useFoodAnalysis, useAnalysisToFormValues } from '../hooks/useFoodAnalysis';
+import { useFoodAnalysis } from '../hooks/useFoodAnalysis';
 
 type RootStackParamList = {
   MainTabs: { screen: 'Care' } | undefined;
@@ -46,10 +46,8 @@ const buildAtIso = (selectedDate: string | null): string => {
 
 const FOOD_TYPE_LABELS: Record<string, string> = {
   vegetables: '蔬菜',
-  hay: '乾草',
   meat: '肉類',
   fruit: '水果',
-  insects: '昆蟲',
   mixed: '混合食物',
   unknown: '未知',
 };
@@ -71,10 +69,8 @@ const FeedInputScreen: React.FC = () => {
 
   // 餵食輸入狀態
   const [vegGrams, setVegGrams] = useState('');
-  const [hayGrams, setHayGrams] = useState('');
   const [meatGrams, setMeatGrams] = useState('');
   const [fruitGrams, setFruitGrams] = useState('');
-  const [insectGrams, setInsectGrams] = useState('');
 
   const [calciumChecked, setCalciumChecked] = useState(false);
   const [vitaminChecked, setVitaminChecked] = useState(false);
@@ -104,26 +100,18 @@ const FeedInputScreen: React.FC = () => {
 
     // 清空所有欄位先
     setVegGrams('');
-    setHayGrams('');
     setMeatGrams('');
     setFruitGrams('');
-    setInsectGrams('');
 
     switch (foodType) {
       case 'vegetables':
         setVegGrams(weightStr);
-        break;
-      case 'hay':
-        setHayGrams(weightStr);
         break;
       case 'meat':
         setMeatGrams(weightStr);
         break;
       case 'fruit':
         setFruitGrams(weightStr);
-        break;
-      case 'insects':
-        setInsectGrams(weightStr);
         break;
       case 'mixed':
         Alert.alert(
@@ -163,20 +151,6 @@ const FeedInputScreen: React.FC = () => {
       });
     }
 
-    const hay = parseFloat(hayGrams);
-    if (!Number.isNaN(hay) && hay > 0) {
-      logs.push({
-        pet_id: currentPetId,
-        type: 'feed',
-        subtype: 'feed_hay',
-        category: 'feed_hay',
-        value: hay,
-        unit: 'g',
-        note: null,
-        at,
-      });
-    }
-
     const meat = parseFloat(meatGrams);
     if (!Number.isNaN(meat) && meat > 0) {
       logs.push({
@@ -199,21 +173,6 @@ const FeedInputScreen: React.FC = () => {
         subtype: 'feed_fruit',
         category: 'feed_fruit',
         value: fruit,
-        unit: 'g',
-        note: null,
-        at,
-      });
-    }
-
-    // 新增：昆蟲
-    const insect = parseFloat(insectGrams);
-    if (!Number.isNaN(insect) && insect > 0) {
-      logs.push({
-        pet_id: currentPetId,
-        type: 'feed',
-        subtype: 'feed_insect',
-        category: 'feed_insect',
-        value: insect,
         unit: 'g',
         note: null,
         at,
@@ -261,7 +220,6 @@ const FeedInputScreen: React.FC = () => {
       setVegGrams('');
       setMeatGrams('');
       setFruitGrams('');
-      setInsectGrams('');
       setCalciumChecked(false);
       setVitaminChecked(false);
       clearResult();
@@ -479,7 +437,7 @@ const FeedInputScreen: React.FC = () => {
 
           <View style={styles.inputRow}>
             <Text style={[styles.label, { color: palette.text }]}>
-              蔬菜 / 葉菜
+              蔬菜
             </Text>
             <View style={styles.inputBox}>
               <TextInput
@@ -493,29 +451,6 @@ const FeedInputScreen: React.FC = () => {
                 keyboardType="numeric"
                 value={vegGrams}
                 onChangeText={setVegGrams}
-                placeholder="0"
-                placeholderTextColor={palette.subText}
-              />
-              <Text style={[styles.unit, { color: palette.subText }]}>g</Text>
-            </View>
-          </View>
-
-          <View style={styles.inputRow}>
-            <Text style={[styles.label, { color: palette.text }]}>
-              乾草
-            </Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    color: palette.text,
-                    backgroundColor: isDark ? 'rgba(0,0,0,0.25)' : '#ffffff',
-                  },
-                ]}
-                keyboardType="numeric"
-                value={hayGrams}
-                onChangeText={setHayGrams}
                 placeholder="0"
                 placeholderTextColor={palette.subText}
               />
@@ -539,29 +474,6 @@ const FeedInputScreen: React.FC = () => {
                 keyboardType="numeric"
                 value={meatGrams}
                 onChangeText={setMeatGrams}
-                placeholder="0"
-                placeholderTextColor={palette.subText}
-              />
-              <Text style={[styles.unit, { color: palette.subText }]}>g</Text>
-            </View>
-          </View>
-
-          <View style={styles.inputRow}>
-            <Text style={[styles.label, { color: palette.text }]}>
-              昆蟲
-            </Text>
-            <View style={styles.inputBox}>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    color: palette.text,
-                    backgroundColor: isDark ? 'rgba(0,0,0,0.25)' : '#ffffff',
-                  },
-                ]}
-                keyboardType="numeric"
-                value={insectGrams}
-                onChangeText={setInsectGrams}
                 placeholder="0"
                 placeholderTextColor={palette.subText}
               />

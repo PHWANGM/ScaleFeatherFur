@@ -216,7 +216,6 @@ export function useAnalysisToFormValues(result: FoodAnalysisResult | null) {
       vegGrams: '',
       meatGrams: '',
       fruitGrams: '',
-      insectGrams: '',
     };
   }
 
@@ -227,6 +226,5 @@ export function useAnalysisToFormValues(result: FoodAnalysisResult | null) {
     vegGrams: foodType === 'vegetables' ? weightStr : '',
     meatGrams: foodType === 'meat' ? weightStr : '',
     fruitGrams: foodType === 'fruit' ? weightStr : '',
-    insectGrams: foodType === 'insects' ? weightStr : '',
   };
 }

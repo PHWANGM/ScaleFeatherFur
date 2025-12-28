@@ -3,11 +3,14 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/rootNavigator';
+import { useDispatch } from 'react-redux';
 import { listPetsWithSpecies, type PetWithSpeciesRow } from '../lib/db/repos/pets.repo';
+import { setCurrentPetId } from '../state/slices/petsSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetSelect'>;
 
 export default function PetSelectScreen({ navigation }: Props) {
+  const dispatch = useDispatch();
   const [pets, setPets] = useState<PetWithSpeciesRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,6 +28,7 @@ export default function PetSelectScreen({ navigation }: Props) {
   }, []);
 
   const onSelect = (petId: string) => {
+    dispatch(setCurrentPetId(petId));
     navigation.navigate('SpeciesNeeds', { petId });
   };
 

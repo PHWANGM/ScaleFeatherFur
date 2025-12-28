@@ -8,7 +8,7 @@ import {
 
 // ========== 類型定義 ==========
 
-export type FoodType = 'vegetables' | 'hay' | 'meat' | 'fruit' | 'insects' | 'mixed' | 'unknown';
+export type FoodType = 'vegetables' | 'meat' | 'fruit' | 'mixed' | 'unknown';
 
 export type FoodAnalysisResult = {
   foodType: FoodType;
@@ -44,7 +44,7 @@ const FOOD_ANALYSIS_PROMPT = `You are an expert pet food analyst specializing in
 
 Required JSON format:
 {
-  "foodType": "vegetables" | "hay" | "meat" | "fruit" | "insects" | "mixed" | "unknown",
+  "foodType": "vegetables" | "meat" | "fruit" | "mixed" | "unknown",
   "estimatedWeightGrams": <number>,
   "confidence": <number between 0 and 1>,
   "identifiedItems": ["specific item name 1", "specific item name 2", ...]
@@ -53,24 +53,18 @@ Required JSON format:
 CRITICAL: Be SPECIFIC in identifiedItems. Use exact names, not generic terms.
 
 Food Type Guidelines:
-- "hay": Timothy hay, orchard grass, bermuda grass, alfalfa hay, meadow hay, oat hay
 - "vegetables": Leafy greens (kale, collard greens, dandelion greens, turnip greens, mustard greens, endive, escarole, watercress, arugula, bok choy, romaine lettuce), squash, bell peppers, carrots, zucchini, pumpkin
 - "meat": Chicken, turkey, beef, fish, shrimp, eggs, organ meats (liver, heart), pinky mice
 - "fruit": Berries (strawberry, blueberry, raspberry), papaya, mango, banana, melon, apple, pear, figs
-- "insects": Dubia roaches, crickets, mealworms, superworms, black soldier fly larvae (BSFL/phoenix worms), hornworms, silkworms, waxworms, grasshoppers, locusts
 - "mixed": Clear combination of multiple food types
 - "unknown": Cannot identify with confidence
 
 Identification Examples (BE THIS SPECIFIC):
-- Say "timothy hay" not just "hay"
 - Say "collard greens" not just "greens"
-- Say "dubia roaches" not just "insects"
 - Say "butternut squash" not just "squash"
 
 Weight estimation tips:
-- Hay: A handful is typically 30-80g, a large pile 100-200g
 - Leafy greens: 20-100g per handful depending on density
-- Insects: 5-30g per portion (crickets ~0.3g each, dubias ~1-3g each)
 - Fruit pieces: 10-50g depending on size
 - Use visual cues like plate size, container, hand comparison
 
@@ -257,13 +251,10 @@ function parseGeminiResponse(text: string): FoodAnalysisResult {
   }
 
   // 驗證必要欄位
-  const validFoodTypes: FoodType[] = ['vegetables', 'hay', 'meat', 'fruit', 'insects', 'mixed', 'unknown'];
-  if (!validFoodTypes.includes(parsed.foodType)) {
-    parsed.foodType = 'unknown';
-  }
+  const normalizedFoodType = normalizeFoodType(parsed.foodType);
 
   return {
-    foodType: parsed.foodType as FoodType,
+    foodType: normalizedFoodType,
     estimatedWeightGrams: Math.max(0, Math.round(Number(parsed.estimatedWeightGrams) || 0)),
     confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0)),
     identifiedItems: Array.isArray(parsed.identifiedItems)
@@ -271,6 +262,15 @@ function parseGeminiResponse(text: string): FoodAnalysisResult {
       : [],
     rawResponse: text,
   };
+}
+
+function normalizeFoodType(raw: unknown): FoodType {
+  if (typeof raw !== 'string') return 'unknown';
+  const lower = raw.toLowerCase();
+  if (lower === 'hay') return 'vegetables';
+  if (lower === 'insects') return 'meat';
+  const validFoodTypes: FoodType[] = ['vegetables', 'meat', 'fruit', 'mixed', 'unknown'];
+  return validFoodTypes.includes(lower as FoodType) ? (lower as FoodType) : 'unknown';
 }
 
 function handleApiError(status: number, error?: { code: number; message: string; status: string }): never {

@@ -19,6 +19,7 @@ import WeighScreen from '../screens/WeighScreen';
 import { StackScreen } from 'react-native-screens';
 import FeedInputScreen from '../screens/FeedInputScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import UVBLogScreen from '../screens/UVBLogScreen';
 
 // ===== 型別 =====
 export type RootStackParamList = {
@@ -219,6 +220,11 @@ export default function RootNavigator() {
         name="Settings"
         component={SettingsScreen}
         options={{ headerShown: true, title: '設定' }}
+      />
+      <Stack.Screen
+        name="UVBLogScreen"
+        component={UVBLogScreen}
+        options={{ headerShown: true, title: 'UVB Log' }}
       />
     </Stack.Navigator>
   );
