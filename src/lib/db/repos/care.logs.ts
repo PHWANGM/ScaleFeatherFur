@@ -7,6 +7,7 @@ export type CareLogType =
   | 'feed'
   | 'calcium'
   | 'vitamin'
+  | 'uvb'
   | 'uvb_on'
   | 'uvb_off'
   | 'heat_on'
@@ -205,6 +206,11 @@ export async function getDailyAggregatesSQL(
     FROM uvb_pairs
     WHERE type = 'uvb_off' AND prev_type = 'uvb_on'
   ),
+  uvb_direct AS (
+    SELECT COALESCE(SUM(value), 0.0) / 60.0 AS uvb_hours
+    FROM day_logs
+    WHERE type = 'uvb' AND unit = 'min'
+  ),
   heat_pairs AS (
     SELECT
       at,
@@ -234,7 +240,7 @@ export async function getDailyAggregatesSQL(
     (SELECT calcium_plain_count   FROM calcium_plain) AS calcium_plain_count,
     (SELECT calcium_d3_count      FROM calcium_d3)    AS calcium_d3_count,
     (SELECT vitamin_count         FROM vitamin)       AS vitamin_count,
-    (SELECT uvb_hours             FROM uvb)           AS uvb_hours,
+    ((SELECT uvb_hours FROM uvb) + (SELECT uvb_hours FROM uvb_direct)) AS uvb_hours,
     (SELECT heat_hours            FROM heat)          AS heat_hours,
     COALESCE((SELECT weight_kg FROM weigh), 0.0)      AS weight_kg;
   `;

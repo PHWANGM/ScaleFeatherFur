@@ -172,22 +172,12 @@ const UVBLogScreen: React.FC = () => {
       setSaving(true);
       await insertCareLog({
         pet_id: currentPetId,
-        type: 'uvb_on',
-        subtype: 'uvb',
-        category: 'light',
-        value: null,
-        unit: null,
-        note: null,
-        at: sessionStartAt.toISOString(),
-      });
-      await insertCareLog({
-        pet_id: currentPetId,
-        type: 'uvb_off',
+        type: 'uvb',
         subtype: 'uvb',
         category: 'light',
         value: durationMin,
         unit: 'min',
-        note: null,
+        note: `UVB exposure ${durationMin} min`,
         at: endAt.toISOString(),
       });
 

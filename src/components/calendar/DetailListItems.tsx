@@ -26,6 +26,8 @@ const typeColor = (t: CareLogType): string => {
       return '#2871C8';
     case 'uvb_off':
       return '#1DA8B1';
+    case 'uvb':
+      return '#3B82F6';
     case 'heat_on':
       return '#E76F51';
     case 'heat_off':
@@ -75,6 +77,8 @@ const DetailListItem: React.FC<DetailListItemProps> = ({ item, onDeleted }) => {
         ? `\n\n餵食量 (g)：${item.value ?? 0}`
         : item.type === 'weigh'
         ? `\n\n體重 (kg)：${item.value ?? 0}`
+        : item.type === 'uvb'
+        ? `\n\nUVB 曝曬(分鐘)？${item.value ?? 0}`
         : '';
     const note = item.note ? `\n\n備註：${item.note}` : '';
 

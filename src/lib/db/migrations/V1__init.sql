@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS care_logs (
   id TEXT PRIMARY KEY,
   pet_id TEXT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
   type TEXT CHECK (type IN (
-    'feed','calcium','vitamin','uvb_on','uvb_off','heat_on','heat_off','clean','weigh'
+    'feed','calcium','vitamin','uvb','uvb_on','uvb_off','heat_on','heat_off','clean','weigh'
   )) NOT NULL,
   subtype  TEXT,   -- 'calcium_plain','calcium_d3','vitamin_multi','feed_greens','feed_meat','feed_insect','feed_fruit','uvb','basking_heat','heat_mat','insect_dusting'...
   category TEXT,   -- 'supplement','feed_insect','feed_meat','feed_greens','feed_fruit','light','heat','maint'...
