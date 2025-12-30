@@ -8,7 +8,7 @@ import EmptyState from '../components/EmptyState';
 import { theme } from '../styles/tokens';
 import { AppDispatch, RootState } from '../state/store';
 import { loadLogsByPet } from '../state/slices/logsSlice';
-import type { TaskType } from '../domain/taskTypes';
+import type { CareLogType } from '../lib/db/repos/care.logs';
 
 export default function PetDetailScreen({ route }: any) {
   const pet = route.params.pet as { id: string; name: string };
@@ -33,7 +33,7 @@ export default function PetDetailScreen({ route }: any) {
       done = 0;
 
     // ✅ 關鍵：用聯集字面量型別，避免被推斷成 string[]
-    const keys: TaskType[] = ['feed', 'calcium', 'uvb_on', 'clean', 'weigh'];
+    const keys: CareLogType[] = ['feed', 'calcium', 'uvb', 'clean', 'weigh', 'vitamin'];
 
     for (let i = 0; i < 7; i++) {
       const day = new Date(now.getTime() - i * 86400000)

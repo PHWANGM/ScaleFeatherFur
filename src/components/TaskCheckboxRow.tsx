@@ -7,15 +7,23 @@ type Props = {
   description?: string;
   checked: boolean;
   points?: number;
+  titleColor?: string;
   onToggle: () => void;
 };
 
-export default function TaskCheckboxRow({ title, description, checked, points = 5, onToggle }: Props) {
+export default function TaskCheckboxRow({
+  title,
+  description,
+  checked,
+  points = 5,
+  titleColor,
+  onToggle,
+}: Props) {
   return (
     <Pressable onPress={onToggle} style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}>
       <View style={[styles.checkbox, checked && styles.checkboxChecked]} />
       <View style={styles.texts}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, titleColor ? { color: titleColor } : null]}>{title}</Text>
         {!!description && <Text style={styles.desc}>{description}</Text>}
       </View>
       <View style={styles.points}>

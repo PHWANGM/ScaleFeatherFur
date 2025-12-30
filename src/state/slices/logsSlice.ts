@@ -4,7 +4,17 @@ import { query, execute } from '../../lib/db/db.client';
 export type CareLog = {
   id: string;
   pet_id: string;
-  type: 'feed' | 'calcium' | 'uvb_on' | 'uvb_off' | 'clean' | 'weigh';
+  type:
+    | 'feed'
+    | 'calcium'
+    | 'vitamin'
+    | 'uvb'
+    | 'uvb_on'
+    | 'uvb_off'
+    | 'heat_on'
+    | 'heat_off'
+    | 'clean'
+    | 'weigh';
   value: number | null;
   note: string | null;
   at: string;

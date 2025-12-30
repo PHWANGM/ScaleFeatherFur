@@ -41,6 +41,13 @@ import UVBWarning from '../components/warning/UVBWarning';
 import FeedingWarning from '../components/warning/FeedingWarning';
 import CalciumWarning from '../components/warning/CalciumWarning';
 import VitaminD3Warning from '../components/warning/VitaminD3Warning';
+import DailyTasksModal from '../components/modals/DailyTasksModal';
+import {
+  completeTaskManually,
+  dayRangeIsoLocal,
+  getDailyTaskStatus,
+  type TaskStatus,
+} from '../lib/db/repos/tasks.repo';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
 
@@ -91,6 +98,9 @@ export default function HomeScreen({ navigation }: Props) {
   // 🐾 Pet state
   const [pet, setPet] = useState<PetWithSpeciesRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [dailyTasks, setDailyTasks] = useState<TaskStatus[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
 
   // 📍 Location（你原本的 hook，不用改）
   const { coords, locationName, loading: locationLoading } = useCurrentLocation();
@@ -137,8 +147,42 @@ export default function HomeScreen({ navigation }: Props) {
     }, [loadPet])
   );
 
+  const refreshDailyTasks = useCallback(async () => {
+    if (!currentPetId) {
+      setDailyTasks([]);
+      return;
+    }
+    setTasksLoading(true);
+    try {
+      const [dayStartISO, dayEndISO] = dayRangeIsoLocal(new Date());
+      const rows = await getDailyTaskStatus(currentPetId, dayStartISO, dayEndISO);
+      setDailyTasks(rows);
+    } catch (e: any) {
+      console.warn('[HomeScreen] load daily tasks failed:', e);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [currentPetId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshDailyTasks();
+    }, [refreshDailyTasks])
+  );
+
+  const handleManualToggle = useCallback(
+    async (task: TaskStatus) => {
+      if (!currentPetId || task.completed || task.auto) return;
+      const [dayStartISO, dayEndISO] = dayRangeIsoLocal(new Date());
+      await completeTaskManually(currentPetId, task.key, dayStartISO, dayEndISO, task.points);
+      await refreshDailyTasks();
+    },
+    [currentPetId, refreshDailyTasks]
+  );
+
   const speciesLabel = pet?.species_name ?? pet?.species_key ?? '—';
   const environmentLoading = locationLoading || weatherLoading;
+  const completedCount = dailyTasks.filter((t) => t.completed).length;
 
   return (
     <SafeAreaView
@@ -262,6 +306,31 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={{ height: 32 }} />
         </ScrollView>
       )}
+
+      <Pressable
+        style={[styles.taskFab, { backgroundColor: palette.primary }]}
+        onPress={() => {
+          setTasksOpen(true);
+          refreshDailyTasks();
+        }}
+      >
+        <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#022c22" />
+      </Pressable>
+
+      <DailyTasksModal
+        visible={tasksOpen}
+        onClose={() => setTasksOpen(false)}
+        palette={{
+          card: palette.card,
+          border: palette.border,
+          text: palette.text,
+          subText: palette.subText,
+        }}
+        tasksLoading={tasksLoading}
+        tasks={dailyTasks}
+        completedCount={completedCount}
+        onToggleTask={handleManualToggle}
+      />
     </SafeAreaView>
   );
 }
@@ -308,4 +377,19 @@ const styles = StyleSheet.create({
   },
   alertTitle: { fontSize: 16, fontWeight: '600' },
   alertSub: { fontSize: 12, marginTop: 2 },
+  taskFab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
 });
