@@ -75,43 +75,43 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
       });
     }
 
-    // ==== Heat（優先 temp_ranges；否則 ambient 範圍） ====
-    const hasTempRanges =
-      !!(target as any)?.temp_ranges?.basking ||
-      !!(target as any)?.temp_ranges?.hot ||
-      !!(target as any)?.temp_ranges?.ambient_day;
+    // // ==== Heat（優先 temp_ranges；否則 ambient 範圍） ====
+    // const hasTempRanges =
+    //   !!(target as any)?.temp_ranges?.basking ||
+    //   !!(target as any)?.temp_ranges?.hot ||
+    //   !!(target as any)?.temp_ranges?.ambient_day;
 
-    if (hasTempRanges) {
-      const tr = (target as any).temp_ranges as
-        | { basking?: [number, number]; hot?: [number, number]; ambient_day?: [number, number] }
-        | undefined;
-      const basking = tr?.basking ? `${tr.basking[0]}–${tr.basking[1]}°C` : null;
-      const hot = tr?.hot ? `${tr.hot[0]}–${tr.hot[1]}°C` : null;
+    // if (hasTempRanges) {
+    //   const tr = (target as any).temp_ranges as
+    //     | { basking?: [number, number]; hot?: [number, number]; ambient_day?: [number, number] }
+    //     | undefined;
+    //   const basking = tr?.basking ? `${tr.basking[0]}–${tr.basking[1]}°C` : null;
+    //   const hot = tr?.hot ? `${tr.hot[0]}–${tr.hot[1]}°C` : null;
 
-      const subtitle = basking
-        ? `熱點 ${basking}`
-        : hot
-          ? `熱區 ${hot}`
-          : '管理加熱時數與熱區溫度';
+    //   const subtitle = basking
+    //     ? `熱點 ${basking}`
+    //     : hot
+    //       ? `熱區 ${hot}`
+    //       : '管理加熱時數與熱區溫度';
 
-      cards.push({
-        key: 'heat',
-        title: '加熱 / 熱點',
-        subtitle,
-        color: '#E6FCF4',
-        route: 'HeatControlScreen',
-      });
-    } else if (target.ambient_temp_c_min != null || target.ambient_temp_c_max != null) {
-      const ambMin = target.ambient_temp_c_min ?? target.ambient_temp_c_max;
-      const ambMax = target.ambient_temp_c_max ?? target.ambient_temp_c_min ?? ambMin;
-      cards.push({
-        key: 'heat_ambient',
-        title: '環境溫度',
-        subtitle: `${ambMin}–${ambMax}°C`,
-        color: '#E6FCF4',
-        route: 'HeatControlScreen',
-      });
-    }
+    //   cards.push({
+    //     key: 'heat',
+    //     title: '加熱 / 熱點',
+    //     subtitle,
+    //     color: '#E6FCF4',
+    //     route: 'HeatControlScreen',
+    //   });
+    // } else if (target.ambient_temp_c_min != null || target.ambient_temp_c_max != null) {
+    //   const ambMin = target.ambient_temp_c_min ?? target.ambient_temp_c_max;
+    //   const ambMax = target.ambient_temp_c_max ?? target.ambient_temp_c_min ?? ambMin;
+    //   cards.push({
+    //     key: 'heat_ambient',
+    //     title: '環境溫度',
+    //     subtitle: `${ambMin}–${ambMax}°C`,
+    //     color: '#E6FCF4',
+    //     route: 'HeatControlScreen',
+    //   });
+    // }
 
     // ==== Diet（只顯示餵食頻率 + 備註；鈣粉週期與 D3 週期改到餵食設定頁處理） ====
     if (target.feeding_interval_hours_min != null || target.feeding_interval_hours_max != null || target.diet_note) {

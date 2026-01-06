@@ -1,28 +1,76 @@
 // App.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ActivityIndicator, StatusBar, useColorScheme } from 'react-native';
 import { Provider } from 'react-redux';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
+
 import { store } from './src/state/store';
 import { ensureDBReady } from './src/lib/db/bootstrap';
 import RootNavigator from './src/navigation/rootNavigator';
+import { navigationRef } from './src/navigation/navigationRef';
 
 export default function App() {
   const isDark = useColorScheme() === 'dark';
-
   const navTheme = isDark ? DarkTheme : DefaultTheme;
 
   const [ready, setReady] = useState(false);
   const [bootErr, setBootErr] = useState<Error | null>(null);
 
+  // ✅ React Navigation linking（正常情況會靠它自動導頁）
+  const linking = useMemo(
+    () => ({
+      prefixes: [Linking.createURL('/'), 'scaleff://'],
+      config: {
+        screens: {
+          ResetPassword: 'auth/reset',
+          AuthCallback: 'auth/callback',
+          ForgotPassword: 'auth/forgot',
+          Login: 'auth/login',
+          Signup: 'auth/signup',
+        },
+      },
+    }),
+    []
+  );
+
+  // ✅ 保底：不管 linking 成不成功，只要收到 auth/reset 就強制導到 ResetPassword
+  useEffect(() => {
+    const routeByUrl = (url: string) => {
+      const parsed = Linking.parse(url);
+      const path = parsed.path ?? '';
+      console.log('[DeepLink] url=', url);
+      console.log('[DeepLink] parsed path=', path, 'query=', parsed.queryParams);
+
+      if (!navigationRef.isReady()) {
+        console.log('[DeepLink] navigation not ready yet');
+        return;
+      }
+
+      if (path === 'auth/reset') {
+        navigationRef.navigate('ResetPassword');
+      } else if (path === 'auth/callback') {
+        navigationRef.navigate('AuthCallback');
+      }
+    };
+
+    // App 冷啟動
+    Linking.getInitialURL().then((url) => {
+      console.log('[DeepLink] initialUrl=', url);
+      if (url) routeByUrl(url);
+    });
+
+    // App 前景/背景切換時的事件
+    const sub = Linking.addEventListener('url', ({ url }) => routeByUrl(url));
+
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    // 8 秒逾時保險：避免卡死沒畫面
     const timeout = setTimeout(() => {
-      if (!ready && !bootErr) {
-        setBootErr(new Error('DB init timeout (>8s).'));
-      }
+      if (!ready && !bootErr) setBootErr(new Error('DB init timeout (>8s).'));
     }, 8000);
 
     (async () => {
@@ -39,10 +87,12 @@ export default function App() {
       }
     })();
 
-    return () => { cancelled = true; clearTimeout(timeout); };
-  }, []);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [ready, bootErr]);
 
-  // ❗ 先顯示錯誤，其次才是 Loading
   if (bootErr) {
     return (
       <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:24, backgroundColor: isDark ? '#000' : '#fff' }}>
@@ -72,7 +122,13 @@ export default function App() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <NavigationContainer theme={navTheme}>
+        <NavigationContainer
+          ref={navigationRef}
+          theme={navTheme}
+          linking={linking}
+          onReady={() => console.log('[Nav] ready')}
+          onStateChange={() => console.log('[Nav] state change')}
+        >
           <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
           <RootNavigator />
         </NavigationContainer>

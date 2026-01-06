@@ -20,17 +20,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   insertCareLog,
   getLatestWeighOnOrBefore,
-} from '../lib/db/repos/care.logs';
-import { listPetsWithSpecies, type PetWithSpeciesRow } from '../lib/db/repos/pets.repo';
+} from '../../lib/db/repos/care.logs';
+import { listPetsWithSpecies, type PetWithSpeciesRow } from '../../lib/db/repos/pets.repo';
 
 import {
   setCurrentPetId,
   selectCurrentPetId,
-} from '../state/slices/petsSlice';
+} from '../../state/slices/petsSlice';
 
-import PrimaryButton from '../components/buttons/PrimaryButton';
+import PrimaryButton from '../../components/buttons/PrimaryButton';
 // 🆕 使用主題顏色
-import { useThemeColors } from '../styles/themesColors';
+import { useThemeColors } from '../../styles/themesColors';
 
 type Unit = 'g' | 'kg';
 

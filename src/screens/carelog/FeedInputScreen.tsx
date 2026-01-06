@@ -21,13 +21,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   selectCurrentPetId,
   selectSelectedDate,
-} from '../state/slices/petsSlice';
+} from '../../state/slices/petsSlice';
 import {
   insertCareLog,
   type CareLogRow,
-} from '../lib/db/repos/care.logs';
-import { useThemeColors } from '../styles/themesColors';
-import { useFoodAnalysis } from '../hooks/useFoodAnalysis';
+} from '../../lib/db/repos/care.logs';
+import { useThemeColors } from '../../styles/themesColors';
+import { useFoodAnalysis } from '../../hooks/useFoodAnalysis';
 
 type RootStackParamList = {
   MainTabs: { screen: 'Care' } | undefined;

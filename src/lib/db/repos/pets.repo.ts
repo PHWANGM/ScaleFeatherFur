@@ -199,3 +199,9 @@ export async function listPetsWithSpecies(filter: PetFilter = {}): Promise<PetWi
 
   return query<PetWithSpeciesRow>(sql, params);
 }
+
+/** æ•¸é‡ */
+export async function countPets(): Promise<number> {
+  const rows = await query<{ count: number }>(`SELECT COUNT(*) as count FROM pets`, []);
+  return rows[0]?.count ?? 0;
+}

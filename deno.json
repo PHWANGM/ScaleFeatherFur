@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "target": "esnext",
+    "types": []
+  },
+  "fmt": {
+    "lineWidth": 80,
+    "useTabs": false,
+    "indentWidth": 2,
+    "semiColons": false
+  },
+  "lint": {
+    "rules": {
+      "include": ["recommended"]
+    }
+  },
+  "tasks": {
+    "fmt": "deno fmt",
+    "lint": "deno lint",
+    "test": "deno test",
+    "check": "deno check --unstable"
+  }
+}

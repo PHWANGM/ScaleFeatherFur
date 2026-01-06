@@ -14,11 +14,11 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
 
-import { insertCareLog } from '../lib/db/repos/care.logs';
-import { selectCurrentPetId, selectSelectedDate } from '../state/slices/petsSlice';
-import { endSession, selectUvbSessionByPetId, startSession } from '../state/slices/uvbSlice';
-import { useThemeColors } from '../styles/themesColors';
-import { useAppSelector } from '../state/hooks';
+import { insertCareLog } from '../../lib/db/repos/care.logs';
+import { selectCurrentPetId, selectSelectedDate } from '../../state/slices/petsSlice';
+import { endSession, selectUvbSessionByPetId, startSession } from '../../state/slices/uvbSlice';
+import { useThemeColors } from '../../styles/themesColors';
+import { useAppSelector } from '../../state/hooks';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const formatDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
