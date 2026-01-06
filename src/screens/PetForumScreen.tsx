@@ -14,11 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-// ✅ 本地資料庫 forum repo
+// ✅ Supabase forum posts repo（你剛剛更新的）
 import {
-  getAllArticles,
-  createArticle,
-  type ArticleRow,
+  fetchPostsFeed,
+  createPostWithImage,
+} from '../lib/supabase/repos/posts.repo';
+
+// ✅ 本地資料庫 product repo（維持原本）
+import {
   getAllProducts,
   createProduct,
   type ProductRow,
@@ -73,67 +76,52 @@ export default function PetForumScreen() {
   // ✅ feed / create（兩個模式共用）
   const [currentView, setCurrentView] = useState<'feed' | 'create'>('feed');
 
-  // Forum 資料
+  // Forum 資料（Supabase）
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Product 資料
+  // Product 資料（本地）
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
-  // --- ArticleRow -> Post ---
-  const mapArticleToPost = useCallback((article: ArticleRow): Post => {
-    let imageUrl: string | undefined;
-    let productLink: string | undefined;
-    let likes = 0;
-
-    if (article.tags) {
-      try {
-        const parsed = JSON.parse(article.tags);
-        if (parsed && typeof parsed === 'object') {
-          if (typeof parsed.imageUrl === 'string') imageUrl = parsed.imageUrl;
-          if (typeof parsed.productLink === 'string') productLink = parsed.productLink;
-          if (typeof parsed.likes === 'number') likes = parsed.likes;
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    const petType = article.species_key || 'other';
-
-    return {
-      id: article.id,
-      userId: 'local-demo-user',
-      title: article.title,
-      content: article.body_md,
-      petType,
-      createdAt: article.created_at,
-      imageUrl,
-      productLink,
-      likes,
-    };
-  }, []);
-
-  // --- Load Forum Posts ---
+  // --- Load Forum Posts (Supabase + Storage imageUrl) ---
   const loadPosts = useCallback(async () => {
     setLoading(true);
     try {
-      const articles = await getAllArticles();
-      const mapped = articles.map(mapArticleToPost);
-      mapped.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      const feed = await fetchPostsFeed({ limit: 50 });
+
+      const mapped: Post[] = feed.map(p => {
+        const petType = p.species_key || 'other';
+
+        // ✅ 直接用 Supabase Storage public url（若沒圖片，才 fallback）
+        const imageUrl =
+          p.image_url && p.image_url.length > 0
+            ? p.image_url
+            : `https://source.unsplash.com/random/800x800/?${petType}`;
+
+        return {
+          id: p.id,
+          userId: p.author_id,
+          title: p.title ?? '(no title)',
+          content: p.body_md,
+          petType,
+          createdAt: p.created_at,
+          imageUrl,
+          productLink: undefined,
+          likes: p.likes_count ?? 0,
+        };
+      });
+
       setPosts(mapped);
     } catch (e) {
       console.error('Load posts error', e);
-      Alert.alert('錯誤', '載入貼文時發生錯誤');
+      Alert.alert('錯誤', '載入貼文時發生錯誤（Supabase）');
     } finally {
       setLoading(false);
     }
-  }, [mapArticleToPost]);
+  }, []);
 
-  // --- Load Products ---
+  // --- Load Products (Local DB) ---
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true);
     try {
@@ -160,31 +148,26 @@ export default function PetForumScreen() {
     if (mode === 'product') loadProducts();
   }, [mode, loadProducts]);
 
-  // --- Create Forum Post ---
+  // --- Create Forum Post (Supabase: insert posts + upload image -> storage + insert post_media) ---
   const handleCreatePost = useCallback(async (input: ForumCreatePostInput) => {
     const key = input.speciesKey || 'other';
 
-    const finalImageUrl =
-      input.imageUrl && input.imageUrl.trim().length > 0
-        ? input.imageUrl.trim()
-        : `https://source.unsplash.com/random/800x800/?${key}`;
+    // 如果使用者沒選圖，你也會替他抓一張 fallback 圖後上傳到 Supabase
+    const fallbackUrl = `https://source.unsplash.com/random/900x900/?${key},pet`;
 
-    const tagsPayload = {
-      tags: [] as string[],
-      imageUrl: finalImageUrl,
-      productLink: input.productLink || null,
-      likes: 0,
-    };
-
-    await createArticle({
+    await createPostWithImage({
+      type: 'general',
       title: input.title,
       body_md: input.content,
       species_key: key,
-      tags: JSON.stringify(tagsPayload),
+
+      // ForumCreatePost 現在提供的是 imageUrl string（可能是 remote url 或本地 file uri）
+      imageUri: input.imageUrl ?? null,
+      fallbackUrl,
     });
   }, []);
 
-  // --- Create Product (✅ 支援 image_url / description) ---
+  // --- Create Product (Local DB) ---
   const handleCreateProduct = useCallback(async (input: ProductCreateInput) => {
     await createProduct({
       name: input.name,
@@ -192,8 +175,6 @@ export default function PetForumScreen() {
       tags: input.tags ?? null,
       affiliate_url: input.affiliate_url ?? null,
       region: input.region ?? null,
-
-      // ✅ NEW
       image_url: input.image_url ?? null,
       description: input.description ?? null,
     });
@@ -359,7 +340,7 @@ export default function PetForumScreen() {
       return (
         <View style={styles.centerContainer}>
           <ActivityIndicator />
-          <Text style={{ marginTop: 8, color: palette.subText }}>Loading from database…</Text>
+          <Text style={{ marginTop: 8, color: palette.subText }}>Loading from Supabase…</Text>
         </View>
       );
     }
@@ -372,6 +353,8 @@ export default function PetForumScreen() {
           keyExtractor={item => item.id}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          onRefresh={loadPosts}
+          refreshing={loading}
           ListEmptyComponent={
             <View style={styles.centerContainer}>
               <Text style={{ color: palette.subText }}>目前還沒有貼文，快來搶頭香！</Text>
