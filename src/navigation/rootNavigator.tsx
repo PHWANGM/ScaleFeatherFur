@@ -1,10 +1,7 @@
 // src/navigation/rootNavigator.tsx
 import React from 'react';
 import { View, Pressable, Platform } from 'react-native';
-import {
-  createBottomTabNavigator,
-  type BottomTabBarButtonProps,
-} from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator, type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import type { NavigatorScreenParams } from '@react-navigation/native';
@@ -20,6 +17,12 @@ import PetSelectScreen from '../screens/PetSelectScreen';
 import SpeciesNeedsScreen from '../screens/SpeciesNeedsScreen';
 import PetsAddScreen from '../screens/PetsAddScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+
+// ✅ NEW: Profile friends system screens
+import ProfileFriendsScreen from '../screens/profile/ProfileFriendsScreen';
+import ProfileMessagesScreen from '../screens/profile/ProfileMessagesScreen';
+import ProfileMatchScreen from '../screens/profile/ProfileMatchScreen';
+import ChatThreadScreen from '../screens/profile/ChatThreadScreen';
 
 // carelog
 import WeighScreen from '../screens/carelog/WeighScreen';
@@ -68,6 +71,14 @@ export type RootStackParamList = {
   Settings: undefined;
   UVBLogScreen: { petId: string } | undefined;
   CleanScreen: { petId: string } | undefined;
+
+  // ✅ Friends system
+  ProfileFriends: undefined;
+  ProfileMessages: undefined;
+  ProfileMatch: undefined;
+
+  // ✅ Chat thread
+  ChatThread: { conversationId: string; title?: string } | undefined;
 
   // keep placeholder if you want
   TempMonitorScreen: { petId: string } | undefined;
@@ -205,21 +216,17 @@ export default function RootNavigator() {
       {/* ✅ Auth */}
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: true, title: '登入' }} />
       <Stack.Screen name="Signup" component={SignUpScreen} options={{ headerShown: true, title: '註冊' }} />
-      <Stack.Screen
-        name="ForgotPassword"
-        component={ForgotPasswordScreen}
-        options={{ headerShown: true, title: '忘記密碼' }}
-      />
-      <Stack.Screen
-        name="ResetPassword"
-        component={ResetPasswordScreen}
-        options={{ headerShown: true, title: '重設密碼' }}
-      />
-      <Stack.Screen
-        name="AuthCallback"
-        component={AuthCallbackScreen}
-        options={{ headerShown: true, title: 'Email 驗證' }}
-      />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: true, title: '忘記密碼' }} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: true, title: '重設密碼' }} />
+      <Stack.Screen name="AuthCallback" component={AuthCallbackScreen} options={{ headerShown: true, title: 'Email 驗證' }} />
+
+      {/* ✅ Friends system */}
+      <Stack.Screen name="ProfileFriends" component={ProfileFriendsScreen} options={{ headerShown: true, title: 'Friends' }} />
+      <Stack.Screen name="ProfileMessages" component={ProfileMessagesScreen} options={{ headerShown: true, title: 'Messages' }} />
+      <Stack.Screen name="ProfileMatch" component={ProfileMatchScreen} options={{ headerShown: true, title: 'Match' }} />
+
+      {/* ✅ Chat thread */}
+      <Stack.Screen name="ChatThread" component={ChatThreadScreen} options={{ headerShown: true, title: 'Chat' }} />
 
       {/* ✅ Other screens */}
       <Stack.Screen

@@ -161,7 +161,7 @@ export default function ProfileScreen() {
         sub: '好友列表 / 申請 / 封鎖',
         badge: badges.friendRequests,
         requiresAuth: true, // ✅ 未登入要禁用
-        onPress: () => navigation.navigate('MainTabs'),
+        onPress: () => navigation.navigate('ProfileFriends'),
       },
       {
         key: 'Match',
@@ -169,7 +169,7 @@ export default function ProfileScreen() {
         sub: '找同物種 / 同地區 / 同照護需求',
         badge: badges.matchSuggestions,
         requiresAuth: true, // ✅
-        onPress: () => navigation.navigate('MainTabs'),
+        onPress: () => navigation.navigate('ProfileMatch'),
       },
       {
         key: 'Messages',
@@ -177,7 +177,7 @@ export default function ProfileScreen() {
         sub: '最近對話 / 訊息請求',
         badge: badges.messages,
         requiresAuth: true, // ✅
-        onPress: () => navigation.navigate('MainTabs'),
+        onPress: () => navigation.navigate('ProfileMessages'),
       },
       {
         key: 'Notifications',
