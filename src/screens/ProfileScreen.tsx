@@ -17,12 +17,16 @@ import { useThemeColors } from '../styles/themesColors';
 import { countPets } from '../lib/db/repos/pets.repo';
 import { supabase } from '../lib/supabase';
 
+// ✅ NEW imports
+import { fetchConversationSummaries } from '../lib/supabase/repos/message.repo';
+import { fetchIncomingRequests } from '../lib/supabase/repos/friends.repo';
+
 type ActionItem = {
   key: string;
   title: string;
   sub?: string;
   badge?: number;
-  requiresAuth?: boolean; // ✅ 新增：未登入時要禁用
+  requiresAuth?: boolean;
   onPress: () => void;
 };
 
@@ -47,6 +51,10 @@ export default function ProfileScreen() {
   const [postCount, setPostCount] = useState<number>(0);
   const [friendCount, setFriendCount] = useState<number>(0);
 
+  // ✅ NEW: badges state
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
+  const [incomingReqCount, setIncomingReqCount] = useState<number>(0);
+
   const palette = useMemo(
     () => ({
       bg: colors.bg,
@@ -59,14 +67,13 @@ export default function ProfileScreen() {
     [colors]
   );
 
+  // ✅ UPDATED: badges (remove notifications + matchSuggestions)
   const badges = useMemo(
     () => ({
-      messages: 2,
-      notifications: 5,
-      friendRequests: 1,
-      matchSuggestions: 3,
+      messages: unreadMessages,
+      friendRequests: incomingReqCount,
     }),
-    []
+    [unreadMessages, incomingReqCount]
   );
 
   const loadSupabaseProfile = useCallback(async () => {
@@ -80,6 +87,10 @@ export default function ProfileScreen() {
         setProfile(null);
         setPostCount(0);
         setFriendCount(0);
+
+        // ✅ reset badges
+        setUnreadMessages(0);
+        setIncomingReqCount(0);
         return;
       }
 
@@ -105,12 +116,26 @@ export default function ProfileScreen() {
         .or(`user_a.eq.${uid},user_b.eq.${uid}`);
 
       setFriendCount(fCount ?? 0);
+
+      // ✅ NEW: load badges in parallel
+      const [convs, incoming] = await Promise.all([
+        fetchConversationSummaries(uid),
+        fetchIncomingRequests(uid),
+      ]);
+
+      const unreadTotal = (convs ?? []).reduce((sum, r) => sum + (r.unread_count ?? 0), 0);
+      setUnreadMessages(unreadTotal);
+      setIncomingReqCount(incoming?.length ?? 0);
     } catch (err) {
       console.warn('[ProfileScreen] load supabase profile failed:', err);
       setUserId(null);
       setProfile(null);
       setPostCount(0);
       setFriendCount(0);
+
+      // ✅ reset badges
+      setUnreadMessages(0);
+      setIncomingReqCount(0);
     } finally {
       setAuthLoading(false);
     }
@@ -149,50 +174,27 @@ export default function ProfileScreen() {
   const actions: ActionItem[] = useMemo(
     () => [
       {
-        key: 'MyPets',
-        title: '🪪 我的寵物',
-        sub: '飼養清單 / 照護紀錄',
-        requiresAuth: false,
-        onPress: () => navigation.navigate('PetSelect'),
-      },
-      {
         key: 'Friends',
         title: '👥 好友',
         sub: '好友列表 / 申請 / 封鎖',
         badge: badges.friendRequests,
-        requiresAuth: true, // ✅ 未登入要禁用
+        requiresAuth: true,
         onPress: () => navigation.navigate('ProfileFriends'),
-      },
-      {
-        key: 'Match',
-        title: '🧩 配對',
-        sub: '找同物種 / 同地區 / 同照護需求',
-        badge: badges.matchSuggestions,
-        requiresAuth: true, // ✅
-        onPress: () => navigation.navigate('ProfileMatch'),
       },
       {
         key: 'Messages',
         title: '💬 私訊',
         sub: '最近對話 / 訊息請求',
         badge: badges.messages,
-        requiresAuth: true, // ✅
+        requiresAuth: true,
         onPress: () => navigation.navigate('ProfileMessages'),
-      },
-      {
-        key: 'Notifications',
-        title: '🛎️ 通知中心',
-        sub: '留言 / 邀請 / 系統通知',
-        badge: badges.notifications,
-        requiresAuth: false, //（你也可以改 false，看你通知是否想開放未登入）
-        onPress: () => navigation.navigate('Settings'),
       },
       {
         key: 'MyPosts',
         title: '🏷️ 我的貼文 / 收藏',
         sub: '我的貼文 / 收藏 / 讚',
-        requiresAuth: true, // ✅
-        onPress: () => navigation.navigate('MainTabs'),
+        requiresAuth: true,
+        onPress: () => navigation.navigate('ProfileMyPosts'),
       },
       {
         key: 'Resources',
@@ -205,7 +207,7 @@ export default function ProfileScreen() {
         key: 'Privacy',
         title: '🔒 隱私',
         sub: '誰能私訊 / 顯示範圍 / 顯示物種',
-        requiresAuth: true, // 通常隱私設定要登入
+        requiresAuth: true,
         onPress: () => navigation.navigate('Settings'),
       },
       {
@@ -223,17 +225,10 @@ export default function ProfileScreen() {
         onPress: () => navigation.navigate('Settings'),
       },
     ],
-    [
-      badges.friendRequests,
-      badges.matchSuggestions,
-      badges.messages,
-      badges.notifications,
-      navigation,
-    ]
+    [badges.friendRequests, badges.messages, navigation]
   );
 
   const isSignedIn = !!userId;
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top', 'left', 'right']}>
       <ScrollView
@@ -299,7 +294,7 @@ export default function ProfileScreen() {
 
                 <Pressable
                   style={[styles.secondaryBtn, { backgroundColor: palette.card, borderColor: palette.border }]}
-                  onPress={() => navigation.navigate('MainTabs')}
+                  onPress={() => navigation.navigate('ProfileMatch')}
                 >
                   <Text style={[styles.secondaryBtnText, { color: palette.subText }]}>開始好友配對</Text>
                 </Pressable>

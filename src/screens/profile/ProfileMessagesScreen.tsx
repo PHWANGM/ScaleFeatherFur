@@ -10,6 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/rootNavigator';
+
 import { getAuthedUserId } from '../../lib/supabase/repos/profile.repo';
 import {
   fetchConversationSummaries,
@@ -19,6 +23,8 @@ import {
 } from '../../lib/supabase/repos/message.repo';
 
 export default function ProfileMessagesScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const [myId, setMyId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -94,8 +100,11 @@ export default function ProfileMessagesScreen() {
                 await markConversationRead(item.conversation_id, myId);
                 await load();
 
-                // TODO: 之後你加 ChatThreadScreen 就改這行
-                Alert.alert('Open chat', `conversation_id: ${item.conversation_id}`);
+                // ✅ 這行就是你要改的：直接導到 ChatThread
+                navigation.navigate('ChatThread', {
+                  conversationId: item.conversation_id,
+                  title: item.displayTitle,
+                });
               } catch {
                 Alert.alert('Error', 'Failed to open chat.');
               }

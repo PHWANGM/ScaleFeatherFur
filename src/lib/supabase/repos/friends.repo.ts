@@ -29,9 +29,10 @@ function nowIso() {
 }
 
 function normalizePair(a: string, b: string): { user_a: string; user_b: string } {
-  // friendships 的 PK 是 (user_a, user_b)，用字典序固定順序可避免重複
   return a < b ? { user_a: a, user_b: b } : { user_a: b, user_b: a };
+  console.log('Normalized pair:',  {a});
 }
+
 
 export async function fetchProfilesByIds(ids: string[]): Promise<Record<string, ProfileRow>> {
   if (ids.length === 0) return {};
@@ -179,5 +180,23 @@ export async function cancelFriendRequest(reqId: string): Promise<void> {
 
 export async function removeFriend(myId: string, otherId: string): Promise<void> {
   const { user_a, user_b } = normalizePair(myId, otherId);
-  await supabase.from('friendships').delete().eq('user_a', user_a).eq('user_b', user_b);
+
+  const { data, error } = await supabase
+    .from('friendships')
+    .delete()
+    .eq('user_a', user_a)
+    .eq('user_b', user_b)
+    .select('user_a,user_b'); // ✅ 讓 supabase 回傳實際刪掉的 rows
+
+  if (error) {
+    console.error('removeFriend error:', error);
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    // ✅ 代表「沒有匹配到任何 row」：通常就是順序不對 / 根本不存在 / RLS 擋掉
+    console.warn('removeFriend: no rows deleted', { myId, otherId, user_a, user_b });
+  } else {
+    console.log('Removed friendship row:', data[0]);
+  }
 }

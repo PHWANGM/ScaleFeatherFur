@@ -24,6 +24,9 @@ import ProfileMessagesScreen from '../screens/profile/ProfileMessagesScreen';
 import ProfileMatchScreen from '../screens/profile/ProfileMatchScreen';
 import ChatThreadScreen from '../screens/profile/ChatThreadScreen';
 
+// ✅ NEW: My Posts screen
+import ProfileMyPostsScreen from '../screens/profile/ProfileMyPostsScreen';
+
 // carelog
 import WeighScreen from '../screens/carelog/WeighScreen';
 import FeedInputScreen from '../screens/carelog/FeedInputScreen';
@@ -76,6 +79,9 @@ export type RootStackParamList = {
   ProfileFriends: undefined;
   ProfileMessages: undefined;
   ProfileMatch: undefined;
+
+  // ✅ My posts
+  ProfileMyPosts: undefined;
 
   // ✅ Chat thread
   ChatThread: { conversationId: string; title?: string } | undefined;
@@ -224,6 +230,9 @@ export default function RootNavigator() {
       <Stack.Screen name="ProfileFriends" component={ProfileFriendsScreen} options={{ headerShown: true, title: 'Friends' }} />
       <Stack.Screen name="ProfileMessages" component={ProfileMessagesScreen} options={{ headerShown: true, title: 'Messages' }} />
       <Stack.Screen name="ProfileMatch" component={ProfileMatchScreen} options={{ headerShown: true, title: 'Match' }} />
+
+      {/* ✅ My Posts */}
+      <Stack.Screen name="ProfileMyPosts" component={ProfileMyPostsScreen} options={{ headerShown: true, title: 'My Posts' }} />
 
       {/* ✅ Chat thread */}
       <Stack.Screen name="ChatThread" component={ChatThreadScreen} options={{ headerShown: true, title: 'Chat' }} />
