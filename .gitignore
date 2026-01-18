@@ -40,3 +40,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Local CLIs / binaries
+supabase.exe
+deno.exe
+*.exe
+
