@@ -42,14 +42,26 @@ import FeedingWarning from '../components/warning/FeedingWarning';
 import CalciumWarning from '../components/warning/CalciumWarning';
 import VitaminD3Warning from '../components/warning/VitaminD3Warning';
 import DailyTasksModal from '../components/modals/DailyTasksModal';
-import {
-  completeTaskManually,
-  dayRangeIsoLocal,
-  getDailyTaskStatus,
-  type TaskStatus,
-} from '../lib/db/repos/tasks.repo';
+
+// ✅ Local (offline) tasks repo
+import * as DbTasks from '../lib/db/repos/tasks.repo';
+import type { TaskStatus } from '../lib/db/repos/tasks.repo';
+
+// ✅ Supabase client + supabase tasks repo
+import { supabase } from '../lib/supabase';
+import * as SbTasks from '../lib/supabase/repos/tasks.repo';
+
+// ✅ Outbox flush + pending
+import { flushOutboxToSupabase } from '../lib/supabase/repos/outbox.sync';
+import { listUnsyncedOutbox } from '../lib/db/repos/sync.outbox.repo';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Home'>;
+
+type SyncState =
+  | { status: 'idle' }
+  | { status: 'syncing' }
+  | { status: 'ok'; ok: number; failed: number }
+  | { status: 'error'; message: string };
 
 /**
  * ✅ 每次「App 打開 / 從背景回前景」才會 +1
@@ -98,9 +110,15 @@ export default function HomeScreen({ navigation }: Props) {
   // 🐾 Pet state
   const [pet, setPet] = useState<PetWithSpeciesRow | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // ✅ Daily tasks state
   const [tasksOpen, setTasksOpen] = useState(false);
   const [dailyTasks, setDailyTasks] = useState<TaskStatus[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+
+  // ✅ Sync UI state
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncState, setSyncState] = useState<SyncState>({ status: 'idle' });
 
   // 📍 Location（你原本的 hook，不用改）
   const { coords, locationName, loading: locationLoading } = useCurrentLocation();
@@ -147,22 +165,80 @@ export default function HomeScreen({ navigation }: Props) {
     }, [loadPet])
   );
 
+  // =========================
+  // ✅ Outbox flush helper (also updates pendingCount + syncState)
+  // =========================
+  const syncNow = useCallback(async () => {
+    try {
+      setSyncState({ status: 'syncing' });
+
+      const pendingBefore = await listUnsyncedOutbox(999);
+      setPendingCount(pendingBefore.length);
+
+      const r = await flushOutboxToSupabase(supabase);
+      console.log('[flushOutboxToSupabase] result', r);
+
+      const pendingAfter = await listUnsyncedOutbox(999);
+      setPendingCount(pendingAfter.length);
+
+      setSyncState({ status: 'ok', ok: r.ok, failed: r.failed });
+      return r;
+    } catch (e: any) {
+      console.log('[flushOutboxToSupabase] failed', e);
+      setSyncState({ status: 'error', message: e?.message ?? String(e) });
+
+      // still update pending
+      try {
+        const pending = await listUnsyncedOutbox(999);
+        setPendingCount(pending.length);
+      } catch {}
+      return { ok: 0, failed: 0 };
+    }
+  }, []);
+
+  // =========================
+  // ✅ Refresh daily tasks:
+  //    1) flush outbox
+  //    2) try supabase tasks
+  //    3) fallback local db tasks
+  // =========================
   const refreshDailyTasks = useCallback(async () => {
     if (!currentPetId) {
       setDailyTasks([]);
       return;
     }
+
     setTasksLoading(true);
     try {
-      const [dayStartISO, dayEndISO] = dayRangeIsoLocal(new Date());
-      const rows = await getDailyTaskStatus(currentPetId, dayStartISO, dayEndISO);
-      setDailyTasks(rows);
+      const [dayStartISO, dayEndISO] = DbTasks.dayRangeIsoLocal(new Date());
+
+      // 1) sync outbox (best effort)
+      await syncNow();
+
+      // 2) primary: Supabase
+      try {
+        const rows = await SbTasks.getDailyTaskStatus(
+          supabase,
+          currentPetId,
+          dayStartISO,
+          dayEndISO
+        );
+        setDailyTasks(rows as TaskStatus[]);
+        return;
+      } catch (e: any) {
+        console.warn('[HomeScreen] supabase daily tasks failed, fallback local:', e);
+      }
+
+      // 3) fallback: Local DB
+      const localRows = await DbTasks.getDailyTaskStatus(currentPetId, dayStartISO, dayEndISO);
+      setDailyTasks(localRows);
     } catch (e: any) {
-      console.warn('[HomeScreen] load daily tasks failed:', e);
+      console.warn('[HomeScreen] refreshDailyTasks failed:', e);
+      setDailyTasks([]);
     } finally {
       setTasksLoading(false);
     }
-  }, [currentPetId]);
+  }, [currentPetId, syncNow]);
 
   useFocusEffect(
     useCallback(() => {
@@ -170,12 +246,28 @@ export default function HomeScreen({ navigation }: Props) {
     }, [refreshDailyTasks])
   );
 
+  // ✅ Manual toggle: offline-first (local DB), then refresh (will sync + load)
   const handleManualToggle = useCallback(
     async (task: TaskStatus) => {
       if (!currentPetId || task.completed || task.auto) return;
-      const [dayStartISO, dayEndISO] = dayRangeIsoLocal(new Date());
-      await completeTaskManually(currentPetId, task.key, dayStartISO, dayEndISO, task.points);
-      await refreshDailyTasks();
+
+      try {
+        const [dayStartISO, dayEndISO] = DbTasks.dayRangeIsoLocal(new Date());
+
+        // 1) local complete (should enqueue outbox inside db/tasks.repo.ts)
+        await DbTasks.completeTaskManually(
+          currentPetId,
+          task.key,
+          dayStartISO,
+          dayEndISO,
+          task.points
+        );
+
+        // 2) refresh (sync + load)
+        await refreshDailyTasks();
+      } catch (e: any) {
+        console.warn('[HomeScreen] handleManualToggle failed:', e);
+      }
     },
     [currentPetId, refreshDailyTasks]
   );
@@ -192,9 +284,7 @@ export default function HomeScreen({ navigation }: Props) {
       {/* 🧭 Header */}
       <View style={[styles.header, { backgroundColor: palette.bg }]}>
         <View style={{ width: 48 }} />
-        <Text style={[styles.appTitle, { color: palette.text }]}>
-          ScaleFeatherFur
-        </Text>
+        <Text style={[styles.appTitle, { color: palette.text }]}>ScaleFeatherFur</Text>
         <Pressable
           style={styles.iconBtn}
           onPress={() => Alert.alert('Settings', 'Open settings…')}
@@ -216,21 +306,14 @@ export default function HomeScreen({ navigation }: Props) {
           </Text>
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <PetsHeader />
 
           {/* 🩺 Care Alerts */}
           <View style={{ marginTop: 16 }}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: palette.text }]}>
-                Care Alerts
-              </Text>
-              <Text style={[styles.sectionHint, { color: palette.subText }]}>
-                {speciesLabel}
-              </Text>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>Care Alerts</Text>
+              <Text style={[styles.sectionHint, { color: palette.subText }]}>{speciesLabel}</Text>
             </View>
 
             <View
@@ -285,9 +368,7 @@ export default function HomeScreen({ navigation }: Props) {
 
           {/* ⚖️ Weight Trend */}
           <View style={{ marginTop: 16 }}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>
-              Weight
-            </Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>Weight</Text>
             <View
               style={[
                 styles.card,
@@ -307,14 +388,19 @@ export default function HomeScreen({ navigation }: Props) {
         </ScrollView>
       )}
 
+      {/* ✅ Open daily tasks: open modal, then sync+refresh */}
       <Pressable
         style={[styles.taskFab, { backgroundColor: palette.primary }]}
-        onPress={() => {
+        onPress={async () => {
           setTasksOpen(true);
-          refreshDailyTasks();
+          await refreshDailyTasks();
         }}
       >
-        <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#022c22" />
+        <MaterialCommunityIcons
+          name="clipboard-check-outline"
+          size={24}
+          color="#022c22"
+        />
       </Pressable>
 
       <DailyTasksModal
@@ -330,6 +416,20 @@ export default function HomeScreen({ navigation }: Props) {
         tasks={dailyTasks}
         completedCount={completedCount}
         onToggleTask={handleManualToggle}
+        pendingCount={pendingCount}
+        syncState={
+          syncState.status === 'ok'
+            ? { status: 'ok', ok: syncState.ok, failed: syncState.failed }
+            : syncState.status === 'error'
+              ? { status: 'error', message: syncState.message }
+              : syncState.status === 'syncing'
+                ? { status: 'syncing' }
+                : { status: 'idle' }
+        }
+        onPressSync={() => {
+          // manual sync button
+          refreshDailyTasks();
+        }}
       />
     </SafeAreaView>
   );

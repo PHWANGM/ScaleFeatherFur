@@ -14,6 +14,8 @@ export const MIGRATIONS: MigrationEntry[] = [
 
   // ✅ NEW: Products seed
   { name: 'V3__productSeed.sql', asset: require('./V3__productSeed.sql') },
+  // ✅ NEW: Outbox for offline-to-supabase sync
+  { name: 'V4__outbox.sql', asset: require('./V4__outbox.sql') },
 ];
 
 /** 讀取 Migration 的 SQL 文字 */

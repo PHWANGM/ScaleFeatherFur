@@ -2,6 +2,8 @@
 import { query, execute, type SQLParams } from '../db.client';
 import { genId, nowIso } from './_helpers';
 import { listCareLogsByPetBetween, type CareLogRow } from './care.logs';
+import { enqueueOutbox, makeTaskCompleteOutboxId } from './sync.outbox.repo';
+
 
 export type TaskRow = {
   key: string;
@@ -35,6 +37,21 @@ const AUTO_TASK_KEYS = new Set([
 ]);
 
 const isAutoTask = (key: string) => AUTO_TASK_KEYS.has(key);
+
+function isoToLocalDayString(iso: string): string {
+  const dt = new Date(iso);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const d = String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+async function enqueueTaskComplete(petId: string, taskKey: string, dayStartISO: string) {
+  const day = isoToLocalDayString(dayStartISO);
+  const id = makeTaskCompleteOutboxId(petId, day, taskKey);
+  await enqueueOutbox(id, 'task_complete', { petId, taskKey, day });
+}
+
 
 export function dayRangeIsoLocal(date: Date): [string, string] {
   const y = date.getFullYear();
@@ -153,6 +170,8 @@ export async function getDailyTaskStatus(
     if (!(await hasPointsForTaskDay(petId, task.key, dayStartISO, dayEndISO))) {
       await insertPointsForTask(petId, task.key, task.points);
     }
+    await enqueueTaskComplete(petId, task.key, dayStartISO); // ✅ 新增：排隊同步
+
     completedSet.add(task.key);
   }
 
@@ -177,4 +196,40 @@ export async function completeTaskManually(
   if (!(await hasPointsForTaskDay(petId, taskKey, dayStartISO, dayEndISO))) {
     await insertPointsForTask(petId, taskKey, points);
   }
+  await enqueueTaskComplete(petId, taskKey, dayStartISO);
+
+}
+// ===== Points totals (Local SQLite) =====
+
+/**
+ * Get total points for a single pet.
+ * We use MAX(balance_after) because you maintain balance_after as a running balance.
+ */
+export async function getTotalPointsByPet(petId: string): Promise<number> {
+  const rows = await query<{ total: number }>(
+    `SELECT COALESCE(MAX(balance_after), 0) AS total
+     FROM points_ledger
+     WHERE pet_id = ?`,
+    [petId]
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
+/**
+ * Get total points across ALL pets (local/offline).
+ *
+ * If you want "sum of each pet's latest balance", we do:
+ *   sum( max(balance_after) per pet_id )
+ */
+export async function getTotalPointsAllPets(): Promise<number> {
+  const rows = await query<{ total: number }>(
+    `SELECT COALESCE(SUM(last_balance), 0) AS total
+     FROM (
+       SELECT pet_id, MAX(balance_after) AS last_balance
+       FROM points_ledger
+       GROUP BY pet_id
+     )`,
+    []
+  );
+  return Number(rows[0]?.total ?? 0);
 }

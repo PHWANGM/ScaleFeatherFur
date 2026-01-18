@@ -10,6 +10,9 @@ import { supabase } from '../../lib/supabase';
 import { useThemeColors } from '../../styles/themesColors';
 import { theme } from '../../styles/tokens';
 import PrimaryButton from '../../components/buttons/PrimaryButton';
+import { flushOutboxToSupabase } from '../../lib/supabase/repos/outbox.sync';
+
+
 
 export default function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -31,12 +34,32 @@ export default function LoginScreen() {
   const canSubmit = email.includes('@') && password.length >= 6 && !loading;
 
   const onLogin = async () => {
-    setErr(null); setLoading(true);
+    setErr(null);
+    setLoading(true);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
-      if (error) { setErr(error.message); return; }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (error) {
+        setErr(error.message);
+        return;
+      }
+
+      // ✅ Login success: best-effort flush outbox to Supabase (do not block navigation)
+    flushOutboxToSupabase(supabase)
+      .then((r) => console.log('[flushOutboxToSupabase] result', r))
+      .catch((e) => console.log('[flushOutboxToSupabase] failed', e));
+
+
       navigation.replace('MainTabs');
-    } catch (e: any) { setErr(e?.message ?? 'Login failed'); } finally { setLoading(false); }
+    } catch (e: any) {
+      setErr(e?.message ?? 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
