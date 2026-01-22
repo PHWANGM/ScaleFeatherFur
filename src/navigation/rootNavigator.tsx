@@ -1,10 +1,14 @@
 // src/navigation/rootNavigator.tsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Pressable, Platform } from 'react-native';
-import { createBottomTabNavigator, type BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
+import {
+  createBottomTabNavigator,
+  type BottomTabBarButtonProps,
+} from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ===== Screens =====
 import WelcomeScreen from '../screens/WelcomeScreen';
@@ -99,58 +103,105 @@ const colors = {
 // Placeholder screen for "+" tab
 const NoopScreen: React.FC = () => <View style={{ flex: 1 }} />;
 
-// Plus button
-type PlusTabButtonProps = BottomTabBarButtonProps & {
-  onPressCustom?: () => void;
-};
-function PlusTabButton({ style, accessibilityState, onPressCustom }: PlusTabButtonProps) {
-  const selected = accessibilityState?.selected;
-  return (
-    <View style={[style, { alignItems: 'center' }]}>
-      <Pressable
-        onPress={onPressCustom}
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
-        hitSlop={10}
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.primary,
-          marginTop: -18,
-          shadowColor: '#000',
-          shadowOpacity: 0.15,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 4,
-        }}
-      >
-        <Feather name="plus" size={28} color={colors.darkBg} />
-      </Pressable>
-    </View>
-  );
-}
-
 // ===== MainTabs =====
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+
+  /**
+   * 你原本的基準值（不含 safe area）
+   * - iOS: tab bar 本來就比較高
+   * - Android: 用你原本的 64/10 當 baseline
+   */
+  const baseHeight = Platform.select({ ios: 88, android: 64 }) ?? 64;
+  const basePaddingBottom = Platform.select({ ios: 24, android: 10 }) ?? 10;
+
+  /**
+   * ✅ 這是最關鍵的：讓 tabBar 把系統底部導覽列高度吃進來
+   * - height: 基準高度 + insets.bottom
+   * - paddingBottom: 至少給 basePaddingBottom，但如果 insets.bottom 更大就用它
+   */
+  const tabBarStyle = useMemo(
+    () => ({
+      height: baseHeight + insets.bottom,
+      paddingBottom: Math.max(insets.bottom, basePaddingBottom),
+      paddingTop: 10,
+      borderTopWidth: 0.5,
+      borderTopColor: 'rgba(0,0,0,0.08)',
+      backgroundColor: '#fff',
+    }),
+    [baseHeight, basePaddingBottom, insets.bottom]
+  );
+
+  /**
+   * ✅ + 按鈕自動微調
+   * 核心概念：
+   * - Tab bar 變高（含 insets.bottom）後，+ 按鈕要「稍微往上浮」，但不要浮太多
+   * - 不同手機（手勢條/三鍵）insets.bottom 不一樣，所以用它做 offset
+   *
+   * 這裡的策略：
+   * - 原本你是 marginTop: -18
+   * - 我們再額外減一點點（liftMore），讓 tab bar 變高時 + 不會看起來沈下去
+   * - liftMore 會隨 insets.bottom 變大而稍微增加，但有上限，避免過度漂浮
+   */
+  const liftMore = Math.min(Math.max(insets.bottom - 6, 0), 12); // 0~12
+  const plusLift = -18 - liftMore;
+
+  type PlusTabButtonProps = BottomTabBarButtonProps & {
+    onPressCustom?: () => void;
+  };
+
+  function PlusTabButton({ style, accessibilityState, onPressCustom }: PlusTabButtonProps) {
+    const selected = accessibilityState?.selected;
+
+    return (
+      <View
+        style={[
+          style,
+          {
+            alignItems: 'center',
+            // ✅ 讓整個按鈕區塊的可點擊區域也跟著 tab bar 底部變化更穩
+            paddingBottom: Math.max(insets.bottom, 0),
+          },
+        ]}
+      >
+        <Pressable
+          onPress={onPressCustom}
+          accessibilityRole="button"
+          accessibilityState={{ selected }}
+          hitSlop={12}
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.primary,
+
+            // ✅ 關鍵：自動微調浮起高度
+            marginTop: plusLift,
+
+            shadowColor: '#000',
+            shadowOpacity: 0.15,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 4,
+          }}
+        >
+          <Feather name="plus" size={28} color={colors.darkBg} />
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: 'rgba(0,0,0,0.5)',
-        tabBarStyle: {
-          height: Platform.select({ ios: 88, android: 64 }),
-          paddingBottom: Platform.select({ ios: 24, android: 10 }),
-          paddingTop: 10,
-          borderTopWidth: 0.5,
-          borderTopColor: 'rgba(0,0,0,0.08)',
-          backgroundColor: '#fff',
-        },
+        tabBarStyle,
       }}
     >
       <Tab.Screen
