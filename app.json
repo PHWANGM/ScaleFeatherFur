@@ -7,9 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-
     "scheme": "scaleff",
-
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -30,7 +28,11 @@
       "softwareKeyboardLayoutMode": "resize",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.ScaleFeatherFur"
+      "package": "com.anonymous.ScaleFeatherFur",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,7 +42,14 @@
       "expo-asset",
       "expo-font",
       "expo-location",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-localization"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "10b17d65-2600-4403-bf74-27dc305f7d14"
+      }
+    }
   }
 }
