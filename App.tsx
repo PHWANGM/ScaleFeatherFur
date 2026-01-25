@@ -5,6 +5,8 @@ import { Provider } from 'react-redux';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
+import "./src/i18n";
+
 
 import { store } from './src/state/store';
 import { ensureDBReady } from './src/lib/db/bootstrap';
