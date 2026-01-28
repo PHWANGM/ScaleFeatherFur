@@ -2,6 +2,8 @@
 import { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+
 import ChartLineWeight from '../components/charts/ChartLineWeight';
 import Card from '../components/cards/Card';
 import EmptyState from '../components/EmptyState';
@@ -11,6 +13,8 @@ import { loadLogsByPet } from '../state/slices/logsSlice';
 import type { CareLogType } from '../lib/db/repos/care.logs';
 
 export default function PetDetailScreen({ route }: any) {
+  const { t } = useTranslation();
+
   const pet = route.params.pet as { id: string; name: string };
   const dispatch = useDispatch<AppDispatch>();
   const logs = useSelector((s: RootState) => s.logs.byPet[pet.id] ?? []);
@@ -36,12 +40,10 @@ export default function PetDetailScreen({ route }: any) {
     const keys: CareLogType[] = ['feed', 'calcium', 'uvb', 'clean', 'weigh', 'vitamin'];
 
     for (let i = 0; i < 7; i++) {
-      const day = new Date(now.getTime() - i * 86400000)
-        .toISOString()
-        .slice(0, 10);
+      const day = new Date(now.getTime() - i * 86400000).toISOString().slice(0, 10);
       total += keys.length;
       const set = new Set(logs.filter((l) => l.at.startsWith(day)).map((l) => l.type));
-      done += keys.filter((k) => set.has(k)).length; // k 為 TaskType，型別相容
+      done += keys.filter((k) => set.has(k)).length;
     }
     return Math.round((done / total) * 100);
   }, [logs]);
@@ -51,20 +53,23 @@ export default function PetDetailScreen({ route }: any) {
       <Text style={styles.h1}>{pet.name}</Text>
 
       <Card style={{ marginTop: theme.spacing.lg }}>
-        <Text style={styles.h2}>體重趨勢</Text>
+        <Text style={styles.h2}>{t('petDetail.weightTrend.title')}</Text>
         <View style={{ height: theme.spacing.md }} />
         {weightSeries.length >= 2 ? (
           <ChartLineWeight data={weightSeries} width={340} height={140} />
         ) : (
-          <EmptyState title="尚無足夠體重紀錄" hint="新增 weigh 紀錄後即可查看趨勢" />
+          <EmptyState
+            title={t('petDetail.weightTrend.emptyTitle')}
+            hint={t('petDetail.weightTrend.emptyHint')}
+          />
         )}
       </Card>
 
       <Card style={{ marginTop: theme.spacing.lg }}>
-        <Text style={styles.h2}>7 日任務完成率</Text>
+        <Text style={styles.h2}>{t('petDetail.completion7d.title')}</Text>
         <View style={{ height: theme.spacing.md }} />
         <Text style={styles.percent}>{completion7d}%</Text>
-        <Text style={styles.hint}>包含：餵食、加鈣、UVB 開、清潔、量體重</Text>
+        <Text style={styles.hint}>{t('petDetail.completion7d.hint')}</Text>
       </Card>
     </View>
   );

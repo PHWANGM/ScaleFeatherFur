@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/rootNavigator';
+import { useTranslation } from 'react-i18next';
+
 import { theme } from '../styles/tokens';
 import { useThemeColors } from '../styles/themesColors';
 import { countPets } from '../lib/db/repos/pets.repo';
@@ -45,6 +47,7 @@ type ProfileRow = {
 };
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useThemeColors();
 
@@ -94,50 +97,43 @@ export default function ProfileScreen() {
 
   // ===== Loaders =====
   const loadLocalStats = useCallback(async () => {
-    // pets count + local points (always available offline)
     const [count, localTotal] = await Promise.all([countPets(), getTotalPointsAllPets()]);
     setPetCount(count);
     return { localTotal };
   }, []);
 
-  const loadCloudPointsIfSignedIn = useCallback(
-    async (signedIn: boolean) => {
-      setPointsLoading(true);
-      setPointsError(null);
-      try {
-        if (!signedIn) {
-          // Signed out -> always show local
-          const localTotal = await getTotalPointsAllPets();
-          setTaskPoints(localTotal);
-          setPointsSource('local');
-          return;
-        }
-
-        // Signed in -> show cloud total
-        const cloudTotal = await getUserPointsTotal(supabase);
-        setTaskPoints(cloudTotal);
-        setPointsSource('cloud');
-      } catch (e: any) {
-        // fallback: show local if cloud fails
-        const msg = String(e?.message ?? e ?? 'load points failed');
-        console.warn('[ProfileScreen] load points failed:', msg);
-
-        try {
-          const localTotal = await getTotalPointsAllPets();
-          setTaskPoints(localTotal);
-          setPointsSource('local');
-          setPointsError('雲端點數讀取失敗，暫時顯示本地點數');
-        } catch {
-          setTaskPoints(0);
-          setPointsSource(signedIn ? 'cloud' : 'local');
-          setPointsError('點數讀取失敗');
-        }
-      } finally {
-        setPointsLoading(false);
+  const loadCloudPointsIfSignedIn = useCallback(async (signedIn: boolean) => {
+    setPointsLoading(true);
+    setPointsError(null);
+    try {
+      if (!signedIn) {
+        const localTotal = await getTotalPointsAllPets();
+        setTaskPoints(localTotal);
+        setPointsSource('local');
+        return;
       }
-    },
-    []
-  );
+
+      const cloudTotal = await getUserPointsTotal(supabase);
+      setTaskPoints(cloudTotal);
+      setPointsSource('cloud');
+    } catch (e: any) {
+      const msg = String(e?.message ?? e ?? 'load points failed');
+      console.warn('[ProfileScreen] load points failed:', msg);
+
+      try {
+        const localTotal = await getTotalPointsAllPets();
+        setTaskPoints(localTotal);
+        setPointsSource('local');
+        setPointsError(t('profile.points.cloudFailedFallbackLocal'));
+      } catch {
+        setTaskPoints(0);
+        setPointsSource(signedIn ? 'cloud' : 'local');
+        setPointsError(t('profile.points.loadFailed'));
+      }
+    } finally {
+      setPointsLoading(false);
+    }
+  }, [t]);
 
   const loadSupabaseProfile = useCallback(async () => {
     setAuthLoading(true);
@@ -204,7 +200,7 @@ export default function ProfileScreen() {
           const { localTotal } = await loadLocalStats();
           if (!mounted) return;
 
-          // If we haven't loaded auth yet, keep showing local until we know
+          // show local until auth known
           setTaskPoints(localTotal);
           setPointsSource('local');
           setPointsLoading(true);
@@ -214,7 +210,7 @@ export default function ProfileScreen() {
           await loadSupabaseProfile();
           if (!mounted) return;
 
-          // decide points source based on latest userId
+          // decide points source based on latest auth
           const { data: userRes } = await supabase.auth.getUser();
           const signedIn = !!userRes.user?.id;
 
@@ -223,14 +219,14 @@ export default function ProfileScreen() {
           console.warn('[ProfileScreen] focus load failed:', e);
           if (!mounted) return;
           setPointsLoading(false);
-          setPointsError('載入失敗');
+          setPointsError(t('profile.points.loadFailed'));
         }
       })();
 
       return () => {
         mounted = false;
       };
-    }, [loadLocalStats, loadSupabaseProfile, loadCloudPointsIfSignedIn])
+    }, [loadLocalStats, loadSupabaseProfile, loadCloudPointsIfSignedIn, t])
   );
 
   // ===== Actions =====
@@ -242,7 +238,6 @@ export default function ProfileScreen() {
     try {
       await supabase.auth.signOut();
     } finally {
-      // after sign out -> reload profile + local points
       await loadSupabaseProfile();
       await loadCloudPointsIfSignedIn(false);
     }
@@ -252,111 +247,120 @@ export default function ProfileScreen() {
     () => [
       {
         key: 'Friends',
-        title: '👥 好友',
-        sub: '好友列表 / 申請 / 封鎖',
+        title: t('profile.actions.friends.title'),
+        sub: t('profile.actions.friends.sub'),
         badge: badges.friendRequests,
         requiresAuth: true,
         onPress: () => navigation.navigate('ProfileFriends'),
       },
       {
         key: 'Messages',
-        title: '💬 私訊',
-        sub: '最近對話 / 訊息請求',
+        title: t('profile.actions.messages.title'),
+        sub: t('profile.actions.messages.sub'),
         badge: badges.messages,
         requiresAuth: true,
         onPress: () => navigation.navigate('ProfileMessages'),
       },
       {
         key: 'MyPosts',
-        title: '🏷️ 我的貼文 / 收藏',
-        sub: '我的貼文 / 收藏 / 讚',
+        title: t('profile.actions.myPosts.title'),
+        sub: t('profile.actions.myPosts.sub'),
         requiresAuth: true,
         onPress: () => navigation.navigate('ProfileMyPosts'),
       },
       {
         key: 'Resources',
-        title: '🧑‍⚕️ 常用資源',
-        sub: '醫院 / 緊急照護卡 / 店家',
+        title: t('profile.actions.resources.title'),
+        sub: t('profile.actions.resources.sub'),
         requiresAuth: false,
         onPress: () => navigation.navigate('MainTabs'),
       },
       {
         key: 'Privacy',
-        title: '🔒 隱私',
-        sub: '誰能私訊 / 顯示範圍 / 顯示物種',
+        title: t('profile.actions.privacy.title'),
+        sub: t('profile.actions.privacy.sub'),
         requiresAuth: true,
         onPress: () => navigation.navigate('Settings'),
       },
       {
         key: 'Settings',
-        title: '⚙️ 設定',
-        sub: '通知 / 語言 / 主題 / 身份',
+        title: t('profile.actions.settings.title'),
+        sub: t('profile.actions.settings.sub'),
         requiresAuth: false,
         onPress: () => navigation.navigate('Settings'),
       },
       {
         key: 'Membership',
-        title: '🧾 會員 / 訂閱',
-        sub: '方案 / 權益 / 付款',
+        title: t('profile.actions.membership.title'),
+        sub: t('profile.actions.membership.sub'),
         requiresAuth: true,
         onPress: () => navigation.navigate('Settings'),
       },
     ],
-    [badges.friendRequests, badges.messages, navigation]
+    [badges.friendRequests, badges.messages, navigation, t]
   );
 
   const pointsLabel = useMemo(() => {
-    if (pointsLoading) return '任務點數';
-    return pointsSource === 'cloud' ? '任務點數（雲端）' : '任務點數（本地）';
-  }, [pointsLoading, pointsSource]);
+    if (pointsLoading) return t('profile.stats.points');
+    return pointsSource === 'cloud' ? t('profile.stats.pointsCloud') : t('profile.stats.pointsLocal');
+  }, [pointsLoading, pointsSource, t]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.bg }]} edges={['top', 'left', 'right']}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile card */}
         <View style={[styles.profileCard, { backgroundColor: palette.card, borderColor: palette.border }]}>
           {authLoading ? (
             <View style={{ paddingVertical: 10, alignItems: 'center' }}>
               <ActivityIndicator />
-              <Text style={{ marginTop: 10, color: palette.subText }}>載入中...</Text>
+              <Text style={{ marginTop: 10, color: palette.subText }}>{t('profile.loading')}</Text>
             </View>
           ) : !isSignedIn ? (
             <>
-              <Text style={[styles.name, { color: palette.text }]}>尚未登入</Text>
+              <Text style={[styles.name, { color: palette.text }]}>{t('profile.signedOut.title')}</Text>
               <Text style={[styles.sub, { color: palette.subText }]}>
-                登入後可同步雲端個人資料、社群貼文與好友功能。{'\n'}
-                任務點數會在登入後合併到雲端帳號。
+                {t('profile.signedOut.subtitle')}
               </Text>
 
               <View style={styles.quickRow}>
                 <Pressable style={[styles.primaryBtn, { backgroundColor: palette.primary }]} onPress={onGoLogin}>
-                  <Text style={[styles.primaryBtnText, { color: palette.bg }]}>登入 / 註冊</Text>
+                  <Text style={[styles.primaryBtnText, { color: palette.bg }]}>
+                    {t('profile.signedOut.login')}
+                  </Text>
                 </Pressable>
               </View>
             </>
           ) : (
             <>
-              <Text style={[styles.name, { color: palette.text }]}>{profile?.display_name ?? 'New User'}</Text>
+              <Text style={[styles.name, { color: palette.text }]}>
+                {profile?.display_name ?? t('profile.signedIn.defaultUserName')}
+              </Text>
 
               {!!profile?.location_city && (
-                <Text style={[styles.sub, { color: palette.subText }]}>📍 {profile.location_city}</Text>
+                <Text style={[styles.sub, { color: palette.subText }]}>
+                  📍 {profile.location_city}
+                </Text>
               )}
 
               {/* 4 stats (2x2) */}
               <View style={styles.statsRow}>
                 <View style={[styles.stat, { backgroundColor: palette.bg, borderColor: palette.border }]}>
                   <Text style={[styles.statNum, { color: palette.text }]}>{postCount}</Text>
-                  <Text style={[styles.statLabel, { color: palette.subText }]}>貼文</Text>
+                  <Text style={[styles.statLabel, { color: palette.subText }]}>{t('profile.stats.posts')}</Text>
                 </View>
 
                 <View style={[styles.stat, { backgroundColor: palette.bg, borderColor: palette.border }]}>
                   <Text style={[styles.statNum, { color: palette.text }]}>{friendCount}</Text>
-                  <Text style={[styles.statLabel, { color: palette.subText }]}>好友</Text>
+                  <Text style={[styles.statLabel, { color: palette.subText }]}>{t('profile.stats.friends')}</Text>
                 </View>
 
                 <View style={[styles.stat, { backgroundColor: palette.bg, borderColor: palette.border }]}>
                   <Text style={[styles.statNum, { color: palette.text }]}>{petCount}</Text>
-                  <Text style={[styles.statLabel, { color: palette.subText }]}>寵物</Text>
+                  <Text style={[styles.statLabel, { color: palette.subText }]}>{t('profile.stats.pets')}</Text>
                 </View>
 
                 <View style={[styles.stat, { backgroundColor: palette.bg, borderColor: palette.border }]}>
@@ -376,21 +380,27 @@ export default function ProfileScreen() {
                   style={[styles.primaryBtn, { backgroundColor: palette.primary }]}
                   onPress={() => navigation.navigate('PetSelect')}
                 >
-                  <Text style={[styles.primaryBtnText, { color: palette.bg }]}>進入我的飼養檔案</Text>
+                  <Text style={[styles.primaryBtnText, { color: palette.bg }]}>
+                    {t('profile.buttons.goToCareProfile')}
+                  </Text>
                 </Pressable>
 
                 <Pressable
                   style={[styles.secondaryBtn, { backgroundColor: palette.card, borderColor: palette.border }]}
                   onPress={() => navigation.navigate('ProfileMatch')}
                 >
-                  <Text style={[styles.secondaryBtnText, { color: palette.subText }]}>開始好友配對</Text>
+                  <Text style={[styles.secondaryBtnText, { color: palette.subText }]}>
+                    {t('profile.buttons.startMatching')}
+                  </Text>
                 </Pressable>
 
                 <Pressable
                   style={[styles.secondaryBtn, { backgroundColor: palette.card, borderColor: palette.border }]}
                   onPress={onSignOut}
                 >
-                  <Text style={[styles.secondaryBtnText, { color: palette.subText }]}>登出</Text>
+                  <Text style={[styles.secondaryBtnText, { color: palette.subText }]}>
+                    {t('profile.buttons.signOut')}
+                  </Text>
                 </Pressable>
               </View>
             </>
@@ -399,7 +409,7 @@ export default function ProfileScreen() {
 
         {/* Actions */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>快捷功能</Text>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>{t('profile.quickActions')}</Text>
 
           {actions.map((a) => {
             const disabled = !isSignedIn && !!a.requiresAuth;
@@ -449,7 +459,11 @@ export default function ProfileScreen() {
                   )}
                 </View>
 
-                {disabled && <Text style={[styles.lockHint, { color: palette.subText }]}>需登入後使用</Text>}
+                {disabled && (
+                  <Text style={[styles.lockHint, { color: palette.subText }]}>
+                    {t('profile.requiresLogin')}
+                  </Text>
+                )}
               </Pressable>
             );
           })}

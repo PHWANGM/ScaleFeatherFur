@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 type Palette = {
   bg: string;
@@ -34,7 +35,7 @@ export type ProductCreateInput = {
   affiliate_url?: string | null;
   region?: string | null;
 
-  // ✅ image_url 現在改成「本機照片 URI」(file://...) 或 null
+  // ✅ image_url：本機照片 URI（file://...) 或 null
   image_url?: string | null;
   description?: string | null;
 };
@@ -50,19 +51,21 @@ export default function ProductCreateForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
+
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
   const [region, setRegion] = useState('TW');
   const [affiliateUrl, setAffiliateUrl] = useState('');
-  const [imageUri, setImageUri] = useState<string | null>(null); // ✅ NEW: 拍照/相簿 uri
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [description, setDescription] = useState('');
-  const [tagsRaw, setTagsRaw] = useState(''); // ex: UVB, sulcata, lamp
+  const [tagsRaw, setTagsRaw] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const tagsJson = useMemo(() => {
     const arr = tagsRaw
       .split(',')
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean);
     if (arr.length === 0) return null;
     return JSON.stringify(arr);
@@ -85,7 +88,7 @@ export default function ProductCreateForm({
   const ensureLibraryPermission = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('需要相簿權限', '請允許相簿權限以選擇照片');
+      Alert.alert(t('productCreateForm.permissions.libraryTitle'), t('productCreateForm.permissions.libraryMessage'));
       return false;
     }
     return true;
@@ -94,7 +97,7 @@ export default function ProductCreateForm({
   const ensureCameraPermission = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('需要相機權限', '請允許相機權限以拍攝照片');
+      Alert.alert(t('productCreateForm.permissions.cameraTitle'), t('productCreateForm.permissions.cameraMessage'));
       return false;
     }
     return true;
@@ -116,7 +119,7 @@ export default function ProductCreateForm({
       if (uri) setImageUri(uri);
     } catch (e) {
       console.error(e);
-      Alert.alert('選擇照片失敗', '請稍後再試');
+      Alert.alert(t('productCreateForm.errors.pickFailedTitle'), t('productCreateForm.errors.pickFailedMessage'));
     }
   };
 
@@ -135,14 +138,14 @@ export default function ProductCreateForm({
       if (uri) setImageUri(uri);
     } catch (e) {
       console.error(e);
-      Alert.alert('拍照失敗', '請稍後再試');
+      Alert.alert(t('productCreateForm.errors.cameraFailedTitle'), t('productCreateForm.errors.cameraFailedMessage'));
     }
   };
 
   const handleSubmit = async () => {
     const n = name.trim();
     if (!n) {
-      Alert.alert('請填寫商品名稱');
+      Alert.alert(t('productCreateForm.validation.nameRequired'));
       return;
     }
 
@@ -160,26 +163,23 @@ export default function ProductCreateForm({
       onSuccess();
     } catch (e) {
       console.error(e);
-      Alert.alert('錯誤', '新增商品失敗，請稍後再試');
+      Alert.alert(t('common.error'), t('productCreateForm.errors.submitFailedMessage'));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={[styles.title, { color: palette.text }]}>新增商品</Text>
+          <Text style={[styles.title, { color: palette.text }]}>{t('productCreateForm.title')}</Text>
 
-          <Text style={[styles.label, { color: palette.subText }]}>商品名稱 *</Text>
+          <Text style={[styles.label, { color: palette.subText }]}>{t('productCreateForm.fields.name')} *</Text>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="例如：Arcadia T5 UVB 12%"
+            placeholder={t('productCreateForm.placeholders.name')}
             placeholderTextColor={palette.subText}
             style={[
               styles.input,
@@ -187,11 +187,11 @@ export default function ProductCreateForm({
             ]}
           />
 
-          <Text style={[styles.label, { color: palette.subText }]}>品牌</Text>
+          <Text style={[styles.label, { color: palette.subText }]}>{t('productCreateForm.fields.brand')}</Text>
           <TextInput
             value={brand}
             onChangeText={setBrand}
-            placeholder="例如：Arcadia"
+            placeholder={t('productCreateForm.placeholders.brand')}
             placeholderTextColor={palette.subText}
             style={[
               styles.input,
@@ -199,11 +199,11 @@ export default function ProductCreateForm({
             ]}
           />
 
-          <Text style={[styles.label, { color: palette.subText }]}>地區</Text>
+          <Text style={[styles.label, { color: palette.subText }]}>{t('productCreateForm.fields.region')}</Text>
           <TextInput
             value={region}
             onChangeText={setRegion}
-            placeholder="TW / US"
+            placeholder={t('productCreateForm.placeholders.region')}
             placeholderTextColor={palette.subText}
             style={[
               styles.input,
@@ -211,11 +211,11 @@ export default function ProductCreateForm({
             ]}
           />
 
-          <Text style={[styles.label, { color: palette.subText }]}>Affiliate URL</Text>
+          <Text style={[styles.label, { color: palette.subText }]}>{t('productCreateForm.fields.affiliateUrl')}</Text>
           <TextInput
             value={affiliateUrl}
             onChangeText={setAffiliateUrl}
-            placeholder="https://..."
+            placeholder={t('productCreateForm.placeholders.affiliateUrl')}
             placeholderTextColor={palette.subText}
             autoCapitalize="none"
             style={[
@@ -224,8 +224,8 @@ export default function ProductCreateForm({
             ]}
           />
 
-          {/* ✅ NEW: 拍照/相簿上傳 */}
-          <Text style={[styles.label, { color: palette.subText }]}>商品圖片</Text>
+          {/* 圖片 */}
+          <Text style={[styles.label, { color: palette.subText }]}>{t('productCreateForm.fields.image')}</Text>
 
           <View style={styles.imageRow}>
             <View
@@ -240,7 +240,7 @@ export default function ProductCreateForm({
                 <View style={styles.imagePlaceholder}>
                   <Feather name="image" size={18} color={palette.subText} />
                   <Text style={[styles.imagePlaceholderText, { color: palette.subText }]}>
-                    尚未選擇
+                    {t('productCreateForm.image.notSelected')}
                   </Text>
                 </View>
               )}
@@ -250,45 +250,42 @@ export default function ProductCreateForm({
               <Pressable
                 onPress={handleTakePhoto}
                 disabled={submitting}
-                style={[
-                  styles.smallBtn,
-                  { borderColor: palette.border, backgroundColor: 'transparent' },
-                ]}
+                style={[styles.smallBtn, { borderColor: palette.border, backgroundColor: 'transparent' }]}
               >
-                <Text style={[styles.smallBtnText, { color: palette.text }]}>拍照</Text>
+                <Text style={[styles.smallBtnText, { color: palette.text }]}>
+                  {t('productCreateForm.actions.takePhoto')}
+                </Text>
               </Pressable>
 
               <Pressable
                 onPress={handlePickFromLibrary}
                 disabled={submitting}
-                style={[
-                  styles.smallBtn,
-                  { borderColor: palette.border, backgroundColor: 'transparent' },
-                ]}
+                style={[styles.smallBtn, { borderColor: palette.border, backgroundColor: 'transparent' }]}
               >
-                <Text style={[styles.smallBtnText, { color: palette.text }]}>從相簿選擇</Text>
+                <Text style={[styles.smallBtnText, { color: palette.text }]}>
+                  {t('productCreateForm.actions.pickFromLibrary')}
+                </Text>
               </Pressable>
 
               {imageUri ? (
                 <Pressable
                   onPress={() => setImageUri(null)}
                   disabled={submitting}
-                  style={[
-                    styles.smallBtn,
-                    { borderColor: palette.border, backgroundColor: 'transparent' },
-                  ]}
+                  style={[styles.smallBtn, { borderColor: palette.border, backgroundColor: 'transparent' }]}
                 >
-                  <Text style={[styles.smallBtnText, { color: palette.subText }]}>移除圖片</Text>
+                  <Text style={[styles.smallBtnText, { color: palette.subText }]}>
+                    {t('productCreateForm.actions.removeImage')}
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
           </View>
 
-          <Text style={[styles.label, { color: palette.subText }]}>簡介</Text>
+          <Text style={[styles.label, { color: palette.subText }]}>{t('productCreateForm.fields.description')}</Text>
           <TextInput
             value={description}
             onChangeText={setDescription}
-            placeholder="例如：高輸出 UVB T5 燈管，適合日行性龜/蜥蜴..."
+            placeholder={t('productCreateForm.placeholders.description')}
             placeholderTextColor={palette.subText}
             multiline
             style={[
@@ -298,11 +295,11 @@ export default function ProductCreateForm({
             ]}
           />
 
-          <Text style={[styles.label, { color: palette.subText }]}>Tags（逗號分隔）</Text>
+          <Text style={[styles.label, { color: palette.subText }]}>{t('productCreateForm.fields.tags')}</Text>
           <TextInput
             value={tagsRaw}
             onChangeText={setTagsRaw}
-            placeholder="UVB, sulcata, lamp"
+            placeholder={t('productCreateForm.placeholders.tags')}
             placeholderTextColor={palette.subText}
             style={[
               styles.input,
@@ -311,31 +308,22 @@ export default function ProductCreateForm({
           />
 
           <View style={styles.btnRow}>
-            <Pressable
-              onPress={onCancel}
-              style={[styles.btn, { borderColor: palette.border }]}
-              disabled={submitting}
-            >
-              <Text style={[styles.btnText, { color: palette.subText }]}>取消</Text>
+            <Pressable onPress={onCancel} style={[styles.btn, { borderColor: palette.border }]} disabled={submitting}>
+              <Text style={[styles.btnText, { color: palette.subText }]}>{t('common.cancel')}</Text>
             </Pressable>
 
             <Pressable
               onPress={handleSubmit}
-              style={[
-                styles.btn,
-                { backgroundColor: palette.linkBg, borderColor: palette.linkBg },
-              ]}
+              style={[styles.btn, { backgroundColor: palette.linkBg, borderColor: palette.linkBg }]}
               disabled={submitting}
             >
               <Text style={[styles.btnText, { color: palette.link }]}>
-                {submitting ? '新增中…' : '新增'}
+                {submitting ? t('productCreateForm.actions.submitting') : t('productCreateForm.actions.submit')}
               </Text>
             </Pressable>
           </View>
 
-          <Text style={[styles.hint, { color: palette.subText }]}>
-            * 圖片會以本機 URI（file://...）存到 image_url 欄位；若你之後要跨裝置同步，建議上傳到雲端再存 URL。
-          </Text>
+          <Text style={[styles.hint, { color: palette.subText }]}>{t('productCreateForm.hint')}</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

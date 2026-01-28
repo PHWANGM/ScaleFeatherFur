@@ -14,13 +14,13 @@ import {
   View,
 } from 'react-native';
 import { NavigationProp, RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 import {
   getSpeciesByKey,
   insertSpecies,
   updateSpecies,
   deleteSpecies,
-  type SpeciesRow,
 } from '../lib/db/repos/species.repo';
 import Field from '../components/fields/Field';
 
@@ -37,13 +37,15 @@ function slugifyCommonName(v: string): string {
   return v
     .trim()
     .toLowerCase()
-    .replace(/[\s/]+/g, '-')          // 空白或斜線 -> '-'
-    .replace(/[^a-z0-9\-_]/g, '')     // 只留 a-z0-9_- 
-    .replace(/-+/g, '-')              // 多個 '-' 合併
-    .replace(/^[-_]+|[-_]+$/g, '');   // 修剪頭尾 -_
+    .replace(/[\s/]+/g, '-') // space or slash -> '-'
+    .replace(/[^a-z0-9\-_]/g, '') // keep a-z0-9_- only
+    .replace(/-+/g, '-') // merge multiple '-'
+    .replace(/^[-_]+|[-_]+$/g, ''); // trim leading/trailing -_
 }
 
 export default function SpeciesEditorScreen() {
+  const { t } = useTranslation();
+
   const route = useRoute<SpeciesEditorRoute>();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
@@ -59,51 +61,63 @@ export default function SpeciesEditorScreen() {
   const [scientificName, setScientificName] = useState('');
   const [notes, setNotes] = useState('');
 
-  const [keyTouched, setKeyTouched] = useState(false); // 只要使用者改過 key，就不再自動生成
+  const [keyTouched, setKeyTouched] = useState(false); // once user edits key, stop auto-gen
 
-  // refs for Next 跳焦點
+  // refs for Next focus
   const refKey = useRef<RNTextInput>(null);
   const refCommon = useRef<RNTextInput>(null);
   const refScientific = useRef<RNTextInput>(null);
   const refNotes = useRef<RNTextInput>(null);
 
-  const title = isEditing ? 'Edit Species' : 'Add Species';
+  const title = useMemo(
+    () => (isEditing ? t('speciesEditor.title.edit') : t('speciesEditor.title.add')),
+    [isEditing, t]
+  );
 
-  // 載入資料（編輯模式）
+  // load data for edit mode
   useEffect(() => {
     let alive = true;
+
     (async () => {
       try {
         setLoading(true);
+
         if (isEditing && editingKeyParam) {
           const row = await getSpeciesByKey(editingKeyParam);
+
           if (!row) {
-            Alert.alert('Not found', `Species ${editingKeyParam} not found.`);
+            Alert.alert(
+              t('speciesEditor.alerts.notFound.title'),
+              t('speciesEditor.alerts.notFound.message', { key: editingKeyParam })
+            );
             navigation.goBack();
             return;
           }
+
           if (!alive) return;
+
           setKeyValue(row.key);
           setCommonName(row.common_name);
           setScientificName(row.scientific_name ?? '');
           setNotes(row.notes ?? '');
-          setKeyTouched(true); // 編輯模式不要自動覆蓋 key
+          setKeyTouched(true); // don't auto-overwrite in edit mode
         } else {
-          // 新增模式：預設焦點在 Common Name
+          // new mode: focus common name
           setTimeout(() => refCommon.current?.focus(), 0);
         }
       } catch (err: any) {
-        Alert.alert('Load failed', err?.message ?? String(err));
+        Alert.alert(t('speciesEditor.alerts.loadFailed.title'), err?.message ?? String(err));
       } finally {
         if (alive) setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
-  }, [isEditing, editingKeyParam, navigation]);
+  }, [isEditing, editingKeyParam, navigation, t]);
 
-  // 使用者輸入 common name 時，若尚未手動改過 key，就自動生成
+  // auto-generate key from common name (only in create mode & not manually touched)
   useEffect(() => {
     if (!keyTouched && !isEditing) {
       const slug = slugifyCommonName(commonName);
@@ -112,42 +126,52 @@ export default function SpeciesEditorScreen() {
   }, [commonName, keyTouched, isEditing]);
 
   const validate = useCallback(async (): Promise<boolean> => {
-    // key 必填，格式檢核
     if (!keyValue.trim()) {
-      Alert.alert('Validation', 'Please enter a species key.');
+      Alert.alert(t('speciesEditor.alerts.validation.title'), t('speciesEditor.alerts.validation.keyRequired'));
       refKey.current?.focus();
       return false;
     }
+
     if (!/^[a-z0-9\-_]+$/.test(keyValue)) {
-      Alert.alert('Validation', 'Key can only contain lowercase letters, numbers, "-" and "_".');
+      Alert.alert(t('speciesEditor.alerts.validation.title'), t('speciesEditor.alerts.validation.keyInvalidChars'));
       refKey.current?.focus();
       return false;
     }
-    // common name 必填
+
     if (!commonName.trim()) {
-      Alert.alert('Validation', 'Please enter a common name.');
+      Alert.alert(
+        t('speciesEditor.alerts.validation.title'),
+        t('speciesEditor.alerts.validation.commonNameRequired')
+      );
       refCommon.current?.focus();
       return false;
     }
-    // 新增時檢查重複 key
+
+    // on create: check duplicate key
+    // on edit: key is locked; still safe to check if somehow changed
     if (!isEditing || keyValue !== editingKeyParam) {
       const dup = await getSpeciesByKey(keyValue);
       if (dup) {
-        Alert.alert('Validation', `Key "${keyValue}" already exists.`);
+        Alert.alert(
+          t('speciesEditor.alerts.validation.title'),
+          t('speciesEditor.alerts.validation.keyExists', { key: keyValue })
+        );
         refKey.current?.focus();
         return false;
       }
     }
+
     return true;
-  }, [keyValue, commonName, isEditing, editingKeyParam]);
+  }, [keyValue, commonName, isEditing, editingKeyParam, t]);
 
   const onSave = useCallback(async () => {
     if (!(await validate())) return;
 
     try {
       setSaving(true);
+
       if (isEditing && editingKeyParam) {
-        // 若允許改 key，會很複雜（涉及外鍵）；這裡鎖定 key 不可改
+        // key is locked (avoid FK issues)
         await updateSpecies(editingKeyParam, {
           common_name: commonName.trim(),
           scientific_name: scientificName.trim() || null,
@@ -161,35 +185,37 @@ export default function SpeciesEditorScreen() {
           notes: notes.trim() || null,
         });
       }
+
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Save failed', err?.message ?? String(err));
+      Alert.alert(t('speciesEditor.alerts.saveFailed.title'), err?.message ?? String(err));
     } finally {
       setSaving(false);
     }
-  }, [validate, isEditing, editingKeyParam, keyValue, commonName, scientificName, notes, navigation]);
+  }, [validate, isEditing, editingKeyParam, keyValue, commonName, scientificName, notes, navigation, t]);
 
   const onDelete = useCallback(() => {
     if (!isEditing || !editingKeyParam) return;
+
     Alert.alert(
-      'Delete species',
-      `Are you sure you want to delete "${commonName || editingKeyParam}"?\n\nRelated pets referencing this key will fail FK checks.`,
+      t('speciesEditor.alerts.deleteConfirm.title'),
+      t('speciesEditor.alerts.deleteConfirm.message', { name: commonName || editingKeyParam }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('speciesEditor.actions.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               setSaving(true);
               const ok = await deleteSpecies(editingKeyParam);
               if (!ok) {
-                Alert.alert('Delete failed', 'The species could not be deleted.');
+                Alert.alert(t('speciesEditor.alerts.deleteFailed.title'), t('speciesEditor.alerts.deleteFailed.message'));
                 return;
               }
               navigation.goBack();
             } catch (err: any) {
-              Alert.alert('Delete failed', err?.message ?? String(err));
+              Alert.alert(t('speciesEditor.alerts.deleteFailed.title'), err?.message ?? String(err));
             } finally {
               setSaving(false);
             }
@@ -197,7 +223,7 @@ export default function SpeciesEditorScreen() {
         },
       ]
     );
-  }, [isEditing, editingKeyParam, commonName, navigation]);
+  }, [isEditing, editingKeyParam, commonName, navigation, t]);
 
   if (loading) {
     return (
@@ -224,16 +250,16 @@ export default function SpeciesEditorScreen() {
         behavior={Platform.select({ ios: 'padding', android: undefined })}
       >
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-          {/* Key（編輯模式禁改，避免破壞 FK） */}
-          <Field label="Key (unique, lowercase, a-z 0-9 - _)">
+          {/* Key (locked in edit mode) */}
+          <Field label={t('speciesEditor.fields.key.label')}>
             <TextInput
               ref={refKey}
-              placeholder="e.g. leopard_gecko"
+              placeholder={t('speciesEditor.fields.key.placeholder')}
               placeholderTextColor="rgba(255,255,255,0.5)"
               value={keyValue}
-              onChangeText={(t) => {
+              onChangeText={(txt) => {
                 setKeyTouched(true);
-                setKeyValue(t.toLowerCase());
+                setKeyValue(txt.toLowerCase());
               }}
               editable={!isEditing}
               style={[styles.input, isEditing && styles.inputDisabled]}
@@ -245,19 +271,25 @@ export default function SpeciesEditorScreen() {
               blurOnSubmit={false}
               onSubmitEditing={() => refCommon.current?.focus()}
             />
+
+            {isEditing ? (
+              <Text style={styles.helpText}>{t('speciesEditor.fields.key.lockedHint')}</Text>
+            ) : (
+              <Text style={styles.helpText}>{t('speciesEditor.fields.key.help')}</Text>
+            )}
           </Field>
 
           {/* Common name */}
-          <Field label="Common Name">
+          <Field label={t('speciesEditor.fields.commonName.label')}>
             <TextInput
               ref={refCommon}
-              placeholder="e.g. Leopard Gecko"
+              placeholder={t('speciesEditor.fields.commonName.placeholder')}
               placeholderTextColor="rgba(255,255,255,0.5)"
               value={commonName}
               onChangeText={setCommonName}
               style={styles.input}
               autoCapitalize="words"
-              autoCorrect={true}
+              autoCorrect
               autoComplete="name"
               textContentType="name"
               returnKeyType="next"
@@ -266,17 +298,17 @@ export default function SpeciesEditorScreen() {
             />
           </Field>
 
-          {/* Scientific name（可空） */}
-          <Field label="Scientific Name (optional)">
+          {/* Scientific name (optional) */}
+          <Field label={t('speciesEditor.fields.scientificName.label')}>
             <TextInput
               ref={refScientific}
-              placeholder="e.g. Eublepharis macularius"
+              placeholder={t('speciesEditor.fields.scientificName.placeholder')}
               placeholderTextColor="rgba(255,255,255,0.5)"
               value={scientificName}
               onChangeText={setScientificName}
               style={styles.input}
               autoCapitalize="words"
-              autoCorrect={true}
+              autoCorrect
               autoComplete="off"
               textContentType="none"
               returnKeyType="next"
@@ -285,11 +317,11 @@ export default function SpeciesEditorScreen() {
             />
           </Field>
 
-          {/* Notes（多行，可空） */}
-          <Field label="Notes (optional)">
+          {/* Notes (optional) */}
+          <Field label={t('speciesEditor.fields.notes.label')}>
             <TextInput
               ref={refNotes}
-              placeholder="Any notes…"
+              placeholder={t('speciesEditor.fields.notes.placeholder')}
               placeholderTextColor="rgba(255,255,255,0.5)"
               value={notes}
               onChangeText={setNotes}
@@ -306,14 +338,14 @@ export default function SpeciesEditorScreen() {
       <View style={styles.footerRow}>
         {isEditing ? (
           <TouchableOpacity disabled={saving} onPress={onDelete} style={styles.dangerBtn}>
-            <Text style={styles.dangerBtnText}>Delete</Text>
+            <Text style={styles.dangerBtnText}>{t('speciesEditor.actions.delete')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ flex: 1 }} />
         )}
 
         <TouchableOpacity disabled={saving} onPress={onSave} style={styles.primaryBtn}>
-          <Text style={styles.primaryBtnText}>Save</Text>
+          <Text style={styles.primaryBtnText}>{saving ? t('speciesEditor.actions.saving') : t('common.save')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -332,7 +364,12 @@ const styles = StyleSheet.create({
   },
   closeButton: { color: 'white', fontSize: 20, width: 24, textAlign: 'center' },
   headerTitle: {
-    flex: 1, textAlign: 'center', color: 'white', fontSize: 18, fontWeight: 'bold', paddingRight: 24,
+    flex: 1,
+    textAlign: 'center',
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    paddingRight: 24,
   },
 
   body: { padding: 16, gap: 14 },
@@ -345,8 +382,14 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   inputDisabled: { opacity: 0.6 },
-
   notes: { minHeight: 120 },
+
+  helpText: {
+    marginTop: 8,
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 12,
+    lineHeight: 16,
+  },
 
   footerRow: {
     padding: 16,

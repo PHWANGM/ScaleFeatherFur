@@ -1,0 +1,373 @@
+{
+  "common": {
+    "save": "儲存",
+    "cancel": "取消",
+    "done": "完成",
+    "none": "—",
+    "error": "錯誤"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "語言",
+    "followSystem": "跟隨系統",
+    "chinese": "中文",
+    "english": "英文"
+  },
+  "home": {
+    "dbErrorTitle": "資料庫錯誤",
+    "openSettings": "開啟設定…",
+    "loadingFromDatabase": "正在從資料庫載入…",
+    "careAlerts": "照護提醒",
+    "vetCheckup": {
+      "title": "獸醫檢查",
+      "subtitle": "安排例行健康檢查"
+    },
+    "environment": {
+      "title": "環境",
+      "loading": "正在載入定位與天氣…",
+      "cloudCoverLabel": "目前雲量：",
+      "temperature": "溫度",
+      "uvIndex": "紫外線指數"
+    },
+    "weightTrend": {
+      "title": "體重趨勢"
+    }
+  },
+  "petDetail": {
+    "weightTrend": {
+      "title": "體重趨勢",
+      "emptyTitle": "尚無足夠體重紀錄",
+      "emptyHint": "新增 weigh 紀錄後即可查看趨勢"
+    },
+    "completion7d": {
+      "title": "7 日任務完成率",
+      "hint": "包含：餵食、加鈣、UVB 開、清潔、量體重"
+    }
+  },
+  "forum": {
+    "header": {
+      "forumTitle": "萌寵圈 · 討論",
+      "productsTitle": "萌寵圈 · 商品"
+    },
+    "tabs": {
+      "forum": "討論區",
+      "products": "商品"
+    },
+    "loading": {
+      "supabase": "正在從 Supabase 載入…",
+      "products": "正在載入商品…"
+    },
+    "empty": {
+      "posts": "目前還沒有貼文，快來搶頭香！",
+      "products": "目前還沒有商品資料（products）。"
+    },
+    "errors": {
+      "loadPosts": "載入貼文時發生錯誤（Supabase）",
+      "loadProducts": "載入商品時發生錯誤"
+    },
+    "post": {
+      "noTitle": "（無標題）"
+    }
+  },
+  "charts": {
+    "weightHistory": {
+      "title": "最近兩個月（每日最後一次）",
+      "units": {
+        "kg": "kg",
+        "g": "g"
+      },
+      "empty": {
+        "noPetSelected": "請先選擇一隻寵物",
+        "noRecordsIn2Months": "最近兩個月沒有體重紀錄"
+      },
+      "errors": {
+        "loadFailed": "無法載入體重資料"
+      }
+    }
+  },
+  "petsAdd": {
+    "title": {
+      "add": "新增寵物",
+      "edit": "編輯寵物"
+    },
+    "notFound": {
+      "title": "找不到資料",
+      "message": "這隻寵物已不存在。"
+    },
+    "loadFailed": {
+      "title": "載入失敗"
+    },
+    "saveFailed": {
+      "title": "儲存失敗"
+    },
+    "validation": {
+      "title": "資料驗證",
+      "nameRequired": "請輸入寵物名字。",
+      "speciesRequired": "請選擇物種。",
+      "birthDateFormat": "生日必須是 YYYY-MM-DD，或留空。"
+    },
+    "avatar": {
+      "title": "選擇頭像",
+      "message": "要從哪裡選取？",
+      "library": "相簿",
+      "camera": "相機"
+    },
+    "fields": {
+      "petName": "寵物名字",
+      "species": "物種",
+      "habitat": "飼養環境",
+      "birthDate": "生日（YYYY-MM-DD）",
+      "locationCity": "所在地（城市）"
+    },
+    "placeholders": {
+      "petName": "例如：Spike",
+      "locationCity": "例如：台北"
+    },
+    "habitat": {
+      "indoorUvb": "室內（UVB）",
+      "outdoorSun": "戶外（日照）",
+      "mixed": "混合"
+    },
+    "birthDate": {
+      "select": "選擇日期",
+      "clear": "清除"
+    },
+    "actions": {
+      "addPet": "新增寵物",
+      "saveChanges": "儲存變更"
+    },
+    "iosDate": {
+      "title": "選擇日期"
+    }
+  },
+  "petSelect": {
+    "title": "選擇你的寵物",
+    "loading": "讀取中…",
+    "empty": "目前沒有寵物，請先新增。"
+  },
+  "productCreateForm": {
+    "title": "新增商品",
+    "fields": {
+      "name": "商品名稱",
+      "brand": "品牌",
+      "region": "地區",
+      "affiliateUrl": "Affiliate URL",
+      "image": "商品圖片",
+      "description": "簡介",
+      "tags": "Tags（逗號分隔）"
+    },
+    "placeholders": {
+      "name": "例如：Arcadia T5 UVB 12%",
+      "brand": "例如：Arcadia",
+      "region": "TW / US",
+      "affiliateUrl": "https://...",
+      "description": "例如：高輸出 UVB T5 燈管，適合日行性龜/蜥蜴...",
+      "tags": "UVB, sulcata, lamp"
+    },
+    "image": {
+      "notSelected": "尚未選擇"
+    },
+    "actions": {
+      "takePhoto": "拍照",
+      "pickFromLibrary": "從相簿選擇",
+      "removeImage": "移除圖片",
+      "submit": "新增",
+      "submitting": "新增中…"
+    },
+    "validation": {
+      "nameRequired": "請填寫商品名稱"
+    },
+    "permissions": {
+      "libraryTitle": "需要相簿權限",
+      "libraryMessage": "請允許相簿權限以選擇照片",
+      "cameraTitle": "需要相機權限",
+      "cameraMessage": "請允許相機權限以拍攝照片"
+    },
+    "errors": {
+      "pickFailedTitle": "選擇照片失敗",
+      "pickFailedMessage": "請稍後再試",
+      "cameraFailedTitle": "拍照失敗",
+      "cameraFailedMessage": "請稍後再試",
+      "submitFailedMessage": "新增商品失敗，請稍後再試"
+    },
+    "hint": "* 圖片會以本機 URI（file://...）存到 image_url 欄位；若你之後要跨裝置同步，建議上傳到雲端再存 URL。"
+  },
+  "products": {
+    "title": "產品推薦",
+    "loading": "載入中…",
+    "empty": "暫無產品",
+    "fields": {
+      "brand": "品牌",
+      "region": "地區",
+      "tags": "標籤"
+    }
+  },
+    "profile": {
+    "loading": "載入中...",
+    "quickActions": "快捷功能",
+    "requiresLogin": "需登入後使用",
+
+    "signedOut": {
+      "title": "尚未登入",
+      "subtitle": "登入後可同步雲端個人資料、社群貼文與好友功能。\n任務點數會在登入後合併到雲端帳號。",
+      "login": "登入 / 註冊"
+    },
+
+    "signedIn": {
+      "defaultUserName": "New User"
+    },
+
+    "stats": {
+      "posts": "貼文",
+      "friends": "好友",
+      "pets": "寵物",
+      "points": "任務點數",
+      "pointsCloud": "任務點數（雲端）",
+      "pointsLocal": "任務點數（本地）"
+    },
+
+    "points": {
+      "cloudFailedFallbackLocal": "雲端點數讀取失敗，暫時顯示本地點數",
+      "loadFailed": "點數讀取失敗"
+    },
+
+    "buttons": {
+      "goToCareProfile": "進入我的飼養檔案",
+      "startMatching": "開始好友配對",
+      "signOut": "登出"
+    },
+
+    "actions": {
+      "friends": {
+        "title": "👥 好友",
+        "sub": "好友列表 / 申請 / 封鎖"
+      },
+      "messages": {
+        "title": "💬 私訊",
+        "sub": "最近對話 / 訊息請求"
+      },
+      "myPosts": {
+        "title": "🏷️ 我的貼文 / 收藏",
+        "sub": "我的貼文 / 收藏 / 讚"
+      },
+      "resources": {
+        "title": "🧑‍⚕️ 常用資源",
+        "sub": "醫院 / 緊急照護卡 / 店家"
+      },
+      "privacy": {
+        "title": "🔒 隱私",
+        "sub": "誰能私訊 / 顯示範圍 / 顯示物種"
+      },
+      "settings": {
+        "title": "⚙️ 設定",
+        "sub": "通知 / 語言 / 主題 / 身份"
+      },
+      "membership": {
+        "title": "🧾 會員 / 訂閱",
+        "sub": "方案 / 權益 / 付款"
+      }
+    }
+  },
+  "speciesNeeds": {
+    "defaults": {
+      "petName": "我的寵物"
+    },
+    "header": "{{petName}} 的需求",
+    "units": {
+      "hours": "{{count}} 小時",
+      "daysFloat": "{{value}} 天"
+    },
+    "empty": {
+      "title": "尚未有可顯示的需求",
+      "subtitle": "請在 species_targets 中填入 UVB、溫度或餵食頻率等欄位。"
+    },
+    "cards": {
+      "uvb": {
+        "title": "UVB / 日照",
+        "perDay": "{{range}}/天",
+        "intensity": "強度 {{value}}"
+      },
+      "feed": {
+        "title": "餵食頻率 / 飲食",
+        "every": "每 {{range}} / 次"
+      },
+      "weigh": {
+        "title": "量體重"
+      },
+      "clean": {
+        "title": "清潔/消毒"
+      }
+    }
+  },
+  "speciesEditor": {
+    "title": {
+      "add": "新增物種",
+      "edit": "編輯物種"
+    },
+    "fields": {
+      "key": {
+        "label": "Key（唯一值，小寫 a-z 0-9 - _）",
+        "placeholder": "例如：leopard_gecko",
+        "help": "提示：Key 會依 Common Name 自動產生（你仍可手動修改）。",
+        "lockedHint": "編輯模式下 Key 會鎖定，避免破壞關聯（外鍵）。"
+      },
+      "commonName": {
+        "label": "常用名稱",
+        "placeholder": "例如：豹紋守宮"
+      },
+      "scientificName": {
+        "label": "學名（可留空）",
+        "placeholder": "例如：Eublepharis macularius"
+      },
+      "notes": {
+        "label": "備註（可留空）",
+        "placeholder": "任何備註…"
+      }
+    },
+    "actions": {
+      "delete": "刪除",
+      "saving": "儲存中…"
+    },
+    "alerts": {
+      "notFound": {
+        "title": "找不到資料",
+        "message": "找不到物種 {{key}}。"
+      },
+      "loadFailed": {
+        "title": "載入失敗"
+      },
+      "saveFailed": {
+        "title": "儲存失敗"
+      },
+      "deleteFailed": {
+        "title": "刪除失敗",
+        "message": "此物種無法刪除。"
+      },
+      "deleteConfirm": {
+        "title": "刪除物種",
+        "message": "確定要刪除「{{name}}」嗎？\n\n若有寵物使用此 key，可能會造成外鍵（FK）檢查失敗。"
+      },
+      "validation": {
+        "title": "資料驗證",
+        "keyRequired": "請輸入 species key。",
+        "keyInvalidChars": "Key 只能包含小寫英數字，以及「-」「_」。",
+        "commonNameRequired": "請輸入常用名稱。",
+        "keyExists": "Key「{{key}}」已存在。"
+      }
+    }
+  },
+  "welcome": {
+    "title": "歡迎來到 ScaleFeatherFur",
+    "subtitle": "你的異寵照護一站式 App：紀錄活動、管理照護，並與同好社群交流分享。",
+    "cta": "開始使用"
+  },
+  "logs": {
+    "empty": {
+      "title": "尚未選擇寵物",
+      "subtitle": "請先新增一隻寵物，之後就可以開始紀錄日誌。"
+    },
+    "warnings": {
+      "bootstrapPetFailed": "[LogsScreen] 初始化 currentPetId 失敗："
+    }
+  }
+}

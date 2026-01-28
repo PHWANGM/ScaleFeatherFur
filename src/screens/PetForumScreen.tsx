@@ -13,41 +13,32 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
-// ✅ Supabase forum posts repo（你剛剛更新的）
-import {
-  fetchPostsFeed,
-  createPostWithImage,
-} from '../lib/supabase/repos/posts.repo';
+// ✅ Supabase forum posts repo
+import { fetchPostsFeed, createPostWithImage } from '../lib/supabase/repos/posts.repo';
 
-// ✅ 本地資料庫 product repo（維持原本）
-import {
-  getAllProducts,
-  createProduct,
-  type ProductRow,
-} from '../lib/db/repos/forum.repo';
+// ✅ Local DB product repo
+import { getAllProducts, createProduct, type ProductRow } from '../lib/db/repos/forum.repo';
 
-// ✅ 共用主題 Hook（跟 HomeScreen 一樣）
+// ✅ Theme hook
 import { useThemeColors } from '../styles/themesColors';
 
-// ✅ 發文畫面 component
+// ✅ Screens/components
 import ForumCreatePost, { type ForumCreatePostInput } from '../components/ForumCreatePost';
-
-// ✅ 貼文卡片 component
 import ForumPostCard, { type ForumPost } from '../components/ForumPostCard';
-
-// ✅ 商品卡片 & 新增商品表單
 import ProductCard from '../components/ProductCard';
 import ProductCreateForm, { type ProductCreateInput } from './ProductCreateForm';
 
-// --- 型別定義（對應 UI，而非直接 DB Row） ---
+// --- UI Type ---
 type Post = ForumPost;
 
 export default function PetForumScreen() {
+  const { t } = useTranslation();
   const { colors, isDark } = useThemeColors();
   const navigation = useNavigation<any>();
 
-  // 🎨 palette：盡量跟 HomeScreen 風格一致，再加上 forum/product 需要的顏色
+  // 🎨 palette
   const palette = useMemo(() => {
     const base = {
       bg: colors.bg,
@@ -70,30 +61,29 @@ export default function PetForumScreen() {
     };
   }, [colors, isDark]);
 
-  // ✅ 顯示模式：Forum / Product
+  // ✅ Modes: Forum / Product
   const [mode, setMode] = useState<'forum' | 'product'>('forum');
 
-  // ✅ feed / create（兩個模式共用）
+  // ✅ Views: Feed / Create
   const [currentView, setCurrentView] = useState<'feed' | 'create'>('feed');
 
-  // Forum 資料（Supabase）
+  // Forum (Supabase)
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Product 資料（本地）
+  // Product (Local DB)
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
-  // --- Load Forum Posts (Supabase + Storage imageUrl) ---
+  // --- Load Forum Posts ---
   const loadPosts = useCallback(async () => {
     setLoading(true);
     try {
       const feed = await fetchPostsFeed({ limit: 50 });
 
-      const mapped: Post[] = feed.map(p => {
+      const mapped: Post[] = feed.map((p) => {
         const petType = p.species_key || 'other';
 
-        // ✅ 直接用 Supabase Storage public url（若沒圖片，才 fallback）
         const imageUrl =
           p.image_url && p.image_url.length > 0
             ? p.image_url
@@ -102,7 +92,7 @@ export default function PetForumScreen() {
         return {
           id: p.id,
           userId: p.author_id,
-          title: p.title ?? '(no title)',
+          title: p.title ?? t('forum.post.noTitle'),
           content: p.body_md,
           petType,
           createdAt: p.created_at,
@@ -115,44 +105,40 @@ export default function PetForumScreen() {
       setPosts(mapped);
     } catch (e) {
       console.error('Load posts error', e);
-      Alert.alert('錯誤', '載入貼文時發生錯誤（Supabase）');
+      Alert.alert(t('common.error'), t('forum.errors.loadPosts'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
-  // --- Load Products (Local DB) ---
+  // --- Load Products ---
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true);
     try {
       const rows = await getAllProducts();
-      rows.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
+      rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setProducts(rows);
     } catch (e) {
       console.error('Load products error', e);
-      Alert.alert('錯誤', '載入商品時發生錯誤');
+      Alert.alert(t('common.error'), t('forum.errors.loadProducts'));
     } finally {
       setLoadingProducts(false);
     }
-  }, []);
+  }, [t]);
 
-  // 初次進入：載入 forum
+  // initial: load forum
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
 
-  // 切到 product：載入商品
+  // when switch to product: load products
   useEffect(() => {
     if (mode === 'product') loadProducts();
   }, [mode, loadProducts]);
 
-  // --- Create Forum Post (Supabase: insert posts + upload image -> storage + insert post_media) ---
+  // --- Create Forum Post ---
   const handleCreatePost = useCallback(async (input: ForumCreatePostInput) => {
     const key = input.speciesKey || 'other';
-
-    // 如果使用者沒選圖，你也會替他抓一張 fallback 圖後上傳到 Supabase
     const fallbackUrl = `https://source.unsplash.com/random/900x900/?${key},pet`;
 
     await createPostWithImage({
@@ -160,14 +146,12 @@ export default function PetForumScreen() {
       title: input.title,
       body_md: input.content,
       species_key: key,
-
-      // ForumCreatePost 現在提供的是 imageUrl string（可能是 remote url 或本地 file uri）
       imageUri: input.imageUrl ?? null,
       fallbackUrl,
     });
   }, []);
 
-  // --- Create Product (Local DB) ---
+  // --- Create Product ---
   const handleCreateProduct = useCallback(async (input: ProductCreateInput) => {
     await createProduct({
       name: input.name,
@@ -204,28 +188,20 @@ export default function PetForumScreen() {
       ]}
     >
       <View style={[styles.header, { backgroundColor: palette.bg }]}>
-        {/* 左側預留空間（對齊 HomeScreen） */}
         <View style={{ width: 48 }} />
 
-        {/* 中間：App 標題 + paw icon */}
         <View style={styles.headerTitleRow}>
-          <View
-            style={[
-              styles.headerIconBox,
-              { backgroundColor: 'rgba(249,115,22,0.12)' },
-            ]}
-          >
+          <View style={[styles.headerIconBox, { backgroundColor: 'rgba(249,115,22,0.12)' }]}>
             <MaterialCommunityIcons name="paw" size={20} color={palette.orange} />
           </View>
           <Text style={[styles.appTitle, { color: palette.text }]}>
-            {mode === 'forum' ? '萌寵圈 · Forum' : '萌寵圈 · Products'}
+            {mode === 'forum' ? t('forum.header.forumTitle') : t('forum.header.productsTitle')}
           </Text>
         </View>
 
-        {/* 右側：Forum => edit-3/x；Product => plus/x */}
         <Pressable
           style={styles.iconBtn}
-          onPress={() => setCurrentView(prev => (prev === 'feed' ? 'create' : 'feed'))}
+          onPress={() => setCurrentView((prev) => (prev === 'feed' ? 'create' : 'feed'))}
           hitSlop={10}
         >
           {currentView === 'feed' ? (
@@ -240,7 +216,7 @@ export default function PetForumScreen() {
         </Pressable>
       </View>
 
-      {/* ✅ Forum / Product 切換 Tag */}
+      {/* ✅ Mode tabs */}
       <View style={[styles.modeTabsRow, { backgroundColor: palette.bg }]}>
         <Pressable
           onPress={() => switchMode('forum')}
@@ -259,7 +235,7 @@ export default function PetForumScreen() {
               { color: mode === 'forum' ? palette.link : palette.subText },
             ]}
           >
-            Forum
+            {t('forum.tabs.forum')}
           </Text>
         </Pressable>
 
@@ -280,24 +256,19 @@ export default function PetForumScreen() {
               { color: mode === 'product' ? palette.link : palette.subText },
             ]}
           >
-            Product
+            {t('forum.tabs.products')}
           </Text>
         </Pressable>
       </View>
     </View>
   );
 
-  const renderPostItem: ListRenderItem<Post> = ({ item }) => (
-    <ForumPostCard post={item} palette={palette} />
-  );
-
-  const renderProductItem: ListRenderItem<ProductRow> = ({ item }) => (
-    <ProductCard product={item} palette={palette} />
-  );
+  const renderPostItem: ListRenderItem<Post> = ({ item }) => <ForumPostCard post={item} palette={palette} />;
+  const renderProductItem: ListRenderItem<ProductRow> = ({ item }) => <ProductCard product={item} palette={palette} />;
 
   // --- Content ---
   const renderContent = () => {
-    // ✅ Product 模式
+    // ✅ Product mode
     if (mode === 'product') {
       if (currentView === 'create') {
         return (
@@ -314,7 +285,7 @@ export default function PetForumScreen() {
         return (
           <View style={styles.centerContainer}>
             <ActivityIndicator />
-            <Text style={{ marginTop: 8, color: palette.subText }}>Loading products…</Text>
+            <Text style={{ marginTop: 8, color: palette.subText }}>{t('forum.loading.products')}</Text>
           </View>
         );
       }
@@ -323,24 +294,24 @@ export default function PetForumScreen() {
         <FlatList
           data={products}
           renderItem={renderProductItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.centerContainer}>
-              <Text style={{ color: palette.subText }}>目前還沒有商品資料（products）。</Text>
+              <Text style={{ color: palette.subText }}>{t('forum.empty.products')}</Text>
             </View>
           }
         />
       );
     }
 
-    // ✅ Forum 模式
+    // ✅ Forum mode
     if (loading && currentView === 'feed') {
       return (
         <View style={styles.centerContainer}>
           <ActivityIndicator />
-          <Text style={{ marginTop: 8, color: palette.subText }}>Loading from Supabase…</Text>
+          <Text style={{ marginTop: 8, color: palette.subText }}>{t('forum.loading.supabase')}</Text>
         </View>
       );
     }
@@ -350,14 +321,14 @@ export default function PetForumScreen() {
         <FlatList
           data={posts}
           renderItem={renderPostItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           onRefresh={loadPosts}
           refreshing={loading}
           ListEmptyComponent={
             <View style={styles.centerContainer}>
-              <Text style={{ color: palette.subText }}>目前還沒有貼文，快來搶頭香！</Text>
+              <Text style={{ color: palette.subText }}>{t('forum.empty.posts')}</Text>
             </View>
           }
         />
@@ -379,17 +350,13 @@ export default function PetForumScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: palette.bg }]}
-      edges={['top', 'left', 'right']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.bg }]} edges={['top', 'left', 'right']}>
       {renderHeader()}
       {renderContent()}
     </SafeAreaView>
   );
 }
 
-/* 🧱 Styles：比照 HomeScreen 的結構，只保留非卡片的部分 */
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
@@ -425,7 +392,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ✅ mode tabs
   modeTabsRow: {
     paddingHorizontal: 16,
     paddingBottom: 10,

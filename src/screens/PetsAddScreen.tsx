@@ -24,6 +24,7 @@ import {
 } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useTranslation } from 'react-i18next';
 
 import {
   insertPet,
@@ -33,12 +34,11 @@ import {
   type PetUpdate,
   type Habitat,
 } from '../lib/db/repos/pets.repo';
-import { listSpecies, type SpeciesRow ,debugSpeciesSnapshot} from '../lib/db/repos/species.repo';
+import { listSpecies, type SpeciesRow } from '../lib/db/repos/species.repo';
 import Field from '../components/fields/Field';
 import { useImagePicker } from '../lib/ui/useImagePicker';
 import { useThemeColors } from '../styles/themesColors';
 import PrimaryButton from '../components/buttons/PrimaryButton';
-// 🔽 新增：下拉式物種選擇器
 import PetSpeciesDropdown from '../components/PetSpeciesDropdown';
 
 // === 本畫面路由參數（可同時當作新增/編輯頁） ===
@@ -54,7 +54,9 @@ const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${p
 const parseISODate = (s: string): Date | null => {
   const m = s?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return null;
-  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+  const y = Number(m[1]),
+    mo = Number(m[2]),
+    d = Number(m[3]);
   return new Date(y, mo - 1, d);
 };
 
@@ -62,6 +64,8 @@ const parseISODate = (s: string): Date | null => {
 const HABITATS: Habitat[] = ['indoor_uvb', 'outdoor_sun', 'mixed'];
 
 export default function PetsAddScreen() {
+  const { t } = useTranslation();
+
   const route = useRoute<LocalRoute>();
   const navigation = useNavigation<NavigationProp<LocalStackParamList>>();
   const { colors, isDark } = useThemeColors();
@@ -73,7 +77,7 @@ export default function PetsAddScreen() {
       bg: colors.bg,
       card: colors.card,
       text: colors.text,
-      subText: colors.subText ?? colors.textDim ?? '#97A3B6',
+      subText: colors.subText ?? (colors as any).textDim ?? '#97A3B6',
       border: colors.border,
       primary: colors.primary ?? '#38e07b',
     }),
@@ -131,7 +135,7 @@ export default function PetsAddScreen() {
 
   const { pickFromLibrary, takePhoto } = useImagePicker();
 
-  const title = editingId ? 'Edit Pet' : 'Add Pet';
+  const title = editingId ? t('petsAdd.title.edit') : t('petsAdd.title.add');
 
   const load = useCallback(async () => {
     try {
@@ -142,10 +146,11 @@ export default function PetsAddScreen() {
       if (editingId) {
         const row = await getPetById(editingId);
         if (!row) {
-          Alert.alert('Not found', 'The pet no longer exists.');
+          Alert.alert(t('petsAdd.notFound.title'), t('petsAdd.notFound.message'));
           navigation.goBack();
           return;
         }
+
         setName(row.name);
         setSpeciesKey(row.species_key);
         setHabitat(row.habitat);
@@ -161,11 +166,11 @@ export default function PetsAddScreen() {
         setSpeciesKey(sp[0].key);
       }
     } catch (err: any) {
-      Alert.alert('Load failed', err?.message ?? String(err));
+      Alert.alert(t('petsAdd.loadFailed.title'), err?.message ?? String(err));
     } finally {
       setLoading(false);
     }
-  }, [editingId, navigation, speciesKey]);
+  }, [editingId, navigation, speciesKey, t]);
 
   useEffect(() => {
     navigation.setOptions?.({ headerShown: false });
@@ -196,32 +201,37 @@ export default function PetsAddScreen() {
   const habitatOptions = useMemo(
     () =>
       HABITATS.map((h) => ({
-        label: h === 'indoor_uvb' ? 'Indoor (UVB)' : h === 'outdoor_sun' ? 'Outdoor (Sun)' : 'Mixed',
+        label:
+          h === 'indoor_uvb'
+            ? t('petsAdd.habitat.indoorUvb')
+            : h === 'outdoor_sun'
+              ? t('petsAdd.habitat.outdoorSun')
+              : t('petsAdd.habitat.mixed'),
         value: h,
       })),
-    []
+    [t]
   );
 
   // 選擇頭像
   const chooseAvatar = useCallback(() => {
-    Alert.alert('選擇頭像', '要從哪裡選取？', [
+    Alert.alert(t('petsAdd.avatar.title'), t('petsAdd.avatar.message'), [
       {
-        text: '相簿',
+        text: t('petsAdd.avatar.library'),
         onPress: async () => {
           const uri = await pickFromLibrary();
           if (uri) setAvatarUri(uri);
         },
       },
       {
-        text: '相機',
+        text: t('petsAdd.avatar.camera'),
         onPress: async () => {
           const uri = await takePhoto();
           if (uri) setAvatarUri(uri);
         },
       },
-      { text: '取消', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
-  }, [pickFromLibrary, takePhoto]);
+  }, [pickFromLibrary, takePhoto, t]);
 
   // Birth date handlers
   const openDatePicker = useCallback(() => {
@@ -233,16 +243,13 @@ export default function PetsAddScreen() {
     }
   }, [birthDateObj]);
 
-  const onAndroidDateChange = useCallback(
-    (_e: DateTimePickerEvent, date?: Date) => {
-      setShowDatePicker(false);
-      if (date) {
-        setBirthDateObj(date);
-        setBirthDateIso(toISODate(date));
-      }
-    },
-    []
-  );
+  const onAndroidDateChange = useCallback((_e: DateTimePickerEvent, date?: Date) => {
+    setShowDatePicker(false);
+    if (date) {
+      setBirthDateObj(date);
+      setBirthDateIso(toISODate(date));
+    }
+  }, []);
 
   const onIosConfirm = useCallback(() => {
     setBirthDateObj(iosTempDate);
@@ -256,19 +263,20 @@ export default function PetsAddScreen() {
     setBirthDateIso('');
     setBirthDateObj(null);
   }, []);
+
   const goToSpeciesEditor = useCallback(() => navigation.navigate('SpeciesEditor'), [navigation]);
 
   const onSave = useCallback(async () => {
     if (!name.trim()) {
-      Alert.alert('Validation', 'Please enter pet name.');
+      Alert.alert(t('petsAdd.validation.title'), t('petsAdd.validation.nameRequired'));
       return;
     }
     if (!speciesKey) {
-      Alert.alert('Validation', 'Please select species.');
+      Alert.alert(t('petsAdd.validation.title'), t('petsAdd.validation.speciesRequired'));
       return;
     }
     if (birthDateIso && !/^\d{4}-\d{2}-\d{2}$/.test(birthDateIso)) {
-      Alert.alert('Validation', 'Birth date must be YYYY-MM-DD or empty.');
+      Alert.alert(t('petsAdd.validation.title'), t('petsAdd.validation.birthDateFormat'));
       return;
     }
 
@@ -299,11 +307,11 @@ export default function PetsAddScreen() {
 
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Save failed', err?.message ?? String(err));
+      Alert.alert(t('petsAdd.saveFailed.title'), err?.message ?? String(err));
     } finally {
       setSaving(false);
     }
-  }, [avatarUri, birthDateIso, habitat, locationCity, name, navigation, speciesKey, editingId]);
+  }, [avatarUri, birthDateIso, editingId, habitat, locationCity, name, navigation, speciesKey, t]);
 
   if (loading) {
     return (
@@ -317,10 +325,7 @@ export default function PetsAddScreen() {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: palette.bg }]}
-      edges={['top', 'left', 'right']}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: palette.bg }]} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: ui.hairline }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -331,10 +336,7 @@ export default function PetsAddScreen() {
       </View>
 
       {/* Body */}
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.select({ ios: 'padding', android: undefined })}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', android: undefined })}>
         <ScrollView
           contentContainerStyle={[styles.body, { gap: 14 }]}
           keyboardShouldPersistTaps="handled"
@@ -352,10 +354,7 @@ export default function PetsAddScreen() {
 
             <TouchableOpacity
               onPress={chooseAvatar}
-              style={[
-                styles.avatarAdd,
-                { backgroundColor: palette.primary, borderColor: palette.bg },
-              ]}
+              style={[styles.avatarAdd, { backgroundColor: palette.primary, borderColor: palette.bg }]}
               hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
             >
               <Text style={[styles.avatarAddText, { color: palette.bg }]}>＋</Text>
@@ -363,9 +362,9 @@ export default function PetsAddScreen() {
           </View>
 
           {/* Pet Name */}
-          <Field label="Pet Name">
+          <Field label={t('petsAdd.fields.petName')}>
             <TextInput
-              placeholder="e.g. Spike"
+              placeholder={t('petsAdd.placeholders.petName')}
               placeholderTextColor={ui.placeholder}
               value={name}
               onChangeText={setName}
@@ -380,10 +379,10 @@ export default function PetsAddScreen() {
             />
           </Field>
 
-          {/* 🔽 Species：改成 Dropdown + Add Species */}
+          {/* Species：Dropdown + Add Species */}
           <Field label="">
             <PetSpeciesDropdown
-              label="Species"
+              label={t('petsAdd.fields.species')}
               palette={dropdownPalette}
               value={speciesKey}
               onChange={setSpeciesKey}
@@ -393,7 +392,7 @@ export default function PetsAddScreen() {
           </Field>
 
           {/* Habitat */}
-          <Field label="Habitat">
+          <Field label={t('petsAdd.fields.habitat')}>
             <View style={[styles.select, { backgroundColor: ui.inputBg }]}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {habitatOptions.map((opt) => {
@@ -425,32 +424,27 @@ export default function PetsAddScreen() {
           </Field>
 
           {/* Birth Date */}
-          <Field label="Birth Date (YYYY-MM-DD)">
+          <Field label={t('petsAdd.fields.birthDate')}>
             <View style={styles.dateRow}>
-              <Pressable
-                onPress={openDatePicker}
-                style={[styles.dateInputLike, { backgroundColor: ui.inputBg }]}
-              >
+              <Pressable onPress={openDatePicker} style={[styles.dateInputLike, { backgroundColor: ui.inputBg }]}>
                 <Text style={birthDateIso ? { color: palette.text } : { color: ui.placeholder }}>
-                  {birthDateIso || 'Select a date'}
+                  {birthDateIso || t('petsAdd.birthDate.select')}
                 </Text>
               </Pressable>
+
               {!!birthDateIso && (
-                <TouchableOpacity
-                  onPress={clearBirthDate}
-                  style={[styles.clearBtn, { backgroundColor: ui.inputBg }]}
-                >
-                  <Text style={{ color: palette.text, fontSize: 12 }}>Clear</Text>
+                <TouchableOpacity onPress={clearBirthDate} style={[styles.clearBtn, { backgroundColor: ui.inputBg }]}>
+                  <Text style={{ color: palette.text, fontSize: 12 }}>{t('petsAdd.birthDate.clear')}</Text>
                 </TouchableOpacity>
               )}
             </View>
           </Field>
 
           {/* Location (City) */}
-          <Field label="Location (City)">
+          <Field label={t('petsAdd.fields.locationCity')}>
             <TextInput
               ref={locationRef}
-              placeholder="e.g. Taipei"
+              placeholder={t('petsAdd.placeholders.locationCity')}
               placeholderTextColor={ui.placeholder}
               value={locationCity}
               onChangeText={setLocationCity}
@@ -477,7 +471,7 @@ export default function PetsAddScreen() {
         ]}
       >
         <PrimaryButton
-          title={editingId ? 'Save Changes' : 'Add Pet'}
+          title={editingId ? t('petsAdd.actions.saveChanges') : t('petsAdd.actions.addPet')}
           onPress={onSave}
           disabled={saving}
           style={{ borderRadius: 16 }}
@@ -501,15 +495,18 @@ export default function PetsAddScreen() {
           <View style={[styles.iosSheet, { backgroundColor: palette.card }]}>
             <View style={[styles.iosSheetHeader, { borderBottomColor: ui.hairline }]}>
               <TouchableOpacity onPress={onIosCancel} style={styles.iosHeaderBtn}>
-                <Text style={[styles.iosHeaderBtnText, { color: palette.text }]}>Cancel</Text>
+                <Text style={[styles.iosHeaderBtnText, { color: palette.text }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <Text style={[styles.iosHeaderTitle, { color: palette.text }]}>Select Date</Text>
+
+              <Text style={[styles.iosHeaderTitle, { color: palette.text }]}>{t('petsAdd.iosDate.title')}</Text>
+
               <TouchableOpacity onPress={onIosConfirm} style={styles.iosHeaderBtn}>
                 <Text style={[styles.iosHeaderBtnText, { color: palette.text, fontWeight: '700' }]}>
-                  Done
+                  {t('common.done')}
                 </Text>
               </TouchableOpacity>
             </View>
+
             <DateTimePicker
               value={iosTempDate}
               onChange={(_, d) => d && setIosTempDate(d)}
@@ -535,7 +532,11 @@ const styles = StyleSheet.create({
   },
   closeButton: { fontSize: 20, width: 24, textAlign: 'center' },
   headerTitle: {
-    flex: 1, textAlign: 'center', fontSize: 18, fontWeight: 'bold', paddingRight: 24,
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: 'bold',
+    paddingRight: 24,
   },
   body: { padding: 16 },
 
@@ -550,32 +551,37 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   avatarCircle: {
-    width: 96, height: 96, borderRadius: 48,
-    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   avatarImage: { width: 96, height: 96, borderRadius: 48 },
   avatarAdd: {
     position: 'absolute',
     right: 4,
     bottom: 4,
-    width: 28, height: 28, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 2,
   },
   avatarAddText: { fontWeight: 'bold', fontSize: 18, lineHeight: 18 },
 
   input: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12 },
 
-  // species row（現在只剩 Habitat 在用）
-  speciesRow: { flexDirection: 'row', alignItems: 'center' },
-  addSpeciesBtn: { marginLeft: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
-  addSpeciesBtnText: { fontWeight: '600', fontSize: 12 },
-
   select: { borderRadius: 12, padding: 8 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 999, backgroundColor: 'transparent',
-    borderWidth: 1, marginRight: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    marginRight: 8,
   },
   chipText: {},
 
@@ -587,11 +593,21 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: StyleSheet.hairlineWidth },
 
   // iOS overlay
-  iosOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'flex-end' },
+  iosOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+  },
   iosSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 24 },
   iosSheetHeader: {
-    height: 48, paddingHorizontal: 12,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    height: 48,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iosHeaderBtn: { paddingHorizontal: 8, paddingVertical: 6 },

@@ -17,6 +17,7 @@ import type { RootTabParamList } from '../navigation/rootNavigator';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import PetsHeader from '../components/headers/PetsHeader';
 import { setCurrentPetId, selectCurrentPetId } from '../state/slices/petsSlice';
@@ -33,15 +34,13 @@ import { useNext24HourlyWeatherByCoords } from '../hooks/useNext24HourlyWeatherB
 
 // components
 import EnvironmentSection from '../components/charts/EnvironmentSection';
-import WeightHistoryChart from '../components/charts/WeightHistoryChart';
-
-// warnings
-import TemperatureWarning from '../components/warning/TemperatureWarning';
-import UVBWarning from '../components/warning/UVBWarning';
-import FeedingWarning from '../components/warning/FeedingWarning';
-import CalciumWarning from '../components/warning/CalciumWarning';
-import VitaminD3Warning from '../components/warning/VitaminD3Warning';
 import DailyTasksModal from '../components/modals/DailyTasksModal';
+
+// ✅ NEW: CareAlerts section (extracted)
+import CareAlerts from '../components/warning/CareAlerts';
+
+// ✅ NEW: WeightTrend section (extracted)
+import WeightTrend from '../components/WeightTrend';
 
 // ✅ Local (offline) tasks repo
 import * as DbTasks from '../lib/db/repos/tasks.repo';
@@ -88,6 +87,8 @@ function useAppActiveSessionId() {
 }
 
 export default function HomeScreen({ navigation }: Props) {
+  const { t } = useTranslation();
+
   const dispatch = useDispatch();
   const currentPetId = useSelector(selectCurrentPetId);
   const { colors, isDark } = useThemeColors();
@@ -153,11 +154,11 @@ export default function HomeScreen({ navigation }: Props) {
         }
       }
     } catch (e: any) {
-      Alert.alert('Database Error', String(e?.message ?? e));
+      Alert.alert(t('home.dbErrorTitle'), String(e?.message ?? e));
     } finally {
       setLoading(false);
     }
-  }, [currentPetId, dispatch]);
+  }, [currentPetId, dispatch, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -272,9 +273,9 @@ export default function HomeScreen({ navigation }: Props) {
     [currentPetId, refreshDailyTasks]
   );
 
-  const speciesLabel = pet?.species_name ?? pet?.species_key ?? '—';
+  const speciesLabel = pet?.species_name ?? pet?.species_key ?? t('common.none');
   const environmentLoading = locationLoading || weatherLoading;
-  const completedCount = dailyTasks.filter((t) => t.completed).length;
+  const completedCount = dailyTasks.filter((tt) => tt.completed).length;
 
   return (
     <SafeAreaView
@@ -287,71 +288,36 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={[styles.appTitle, { color: palette.text }]}>ScaleFeatherFur</Text>
         <Pressable
           style={styles.iconBtn}
-          onPress={() => Alert.alert('Settings', 'Open settings…')}
+          onPress={() => Alert.alert(t('settings.title'), t('home.openSettings'))}
           hitSlop={10}
         >
-          <Feather
-            name="settings"
-            size={22}
-            color={isDark ? '#d1d5db' : '#4b5563'}
-          />
+          <Feather name="settings" size={22} color={isDark ? '#d1d5db' : '#4b5563'} />
         </Pressable>
       </View>
 
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator />
-          <Text style={{ marginTop: 8, color: palette.subText }}>
-            Loading from database…
-          </Text>
+          <Text style={{ marginTop: 8, color: palette.subText }}>{t('home.loadingFromDatabase')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <PetsHeader />
 
-          {/* 🩺 Care Alerts */}
-          <View style={{ marginTop: 16 }}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: palette.text }]}>Care Alerts</Text>
-              <Text style={[styles.sectionHint, { color: palette.subText }]}>{speciesLabel}</Text>
-            </View>
-
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: palette.card, borderColor: palette.border },
-              ]}
-            >
-              <TemperatureWarning tempRisk={tempRisk} />
-              <UVBWarning uvbRisk={uvbRisk} />
-              <FeedingWarning petId={currentPetId} />
-              <CalciumWarning petId={currentPetId} />
-              <VitaminD3Warning petId={currentPetId} />
-
-              <View style={[styles.alertRow, { marginTop: 10 }]}>
-                <View
-                  style={[
-                    styles.alertIconBox,
-                    { backgroundColor: 'rgba(56,224,123,0.2)' },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name="stethoscope"
-                    size={22}
-                    color={palette.primary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.alertTitle, { color: palette.text }]}>
-                    Vet Checkup
-                  </Text>
-                  <Text style={[styles.alertSub, { color: palette.subText }]}>
-                    Schedule a routine check
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          {/* ✅ Care Alerts (extracted) */}
+          <CareAlerts
+            palette={{
+              card: palette.card,
+              border: palette.border,
+              text: palette.text,
+              subText: palette.subText,
+              primary: palette.primary,
+            }}
+            speciesLabel={speciesLabel}
+            currentPetId={currentPetId}
+            tempRisk={tempRisk}
+            uvbRisk={uvbRisk}
+          />
 
           {/* 🌤 Environment */}
           <View style={{ marginTop: 16 }}>
@@ -366,23 +332,14 @@ export default function HomeScreen({ navigation }: Props) {
             />
           </View>
 
-          {/* ⚖️ Weight Trend */}
-          <View style={{ marginTop: 16 }}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>Weight</Text>
-            <View
-              style={[
-                styles.card,
-                {
-                  backgroundColor: palette.card,
-                  borderColor: palette.border,
-                  paddingVertical: 12,
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <WeightHistoryChart />
-            </View>
-          </View>
+          {/* ✅ Weight Trend (extracted) */}
+          <WeightTrend
+            palette={{
+              card: palette.card,
+              border: palette.border,
+              text: palette.text,
+            }}
+          />
 
           <View style={{ height: 32 }} />
         </ScrollView>
@@ -396,11 +353,7 @@ export default function HomeScreen({ navigation }: Props) {
           await refreshDailyTasks();
         }}
       >
-        <MaterialCommunityIcons
-          name="clipboard-check-outline"
-          size={24}
-          color="#022c22"
-        />
+        <MaterialCommunityIcons name="clipboard-check-outline" size={24} color="#022c22" />
       </Pressable>
 
       <DailyTasksModal
@@ -427,7 +380,6 @@ export default function HomeScreen({ navigation }: Props) {
                 : { status: 'idle' }
         }
         onPressSync={() => {
-          // manual sync button
           refreshDailyTasks();
         }}
       />
@@ -454,29 +406,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: { padding: 16 },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: '700' },
-  sectionHint: { fontSize: 14, fontWeight: '500' },
-  card: {
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  alertRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  alertIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertTitle: { fontSize: 16, fontWeight: '600' },
-  alertSub: { fontSize: 12, marginTop: 2 },
   taskFab: {
     position: 'absolute',
     right: 20,

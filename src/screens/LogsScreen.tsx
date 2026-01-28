@@ -1,16 +1,22 @@
 // src/screens/LogsScreen.tsx
 import { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import CustomCalendar from '../components/calendar/CustomCalendar';
 import CalendarDateDetail from '../components/calendar/CalendarDateDetail';
 import PetsHeader from '../components/headers/PetsHeader';
 
-import { selectCurrentPetId, selectSelectedDate, setCurrentPetId, setSelectedDate } from '../state/slices/petsSlice';
-import { query } from '../lib/db/db.client'; 
+import {
+  selectCurrentPetId,
+  selectSelectedDate,
+  setCurrentPetId,
+  setSelectedDate,
+} from '../state/slices/petsSlice';
+import { query } from '../lib/db/db.client';
 
 type ActivitiesProps = {
   route?: { params?: { redirectToNewActivity?: boolean } };
@@ -21,6 +27,7 @@ type ActivitiesProps = {
 };
 
 function Activities({ route, navigation }: ActivitiesProps) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const isRedirect = route?.params?.redirectToNewActivity === true;
 
@@ -47,7 +54,7 @@ function Activities({ route, navigation }: ActivitiesProps) {
             }
           }
         } catch (e) {
-          console.warn('[LogsScreen] bootstrap currentPetId failed:', e);
+          console.warn(t('logs.warnings.bootstrapPetFailed'), e);
         }
       })();
 
@@ -56,8 +63,23 @@ function Activities({ route, navigation }: ActivitiesProps) {
         navigation.setParams({ redirectToNewActivity: false });
         navigation.navigate('Activities', { screen: 'NewActivity' });
       }
-    }, [isRedirect, navigation, currentPetId, selectedDate, dispatch])
+    }, [isRedirect, navigation, currentPetId, selectedDate, dispatch, t])
   );
+
+  // ✅ 若還沒有 currentPetId（DB 還沒撈到，或真的沒有寵物），給一個可翻譯的空狀態
+  if (!currentPetId) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <View style={styles.activityContainer}>
+          <PetsHeader />
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyTitle}>{t('logs.empty.title')}</Text>
+            <Text style={styles.emptySubtitle}>{t('logs.empty.subtitle')}</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -81,4 +103,25 @@ const styles = StyleSheet.create({
   activityContainer: { flex: 1, alignItems: 'center', width: '100%' },
   calendar: { flexShrink: 1, width: '100%' },
   date: { flex: 1, width: '100%' },
+
+  emptyWrap: {
+    flex: 1,
+    width: '100%',
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D3748',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4A5568',
+    textAlign: 'center',
+  },
 });

@@ -4,13 +4,17 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/rootNavigator';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+
 import { listPetsWithSpecies, type PetWithSpeciesRow } from '../lib/db/repos/pets.repo';
 import { setCurrentPetId } from '../state/slices/petsSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PetSelect'>;
 
 export default function PetSelectScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
+
   const [pets, setPets] = useState<PetWithSpeciesRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,7 +28,9 @@ export default function PetSelectScreen({ navigation }: Props) {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const onSelect = (petId: string) => {
@@ -52,17 +58,19 @@ export default function PetSelectScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>選擇你的寵物</Text>
+      <Text style={styles.title}>{t('petSelect.title')}</Text>
+
       {loading ? (
-        <Text style={styles.hint}>讀取中…</Text>
+        <Text style={styles.hint}>{t('petSelect.loading')}</Text>
       ) : pets.length === 0 ? (
-        <Text style={styles.hint}>目前沒有寵物，請先新增。</Text>
+        <Text style={styles.hint}>{t('petSelect.empty')}</Text>
       ) : (
         <FlatList
           data={pets}
           keyExtractor={(p) => p.id}
           renderItem={renderItem}
           contentContainerStyle={{ paddingVertical: 12 }}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </View>
@@ -71,7 +79,13 @@ export default function PetSelectScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 20 },
-  title: { fontSize: 20, color: '#7D7D7D', textAlign: 'center', fontWeight: '600', marginTop: 16 },
+  title: {
+    fontSize: 20,
+    color: '#7D7D7D',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginTop: 16,
+  },
   hint: { textAlign: 'center', marginTop: 20, color: '#999' },
   card: {
     flexDirection: 'row',
@@ -81,7 +95,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FB',
     borderRadius: 12,
   },
-  avatarWrap: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', marginRight: 12, backgroundColor: '#EEE' },
+  avatarWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    marginRight: 12,
+    backgroundColor: '#EEE',
+  },
   avatar: { width: '100%', height: '100%', resizeMode: 'cover' },
   meta: { flex: 1 },
   petName: { fontSize: 18, fontWeight: '700', color: '#333' },

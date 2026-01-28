@@ -1,0 +1,373 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "done": "Done",
+    "none": "—",
+    "error": "Error"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "followSystem": "Follow system",
+    "chinese": "Chinese",
+    "english": "English"
+  },
+  "home": {
+    "dbErrorTitle": "Database Error",
+    "openSettings": "Open settings…",
+    "loadingFromDatabase": "Loading from database…",
+    "careAlerts": "Care Alerts",
+    "vetCheckup": {
+      "title": "Vet Checkup",
+      "subtitle": "Schedule a routine check"
+    },
+    "environment": {
+      "title": "Environment",
+      "loading": "Loading location & weather…",
+      "cloudCoverLabel": "Current Cloud Cover:",
+      "temperature": "Temperature",
+      "uvIndex": "UV Index"
+    },
+    "weightTrend": {
+      "title": "Weight Trend"
+    }
+  },
+  "petDetail": {
+    "weightTrend": {
+      "title": "Weight Trend",
+      "emptyTitle": "Not enough weight records yet",
+      "emptyHint": "Add a weigh log to see the trend"
+    },
+    "completion7d": {
+      "title": "7-day Task Completion",
+      "hint": "Includes: feeding, calcium, UVB, cleaning, weighing"
+    }
+  },
+  "forum": {
+    "header": {
+      "forumTitle": "Pet Circle · Forum",
+      "productsTitle": "Pet Circle · Products"
+    },
+    "tabs": {
+      "forum": "Forum",
+      "products": "Product"
+    },
+    "loading": {
+      "supabase": "Loading from Supabase…",
+      "products": "Loading products…"
+    },
+    "empty": {
+      "posts": "No posts yet — be the first!",
+      "products": "No products yet."
+    },
+    "errors": {
+      "loadPosts": "Something went wrong while loading posts (Supabase).",
+      "loadProducts": "Something went wrong while loading products."
+    },
+    "post": {
+      "noTitle": "(no title)"
+    }
+  },
+  "charts": {
+    "weightHistory": {
+      "title": "The last 2 months (last log each day)",
+      "units": {
+        "kg": "kg",
+        "g": "g"
+      },
+      "empty": {
+        "noPetSelected": "Please select a pet first",
+        "noRecordsIn2Months": "No weight records in the last 2 months"
+      },
+      "errors": {
+        "loadFailed": "Failed to load weight data"
+      }
+    }
+  },
+  "petsAdd": {
+    "title": {
+      "add": "Add Pet",
+      "edit": "Edit Pet"
+    },
+    "notFound": {
+      "title": "Not found",
+      "message": "The pet no longer exists."
+    },
+    "loadFailed": {
+      "title": "Load failed"
+    },
+    "saveFailed": {
+      "title": "Save failed"
+    },
+    "validation": {
+      "title": "Validation",
+      "nameRequired": "Please enter pet name.",
+      "speciesRequired": "Please select species.",
+      "birthDateFormat": "Birth date must be YYYY-MM-DD or empty."
+    },
+    "avatar": {
+      "title": "Choose avatar",
+      "message": "Where do you want to pick from?",
+      "library": "Photo Library",
+      "camera": "Camera"
+    },
+    "fields": {
+      "petName": "Pet Name",
+      "species": "Species",
+      "habitat": "Habitat",
+      "birthDate": "Birth Date (YYYY-MM-DD)",
+      "locationCity": "Location (City)"
+    },
+    "placeholders": {
+      "petName": "e.g. Spike",
+      "locationCity": "e.g. Taipei"
+    },
+    "habitat": {
+      "indoorUvb": "Indoor (UVB)",
+      "outdoorSun": "Outdoor (Sun)",
+      "mixed": "Mixed"
+    },
+    "birthDate": {
+      "select": "Select a date",
+      "clear": "Clear"
+    },
+    "actions": {
+      "addPet": "Add Pet",
+      "saveChanges": "Save Changes"
+    },
+    "iosDate": {
+      "title": "Select Date"
+    }
+  },
+  "petSelect": {
+    "title": "Choose your pet",
+    "loading": "Loading…",
+    "empty": "No pets yet. Please add one first."
+  },
+  "productCreateForm": {
+    "title": "Add Product",
+    "fields": {
+      "name": "Product name",
+      "brand": "Brand",
+      "region": "Region",
+      "affiliateUrl": "Affiliate URL",
+      "image": "Product image",
+      "description": "Description",
+      "tags": "Tags (comma-separated)"
+    },
+    "placeholders": {
+      "name": "e.g. Arcadia T5 UVB 12%",
+      "brand": "e.g. Arcadia",
+      "region": "TW / US",
+      "affiliateUrl": "https://...",
+      "description": "e.g. High-output T5 UVB tube for diurnal turtles/lizards...",
+      "tags": "UVB, sulcata, lamp"
+    },
+    "image": {
+      "notSelected": "Not selected"
+    },
+    "actions": {
+      "takePhoto": "Take photo",
+      "pickFromLibrary": "Choose from library",
+      "removeImage": "Remove image",
+      "submit": "Add",
+      "submitting": "Adding…"
+    },
+    "validation": {
+      "nameRequired": "Please enter product name."
+    },
+    "permissions": {
+      "libraryTitle": "Photo Library Permission",
+      "libraryMessage": "Please allow photo library access to choose an image.",
+      "cameraTitle": "Camera Permission",
+      "cameraMessage": "Please allow camera access to take a photo."
+    },
+    "errors": {
+      "pickFailedTitle": "Failed to choose image",
+      "pickFailedMessage": "Please try again later.",
+      "cameraFailedTitle": "Failed to take photo",
+      "cameraFailedMessage": "Please try again later.",
+      "submitFailedMessage": "Failed to add product. Please try again later."
+    },
+    "hint": "* The image will be saved as a local URI (file://...) in the image_url field. If you need cross-device sync, upload it to the cloud and store a URL instead."
+  },
+  "products": {
+    "title": "Product recommendations",
+    "loading": "Loading…",
+    "empty": "No products yet",
+    "fields": {
+      "brand": "Brand",
+      "region": "Region",
+      "tags": "Tags"
+    }
+  },
+  "profile": {
+    "loading": "Loading...",
+    "quickActions": "Quick actions",
+    "requiresLogin": "Requires login",
+
+    "signedOut": {
+      "title": "Not signed in",
+      "subtitle": "Sign in to sync your cloud profile, community posts, and friends features.\nTask points will be merged into your cloud account after signing in.",
+      "login": "Sign in / Sign up"
+    },
+
+    "signedIn": {
+      "defaultUserName": "New User"
+    },
+
+    "stats": {
+      "posts": "Posts",
+      "friends": "Friends",
+      "pets": "Pets",
+      "points": "Task points",
+      "pointsCloud": "Task points (Cloud)",
+      "pointsLocal": "Task points (Local)"
+    },
+
+    "points": {
+      "cloudFailedFallbackLocal": "Failed to load cloud points. Showing local points for now.",
+      "loadFailed": "Failed to load points"
+    },
+
+    "buttons": {
+      "goToCareProfile": "Go to my care profiles",
+      "startMatching": "Start friend matching",
+      "signOut": "Sign out"
+    },
+
+    "actions": {
+      "friends": {
+        "title": "👥 Friends",
+        "sub": "Friends list / Requests / Block"
+      },
+      "messages": {
+        "title": "💬 Messages",
+        "sub": "Recent chats / Message requests"
+      },
+      "myPosts": {
+        "title": "🏷️ My posts / Saved",
+        "sub": "My posts / Saved / Likes"
+      },
+      "resources": {
+        "title": "🧑‍⚕️ Resources",
+        "sub": "Hospitals / Emergency care card / Shops"
+      },
+      "privacy": {
+        "title": "🔒 Privacy",
+        "sub": "Who can message / Visibility / Show species"
+      },
+      "settings": {
+        "title": "⚙️ Settings",
+        "sub": "Notifications / Language / Theme / Identity"
+      },
+      "membership": {
+        "title": "🧾 Membership / Subscription",
+        "sub": "Plans / Benefits / Payment"
+      }
+    }
+  },
+  "speciesNeeds": {
+    "defaults": {
+      "petName": "My Pet"
+    },
+    "header": "{{petName}}'s needs",
+    "units": {
+      "hours": "{{count}} hours",
+      "daysFloat": "{{value}} days"
+    },
+    "empty": {
+      "title": "No needs to show yet",
+      "subtitle": "Please fill in UVB, temperature, feeding interval, etc. in species_targets."
+    },
+    "cards": {
+      "uvb": {
+        "title": "UVB / Light",
+        "perDay": "{{range}}/day",
+        "intensity": "Intensity {{value}}"
+      },
+      "feed": {
+        "title": "Feeding / Diet",
+        "every": "Every {{range}} per feeding"
+      },
+      "weigh": {
+        "title": "Weigh-in"
+      },
+      "clean": {
+        "title": "Cleaning / Disinfection"
+      }
+    }
+  },
+  "speciesEditor": {
+    "title": {
+      "add": "Add Species",
+      "edit": "Edit Species"
+    },
+    "fields": {
+      "key": {
+        "label": "Key (unique, lowercase, a-z 0-9 - _)",
+        "placeholder": "e.g. leopard_gecko",
+        "help": "Tip: Key is auto-generated from Common Name (you can still edit it).",
+        "lockedHint": "Key is locked in edit mode to avoid breaking relations (FK)."
+      },
+      "commonName": {
+        "label": "Common Name",
+        "placeholder": "e.g. Leopard Gecko"
+      },
+      "scientificName": {
+        "label": "Scientific Name (optional)",
+        "placeholder": "e.g. Eublepharis macularius"
+      },
+      "notes": {
+        "label": "Notes (optional)",
+        "placeholder": "Any notes…"
+      }
+    },
+    "actions": {
+      "delete": "Delete",
+      "saving": "Saving…"
+    },
+    "alerts": {
+      "notFound": {
+        "title": "Not found",
+        "message": "Species {{key}} not found."
+      },
+      "loadFailed": {
+        "title": "Load failed"
+      },
+      "saveFailed": {
+        "title": "Save failed"
+      },
+      "deleteFailed": {
+        "title": "Delete failed",
+        "message": "The species could not be deleted."
+      },
+      "deleteConfirm": {
+        "title": "Delete species",
+        "message": "Are you sure you want to delete \"{{name}}\"?\n\nRelated pets referencing this key may fail FK checks."
+      },
+      "validation": {
+        "title": "Validation",
+        "keyRequired": "Please enter a species key.",
+        "keyInvalidChars": "Key can only contain lowercase letters, numbers, \"-\" and \"_\".",
+        "commonNameRequired": "Please enter a common name.",
+        "keyExists": "Key \"{{key}}\" already exists."
+      }
+    }
+  },
+  "welcome": {
+    "title": "Welcome to ScaleFeatherFur",
+    "subtitle": "Your all-in-one app for exotic pet care. Track activities, manage care, and connect with a community of fellow exotic pet enthusiasts.",
+    "cta": "Get Started"
+  },
+  "logs": {
+    "empty": {
+      "title": "No pet selected",
+      "subtitle": "Please add a pet first, then you can start logging activities."
+    },
+    "warnings": {
+      "bootstrapPetFailed": "[LogsScreen] Failed to bootstrap currentPetId:"
+    }
+  }
+}
