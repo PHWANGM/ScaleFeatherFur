@@ -5,8 +5,9 @@ import { Provider } from 'react-redux';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
-import "./src/i18n";
 
+// ✅ 改這裡：不要用 side-effect import，改成可 await 的 init
+import { initI18n } from './src/i18n';
 
 import { store } from './src/state/store';
 import { ensureDBReady } from './src/lib/db/bootstrap';
@@ -57,32 +58,37 @@ export default function App() {
       }
     };
 
-    // App 冷啟動
     Linking.getInitialURL().then((url) => {
       console.log('[DeepLink] initialUrl=', url);
       if (url) routeByUrl(url);
     });
 
-    // App 前景/背景切換時的事件
     const sub = Linking.addEventListener('url', ({ url }) => routeByUrl(url));
-
     return () => sub.remove();
   }, []);
 
+  // ✅ Boot：i18n + DB 都完成才 ready
   useEffect(() => {
     let cancelled = false;
+
     const timeout = setTimeout(() => {
       if (!ready && !bootErr) setBootErr(new Error('DB init timeout (>8s).'));
     }, 8000);
 
     (async () => {
       try {
-        console.log('[App] ensureDBReady start');
-        await ensureDBReady();
-        console.log('[App] ensureDBReady done');
+        console.log('[App] boot start: initI18n + ensureDBReady');
+
+        // ✅ 兩個都做完才讓 App 進主畫面
+        await Promise.all([
+          initI18n(),       // ← 這就是你要的「APP 入口語言」
+          ensureDBReady(),  // ← 你原本的 DB init
+        ]);
+
+        console.log('[App] boot done');
         if (!cancelled) setReady(true);
       } catch (e: any) {
-        console.error('DB init failed', e);
+        console.error('Boot failed', e);
         if (!cancelled) setBootErr(e);
       } finally {
         clearTimeout(timeout);
@@ -115,7 +121,7 @@ export default function App() {
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <ActivityIndicator size="large" />
         <Text style={{ color: isDark ? '#fff' : '#000', marginTop: 12 }}>
-          Initializing database…
+          Initializing…
         </Text>
       </View>
     );
