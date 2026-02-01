@@ -1,5 +1,4 @@
 // src/components/modals/DailyTasksModal.tsx
-import React from "react"
 import {
   ActivityIndicator,
   Modal,

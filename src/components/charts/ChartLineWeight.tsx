@@ -1,5 +1,4 @@
 // src/components/charts/ChartLineWeight.tsx
-import React from "react"
 import { StyleSheet, View } from "react-native"
 import Svg, {
   Circle,

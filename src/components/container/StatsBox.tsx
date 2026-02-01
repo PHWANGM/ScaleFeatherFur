@@ -1,4 +1,3 @@
-import React from "react"
 import { Dimensions, StyleSheet, Text, View } from "react-native"
 
 // ====== 型別定義 ======

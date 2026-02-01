@@ -1,5 +1,5 @@
 // src/components/charts/LineChart.tsx
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 import { StyleSheet, Text, useColorScheme, View } from "react-native"
 import Svg, {
   Defs,

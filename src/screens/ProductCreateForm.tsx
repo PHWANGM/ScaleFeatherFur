@@ -1,5 +1,5 @@
 // src/components/ProductCreateForm.tsx
-import React, { useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Alert,
   Image,

@@ -1,5 +1,5 @@
 // src/components/StatsContainer/StatsContainer.tsx
-import React, { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ActivityIndicator, StyleSheet, View } from "react-native"
 import { useSelector } from "react-redux"
 import { useIsFocused } from "@react-navigation/native"

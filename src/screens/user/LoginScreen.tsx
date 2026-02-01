@@ -1,5 +1,5 @@
 // src/screens/user/LoginScreen.tsx
-import React, { useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import {
   KeyboardAvoidingView,
   Platform,

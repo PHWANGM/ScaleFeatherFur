@@ -1,5 +1,5 @@
 // src/components/chat/MessageBubble.tsx
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 import { Image, StyleSheet, Text, View } from "react-native"
 
 import { theme } from "../../styles/tokens"

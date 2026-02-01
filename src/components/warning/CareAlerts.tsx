@@ -1,5 +1,4 @@
 // src/components/warning/CareAlerts.tsx
-import React from "react"
 import { StyleSheet, Text, View } from "react-native"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"

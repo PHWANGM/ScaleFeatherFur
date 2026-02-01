@@ -1,5 +1,5 @@
 // src/components/charts/WeightHistoryChart.tsx
-import React, { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ActivityIndicator, StyleSheet, Switch, Text, View } from "react-native"
 import { useSelector } from "react-redux"
 import { useTranslation } from "react-i18next"

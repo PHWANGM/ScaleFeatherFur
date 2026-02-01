@@ -1,5 +1,5 @@
 // src/components/fields/Field.tsx
-import React, { PropsWithChildren, useMemo } from "react"
+import { PropsWithChildren, useMemo } from "react"
 import { StyleSheet, Text, TextStyle, View, ViewStyle } from "react-native"
 import { useThemeColors } from "../../styles/themesColors"
 

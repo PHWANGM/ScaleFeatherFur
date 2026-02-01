@@ -1,5 +1,4 @@
 // src/components/buttons/PrimaryButton.tsx
-import React from "react"
 import {
   ActivityIndicator,
   StyleSheet,

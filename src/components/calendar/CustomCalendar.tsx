@@ -1,5 +1,5 @@
 // src/components/CustomCalendar.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 import { Calendar, LocaleConfig } from "react-native-calendars"
 import { Ionicons } from "@expo/vector-icons"

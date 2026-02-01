@@ -1,5 +1,4 @@
 // src/components/ForumPostCard.tsx
-import React from "react"
 import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { Feather } from "@expo/vector-icons"
 

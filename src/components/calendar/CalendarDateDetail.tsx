@@ -1,5 +1,5 @@
 // src/components/CalendarDateDetail.tsx
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 import { Dimensions, StyleSheet, Text, View } from "react-native"
 import { useSelector } from "react-redux"
 import DetailListContainer from "./DetailListContainer"

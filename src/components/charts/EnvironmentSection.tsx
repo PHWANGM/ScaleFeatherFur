@@ -1,5 +1,4 @@
 // src/components/charts/EnvironmentSection.tsx
-import React from "react"
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native"
 import { Feather } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"

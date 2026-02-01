@@ -1,4 +1,4 @@
-import React, { PropsWithChildren } from "react"
+import { PropsWithChildren } from "react"
 import { StyleSheet, View, ViewStyle } from "react-native"
 import { theme } from "../../styles/tokens"
 

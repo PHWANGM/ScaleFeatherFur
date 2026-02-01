@@ -1,5 +1,5 @@
 // src/screens/CleanScreen.tsx
-import React, { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import {
   Alert,
   Platform,

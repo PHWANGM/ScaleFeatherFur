@@ -1,5 +1,5 @@
 // src/navigation/rootNavigator.tsx
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 import { Platform, Pressable, View } from "react-native"
 import {
   type BottomTabBarButtonProps,

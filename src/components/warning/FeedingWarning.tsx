@@ -1,5 +1,5 @@
 // src/components/warning/FeedingWarning.tsx
-import React, { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { StyleSheet, Text, View } from "react-native"
 import { Feather } from "@expo/vector-icons"
 import { useThemeColors } from "../../styles/themesColors"

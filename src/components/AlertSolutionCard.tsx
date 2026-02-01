@@ -1,4 +1,3 @@
-import React from "react"
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import Card from "./cards/Card"
 import { theme } from "../styles/tokens"

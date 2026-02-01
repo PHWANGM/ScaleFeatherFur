@@ -1,5 +1,5 @@
 // src/screens/profile/ProfileMyPostsScreen.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
