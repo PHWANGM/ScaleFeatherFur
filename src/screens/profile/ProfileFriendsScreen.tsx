@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/rootNavigator';
+import { useTranslation } from 'react-i18next';
 
 import { getAuthedUserId, type ProfileRow } from '../../lib/supabase/repos/profile.repo';
 import {
@@ -31,6 +32,7 @@ import {
 import { createOrGetDm } from '../../lib/supabase/repos/message.repo';
 
 export default function ProfileFriendsScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [myId, setMyId] = useState<string | null>(null);
@@ -117,7 +119,7 @@ export default function ProfileFriendsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
-        <Text style={styles.muted}>Loading friends…</Text>
+        <Text style={styles.muted}>{t('friends.loading')}</Text>
       </View>
     );
   }
@@ -125,34 +127,40 @@ export default function ProfileFriendsScreen() {
   if (!myId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.title}>Friends</Text>
-        <Text style={styles.muted}>Please sign in to use Friends.</Text>
+        <Text style={styles.title}>{t('friends.title')}</Text>
+        <Text style={styles.muted}>{t('friends.signInToUse')}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Friends</Text>
+      <Text style={styles.title}>{t('friends.title')}</Text>
 
       <TextInput
         value={query}
         onChangeText={setQuery}
-        placeholder="Search friends…"
+        placeholder={t('friends.searchPlaceholder')}
         style={styles.search}
         autoCorrect={false}
         autoCapitalize="none"
       />
 
       {/* Incoming Requests */}
-      {renderSectionHeader('Friend Requests', incoming.length ? `${incoming.length} incoming` : 'No incoming requests')}
+      {renderSectionHeader(
+        t('friends.sections.requests'),
+        incoming.length
+          ? t('friends.incoming.count', { count: incoming.length })
+          : t('friends.incoming.none')
+      )}
+
       {incoming.length > 0 && (
         <View style={styles.card}>
           {incoming.map((r) => (
             <View key={r.id} style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{r.fromProfile?.display_name ?? r.from_user_id}</Text>
-                <Text style={styles.muted}>wants to add you</Text>
+                <Text style={styles.muted}>{t('friends.incoming.wantsToAddYou')}</Text>
               </View>
 
               <TouchableOpacity
@@ -162,11 +170,11 @@ export default function ProfileFriendsScreen() {
                     await acceptFriendRequest(r);
                     await load();
                   } catch {
-                    Alert.alert('Error', 'Failed to accept request.');
+                    Alert.alert(t('friends.alerts.errorTitle'), t('friends.alerts.acceptFailed'));
                   }
                 }}
               >
-                <Text style={styles.btnTextPrimary}>Accept</Text>
+                <Text style={styles.btnTextPrimary}>{t('friends.incoming.accept')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -176,11 +184,11 @@ export default function ProfileFriendsScreen() {
                     await rejectFriendRequest(r.id);
                     await load();
                   } catch {
-                    Alert.alert('Error', 'Failed to reject request.');
+                    Alert.alert(t('friends.alerts.errorTitle'), t('friends.alerts.rejectFailed'));
                   }
                 }}
               >
-                <Text style={styles.btnTextGhost}>Reject</Text>
+                <Text style={styles.btnTextGhost}>{t('friends.incoming.reject')}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -188,14 +196,20 @@ export default function ProfileFriendsScreen() {
       )}
 
       {/* Outgoing Requests */}
-      {renderSectionHeader('Pending Sent', outgoing.length ? `${outgoing.length} sent` : 'No pending sent requests')}
+      {renderSectionHeader(
+        t('friends.sections.pendingSent'),
+        outgoing.length
+          ? t('friends.outgoing.count', { count: outgoing.length })
+          : t('friends.outgoing.none')
+      )}
+
       {outgoing.length > 0 && (
         <View style={styles.card}>
           {outgoing.map((r) => (
             <View key={r.id} style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{r.toProfile?.display_name ?? r.to_user_id}</Text>
-                <Text style={styles.muted}>pending…</Text>
+                <Text style={styles.muted}>{t('friends.outgoing.pending')}</Text>
               </View>
 
               <TouchableOpacity
@@ -205,11 +219,11 @@ export default function ProfileFriendsScreen() {
                     await cancelFriendRequest(r.id);
                     await load();
                   } catch {
-                    Alert.alert('Error', 'Failed to cancel request.');
+                    Alert.alert(t('friends.alerts.errorTitle'), t('friends.alerts.cancelFailed'));
                   }
                 }}
               >
-                <Text style={styles.btnTextGhost}>Cancel</Text>
+                <Text style={styles.btnTextGhost}>{t('friends.outgoing.cancel')}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -217,7 +231,7 @@ export default function ProfileFriendsScreen() {
       )}
 
       {/* Friends List */}
-      {renderSectionHeader('Your Friends', `${filteredFriends.length} friends`)}
+      {renderSectionHeader(t('friends.sections.yourFriends'), t('friends.list.count', { count: filteredFriends.length }))}
 
       <FlatList
         data={filteredFriends}
@@ -231,53 +245,62 @@ export default function ProfileFriendsScreen() {
               {!!item.profile?.location_city && <Text style={styles.muted}>{item.profile.location_city}</Text>}
             </View>
 
-            {/* ✅ NEW: Message button */}
+            {/* Message */}
             <TouchableOpacity
               style={[styles.btn, styles.btnGhost]}
               onPress={async () => {
                 try {
                   const res = await createOrGetDm(item.userId);
                   if (!res) {
-                    Alert.alert('Error', 'Failed to create conversation.');
+                    Alert.alert(t('friends.alerts.errorTitle'), t('friends.alerts.createConversationFailed'));
                     return;
                   }
-                  navigation.navigate('ChatThread', {
-                    conversationId: res.conversationId,
-                    title: res.title,
-                  } as never);
+                  navigation.navigate(
+                    'ChatThread',
+                    {
+                      conversationId: res.conversationId,
+                      title: res.title,
+                    } as never
+                  );
                 } catch {
-                  Alert.alert('Error', 'Failed to open chat.');
+                  Alert.alert(t('friends.alerts.errorTitle'), t('friends.alerts.openChatFailed'));
                 }
               }}
             >
-              <Text style={styles.btnTextGhost}>Message</Text>
+              <Text style={styles.btnTextGhost}>{t('friends.actions.message')}</Text>
             </TouchableOpacity>
 
+            {/* Remove */}
             <TouchableOpacity
               style={[styles.btn, styles.btnDanger]}
               onPress={() => {
-                Alert.alert('Remove friend?', `Remove ${item.profile?.display_name ?? 'this user'} from friends?`, [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Remove',
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        await removeFriendRepo(myId, item.userId);
-                        await load();
-                      } catch {
-                        Alert.alert('Error', 'Failed to remove friend.');
-                      }
+                const name = item.profile?.display_name ?? t('friends.alerts.unknownUser');
+                Alert.alert(
+                  t('friends.alerts.removeConfirmTitle'),
+                  t('friends.alerts.removeConfirmMessage', { name }),
+                  [
+                    { text: t('friends.alerts.cancel'), style: 'cancel' },
+                    {
+                      text: t('friends.alerts.removeDestructive'),
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await removeFriendRepo(myId, item.userId);
+                          await load();
+                        } catch {
+                          Alert.alert(t('friends.alerts.errorTitle'), t('friends.alerts.removeFailed'));
+                        }
+                      },
                     },
-                  },
-                ]);
+                  ]
+                );
               }}
             >
-              <Text style={styles.btnTextPrimary}>Remove</Text>
+              <Text style={styles.btnTextPrimary}>{t('friends.actions.remove')}</Text>
             </TouchableOpacity>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.muted}>No friends yet. Go to “Match” to add some!</Text>}
+        ListEmptyComponent={<Text style={styles.muted}>{t('friends.list.empty')}</Text>}
       />
     </View>
   );

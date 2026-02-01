@@ -5,10 +5,11 @@ import {
   createBottomTabNavigator,
   type BottomTabBarButtonProps,
 } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, type NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 // ===== Screens =====
 import WelcomeScreen from '../screens/WelcomeScreen';
@@ -103,25 +104,27 @@ const colors = {
 // Placeholder screen for "+" tab
 const NoopScreen: React.FC = () => <View style={{ flex: 1 }} />;
 
+// ✅ helper: allow using i18n title for stack headers safely
+function withHeaderTitle(titleKey: string): NativeStackNavigationOptions {
+  // 這個 function 不能直接用 hook
+  // 我們回傳 "function options" 給 Stack.Screen，再在裡面用 hook
+  // → 所以下面 RootNavigator 會用 `options={() => ...}` 來套用
+  return {
+    headerShown: true,
+    title: titleKey, // 先塞 key，真正 title 會在 options callback 內 t()
+  };
+}
+
 // ===== MainTabs =====
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
 function MainTabs() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
-  /**
-   * 你原本的基準值（不含 safe area）
-   * - iOS: tab bar 本來就比較高
-   * - Android: 用你原本的 64/10 當 baseline
-   */
   const baseHeight = Platform.select({ ios: 88, android: 64 }) ?? 64;
   const basePaddingBottom = Platform.select({ ios: 24, android: 10 }) ?? 10;
 
-  /**
-   * ✅ 這是最關鍵的：讓 tabBar 把系統底部導覽列高度吃進來
-   * - height: 基準高度 + insets.bottom
-   * - paddingBottom: 至少給 basePaddingBottom，但如果 insets.bottom 更大就用它
-   */
   const tabBarStyle = useMemo(
     () => ({
       height: baseHeight + insets.bottom,
@@ -134,17 +137,6 @@ function MainTabs() {
     [baseHeight, basePaddingBottom, insets.bottom]
   );
 
-  /**
-   * ✅ + 按鈕自動微調
-   * 核心概念：
-   * - Tab bar 變高（含 insets.bottom）後，+ 按鈕要「稍微往上浮」，但不要浮太多
-   * - 不同手機（手勢條/三鍵）insets.bottom 不一樣，所以用它做 offset
-   *
-   * 這裡的策略：
-   * - 原本你是 marginTop: -18
-   * - 我們再額外減一點點（liftMore），讓 tab bar 變高時 + 不會看起來沈下去
-   * - liftMore 會隨 insets.bottom 變大而稍微增加，但有上限，避免過度漂浮
-   */
   const liftMore = Math.min(Math.max(insets.bottom - 6, 0), 12); // 0~12
   const plusLift = -18 - liftMore;
 
@@ -161,7 +153,6 @@ function MainTabs() {
           style,
           {
             alignItems: 'center',
-            // ✅ 讓整個按鈕區塊的可點擊區域也跟著 tab bar 底部變化更穩
             paddingBottom: Math.max(insets.bottom, 0),
           },
         ]}
@@ -178,8 +169,6 @@ function MainTabs() {
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: colors.primary,
-
-            // ✅ 關鍵：自動微調浮起高度
             marginTop: plusLift,
 
             shadowColor: '#000',
@@ -208,7 +197,7 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: 'Home',
+          tabBarLabel: t('nav.tabs.home'),
           tabBarIcon: ({ color, size }) => <Feather name="home" color={color} size={size} />,
         }}
       />
@@ -217,7 +206,7 @@ function MainTabs() {
         name="Care"
         component={LogsScreen}
         options={{
-          tabBarLabel: 'Care',
+          tabBarLabel: t('nav.tabs.care'),
           tabBarIcon: ({ color, size }) => <Feather name="activity" color={color} size={size} />,
         }}
       />
@@ -244,7 +233,7 @@ function MainTabs() {
         name="PetForum"
         component={PetForumScreen}
         options={{
-          tabBarLabel: 'PetForum',
+          tabBarLabel: t('nav.tabs.petForum'),
           tabBarIcon: ({ color, size }) => <Feather name="users" color={color} size={size} />,
         }}
       />
@@ -253,7 +242,7 @@ function MainTabs() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: t('nav.tabs.profile'),
           tabBarIcon: ({ color, size }) => <Feather name="user" color={color} size={size} />,
         }}
       />
@@ -265,28 +254,83 @@ function MainTabs() {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
+  const { t } = useTranslation();
+
+  // ✅ helper: translate the "titleKey" we placed in withHeaderTitle()
+  const translateTitle = (opt: NativeStackNavigationOptions) => ({
+    ...opt,
+    title: opt.title ? t(opt.title) : undefined,
+  });
+
   return (
     <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="MainTabs" component={MainTabs} />
 
       {/* ✅ Auth */}
-      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: true, title: '登入' }} />
-      <Stack.Screen name="Signup" component={SignUpScreen} options={{ headerShown: true, title: '註冊' }} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: true, title: '忘記密碼' }} />
-      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: true, title: '重設密碼' }} />
-      <Stack.Screen name="AuthCallback" component={AuthCallbackScreen} options={{ headerShown: true, title: 'Email 驗證' }} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.login'))}
+      />
+      <Stack.Screen
+        name="Signup"
+        component={SignUpScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.signup'))}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.forgotPassword'))}
+      />
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.resetPassword'))}
+      />
+      <Stack.Screen
+        name="AuthCallback"
+        component={AuthCallbackScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.authCallback'))}
+      />
 
       {/* ✅ Friends system */}
-      <Stack.Screen name="ProfileFriends" component={ProfileFriendsScreen} options={{ headerShown: true, title: 'Friends' }} />
-      <Stack.Screen name="ProfileMessages" component={ProfileMessagesScreen} options={{ headerShown: true, title: 'Messages' }} />
-      <Stack.Screen name="ProfileMatch" component={ProfileMatchScreen} options={{ headerShown: true, title: 'Match' }} />
+      <Stack.Screen
+        name="ProfileFriends"
+        component={ProfileFriendsScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.profileFriends'))}
+      />
+      <Stack.Screen
+        name="ProfileMessages"
+        component={ProfileMessagesScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.profileMessages'))}
+      />
+      <Stack.Screen
+        name="ProfileMatch"
+        component={ProfileMatchScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.profileMatch'))}
+      />
 
       {/* ✅ My Posts */}
-      <Stack.Screen name="ProfileMyPosts" component={ProfileMyPostsScreen} options={{ headerShown: true, title: 'My Posts' }} />
+      <Stack.Screen
+        name="ProfileMyPosts"
+        component={ProfileMyPostsScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.profileMyPosts'))}
+      />
 
       {/* ✅ Chat thread */}
-      <Stack.Screen name="ChatThread" component={ChatThreadScreen} options={{ headerShown: true, title: 'Chat' }} />
+      <Stack.Screen
+        name="ChatThread"
+        component={ChatThreadScreen}
+        options={({ route }) => {
+          // 如果你想用對話標題（route.params.title），就優先顯示；否則用 i18n
+          const dynamicTitle = route.params?.title?.trim();
+          return {
+            headerShown: true,
+            title: dynamicTitle || t('nav.stack.chatThread'),
+          };
+        }}
+      />
 
       {/* ✅ Other screens */}
       <Stack.Screen
@@ -298,16 +342,48 @@ export default function RootNavigator() {
         }}
       />
 
-      <Stack.Screen name="PetSelect" component={PetSelectScreen} options={{ headerShown: true, title: '選擇寵物' }} />
-      <Stack.Screen name="SpeciesNeeds" component={SpeciesNeedsScreen} options={{ headerShown: true, title: '需求選單' }} />
-      <Stack.Screen name="PetsAdd" component={PetsAddScreen} options={{ headerShown: true, title: '新增寵物' }} />
+      <Stack.Screen
+        name="PetSelect"
+        component={PetSelectScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.petSelect'))}
+      />
+      <Stack.Screen
+        name="SpeciesNeeds"
+        component={SpeciesNeedsScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.speciesNeeds'))}
+      />
+      <Stack.Screen
+        name="PetsAdd"
+        component={PetsAddScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.petsAdd'))}
+      />
 
-      <Stack.Screen name="WeighScreen" component={WeighScreen} options={{ headerShown: true, title: '體重記錄' }} />
-      <Stack.Screen name="FeedInputScreen" component={FeedInputScreen} options={{ headerShown: true, title: '餵食記錄' }} />
-      <Stack.Screen name="UVBLogScreen" component={UVBLogScreen} options={{ headerShown: true, title: 'UVB Log' }} />
-      <Stack.Screen name="CleanScreen" component={CleanScreen} options={{ headerShown: true, title: '清潔記錄' }} />
+      <Stack.Screen
+        name="WeighScreen"
+        component={WeighScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.weigh'))}
+      />
+      <Stack.Screen
+        name="FeedInputScreen"
+        component={FeedInputScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.feed'))}
+      />
+      <Stack.Screen
+        name="UVBLogScreen"
+        component={UVBLogScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.uvb'))}
+      />
+      <Stack.Screen
+        name="CleanScreen"
+        component={CleanScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.clean'))}
+      />
 
-      <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: true, title: '設定' }} />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={() => translateTitle(withHeaderTitle('nav.stack.settings'))}
+      />
     </Stack.Navigator>
   );
 }

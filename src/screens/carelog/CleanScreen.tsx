@@ -11,13 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { useTranslation } from 'react-i18next';
 
 import { insertCareLog } from '../../lib/db/repos/care.logs';
 import { selectCurrentPetId } from '../../state/slices/petsSlice';
 import { useAppSelector } from '../../state/hooks';
 import { useThemeColors } from '../../styles/themesColors';
-import type { RootStackParamList } from '../../navigation/rootNavigator';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const formatDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -35,6 +35,7 @@ const combineDateTime = (datePart: Date, timePart: Date) =>
   );
 
 const CleanScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const currentPetId = useAppSelector(selectCurrentPetId);
   const { colors } = useThemeColors();
@@ -92,10 +93,15 @@ const CleanScreen: React.FC = () => {
 
   const handleClean = useCallback(async () => {
     if (!currentPetId) {
-      Alert.alert('Select a pet first', 'Please choose a pet before logging clean.');
+      Alert.alert(
+        t('carelog.clean.selectPetTitle'),
+        t('carelog.clean.selectPetMessage')
+      );
       return;
     }
+
     const at = combineDateTime(datePart, timePart);
+
     try {
       setSaving(true);
       await insertCareLog({
@@ -105,23 +111,26 @@ const CleanScreen: React.FC = () => {
         category: 'maint',
         value: null,
         unit: null,
-        note: 'Cleaned enclosure',
+        note: t('carelog.clean.noteDefault'),
         at: at.toISOString(),
       });
       navigation.navigate('MainTabs', { screen: 'Care' });
     } catch (err) {
       console.error('[CleanScreen] Failed to save clean log:', err);
-      Alert.alert('Save failed', 'Failed to save clean log. Please try again.');
+      Alert.alert(
+        t('carelog.clean.saveFailedTitle'),
+        t('carelog.clean.saveFailedMessage')
+      );
     } finally {
       setSaving(false);
     }
-  }, [currentPetId, datePart, navigation, timePart]);
+  }, [currentPetId, datePart, navigation, timePart, t]);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.subText }]}>Date</Text>
+          <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.clean.date')}</Text>
           <Pressable
             style={[styles.inputLike, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={openDatePicker}
@@ -131,7 +140,7 @@ const CleanScreen: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.subText }]}>Time</Text>
+          <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.clean.time')}</Text>
           <Pressable
             style={[styles.inputLike, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={openTimePicker}
@@ -148,7 +157,7 @@ const CleanScreen: React.FC = () => {
           onPress={handleClean}
           disabled={saving}
         >
-          <Text style={styles.primaryButtonText}>執行清潔</Text>
+          <Text style={styles.primaryButtonText}>{t('carelog.clean.action')}</Text>
         </Pressable>
       </View>
 
@@ -175,17 +184,24 @@ const CleanScreen: React.FC = () => {
           <View style={[styles.iosSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.iosHeader, { borderBottomColor: colors.border }]}>
               <Pressable onPress={onIosCancel} style={styles.iosHeaderBtn}>
-                <Text style={[styles.iosHeaderBtnText, { color: colors.text }]}>Cancel</Text>
+                <Text style={[styles.iosHeaderBtnText, { color: colors.text }]}>
+                  {t('common.cancel')}
+                </Text>
               </Pressable>
+
               <Text style={[styles.iosHeaderTitle, { color: colors.text }]}>
-                {iosPickerMode === 'date' ? 'Select Date' : 'Select Time'}
+                {iosPickerMode === 'date'
+                  ? t('carelog.clean.ios.selectDate')
+                  : t('carelog.clean.ios.selectTime')}
               </Text>
+
               <Pressable onPress={onIosConfirm} style={styles.iosHeaderBtn}>
                 <Text style={[styles.iosHeaderBtnText, { color: colors.text, fontWeight: '700' }]}>
-                  Done
+                  {t('common.done')}
                 </Text>
               </Pressable>
             </View>
+
             <DateTimePicker
               value={iosTemp}
               onChange={(_, d) => d && setIosTemp(d)}

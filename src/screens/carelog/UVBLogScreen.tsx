@@ -13,6 +13,7 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import { insertCareLog } from '../../lib/db/repos/care.logs';
 import { selectCurrentPetId, selectSelectedDate } from '../../state/slices/petsSlice';
@@ -36,6 +37,7 @@ const combineDateTime = (datePart: Date, timePart: Date) =>
   );
 
 const UVBLogScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const currentPetId = useAppSelector(selectCurrentPetId);
@@ -141,12 +143,12 @@ const UVBLogScreen: React.FC = () => {
 
   const handleStart = useCallback(() => {
     if (!currentPetId) {
-      Alert.alert('Select a pet first', 'Please choose a pet before logging UVB.');
+      Alert.alert(t('carelog.uvb.alerts.noPetTitle'), t('carelog.uvb.alerts.noPetMessage'));
       return;
     }
     const minutesValue = Number(durationMinutes);
     if (!Number.isFinite(minutesValue) || minutesValue <= 0) {
-      Alert.alert('Invalid timer', 'Please set a positive duration in minutes.');
+      Alert.alert(t('carelog.uvb.alerts.invalidTimerTitle'), t('carelog.uvb.alerts.invalidTimerMessage'));
       return;
     }
     const startAt = combineDateTime(datePart, timePart);
@@ -159,7 +161,7 @@ const UVBLogScreen: React.FC = () => {
       })
     );
     setElapsedMs(0);
-  }, [currentPetId, datePart, dispatch, durationMinutes, timePart]);
+  }, [currentPetId, datePart, dispatch, durationMinutes, timePart, t]);
 
   const handleStop = useCallback(async () => {
     if (!currentPetId || !sessionStarted || !sessionStartAt) return;
@@ -177,7 +179,7 @@ const UVBLogScreen: React.FC = () => {
         category: 'light',
         value: durationMin,
         unit: 'min',
-        note: `UVB exposure ${durationMin} min`,
+        note: t('carelog.uvb.note', { minutes: durationMin }),
         at: endAt.toISOString(),
       });
 
@@ -187,11 +189,11 @@ const UVBLogScreen: React.FC = () => {
       navigation.navigate('MainTabs', { screen: 'Care' });
     } catch (err) {
       console.error('[UVBLogScreen] Failed to save UVB logs:', err);
-      Alert.alert('Save failed', 'Failed to save UVB logs. Please try again.');
+      Alert.alert(t('carelog.uvb.alerts.saveFailedTitle'), t('carelog.uvb.alerts.saveFailedMessage'));
     } finally {
       setSaving(false);
     }
-  }, [currentPetId, dispatch, elapsedMs, navigation, sessionStartAt, sessionStarted, timerStartMs]);
+  }, [currentPetId, dispatch, elapsedMs, navigation, sessionStartAt, sessionStarted, timerStartMs, t]);
 
   const elapsedDisplay = useMemo(() => {
     const totalSec = Math.floor(elapsedMs / 1000);
@@ -211,7 +213,7 @@ const UVBLogScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.subText }]}>Date</Text>
+        <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.uvb.date')}</Text>
         <Pressable
           style={[styles.inputLike, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={openDatePicker}
@@ -222,7 +224,7 @@ const UVBLogScreen: React.FC = () => {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.subText }]}>Time</Text>
+        <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.uvb.time')}</Text>
         <Pressable
           style={[styles.inputLike, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={openTimePicker}
@@ -233,7 +235,7 @@ const UVBLogScreen: React.FC = () => {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.subText }]}>Timer (minutes)</Text>
+        <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.uvb.timerMinutes')}</Text>
         <TextInput
           style={[
             styles.input,
@@ -251,13 +253,14 @@ const UVBLogScreen: React.FC = () => {
 
       <View style={styles.timerCard}>
         <View style={styles.timerRow}>
-          <Text style={[styles.timerLabel, { color: colors.subText }]}>Elapsed</Text>
+          <Text style={[styles.timerLabel, { color: colors.subText }]}>{t('carelog.uvb.elapsed')}</Text>
           <Text style={[styles.timerValue, { color: colors.text }]}>{elapsedDisplay}</Text>
         </View>
         <View style={styles.timerRow}>
-          <Text style={[styles.timerLabel, { color: colors.subText }]}>Remaining</Text>
+          <Text style={[styles.timerLabel, { color: colors.subText }]}>{t('carelog.uvb.remaining')}</Text>
           <Text style={[styles.timerValue, { color: colors.text }]}>{remainingDisplay}</Text>
         </View>
+
         {!!sessionStarted && durationMs > 0 && (
           <Text
             style={[
@@ -265,7 +268,7 @@ const UVBLogScreen: React.FC = () => {
               { color: elapsedMs >= durationMs ? '#ef4444' : colors.subText },
             ]}
           >
-            {elapsedMs >= durationMs ? 'Over exposure time!' : 'Counting down'}
+            {elapsedMs >= durationMs ? t('carelog.uvb.overExposure') : t('carelog.uvb.countingDown')}
           </Text>
         )}
       </View>
@@ -279,8 +282,9 @@ const UVBLogScreen: React.FC = () => {
           onPress={handleStart}
           disabled={sessionStarted || saving}
         >
-          <Text style={styles.primaryButtonText}>Start Exposure</Text>
+          <Text style={styles.primaryButtonText}>{t('carelog.uvb.start')}</Text>
         </Pressable>
+
         <Pressable
           style={[
             styles.secondaryButton,
@@ -289,7 +293,7 @@ const UVBLogScreen: React.FC = () => {
           onPress={handleStop}
           disabled={!sessionStarted || saving}
         >
-          <Text style={[styles.secondaryButtonText, { color: colors.text }]}>End Exposure</Text>
+          <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('carelog.uvb.end')}</Text>
         </Pressable>
       </View>
 
@@ -316,17 +320,24 @@ const UVBLogScreen: React.FC = () => {
           <View style={[styles.iosSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.iosHeader, { borderBottomColor: colors.border }]}>
               <Pressable onPress={onIosCancel} style={styles.iosHeaderBtn}>
-                <Text style={[styles.iosHeaderBtnText, { color: colors.text }]}>Cancel</Text>
+                <Text style={[styles.iosHeaderBtnText, { color: colors.text }]}>
+                  {t('carelog.uvb.iosPicker.cancel')}
+                </Text>
               </Pressable>
+
               <Text style={[styles.iosHeaderTitle, { color: colors.text }]}>
-                {iosPickerMode === 'date' ? 'Select Date' : 'Select Time'}
+                {iosPickerMode === 'date'
+                  ? t('carelog.uvb.iosPicker.selectDate')
+                  : t('carelog.uvb.iosPicker.selectTime')}
               </Text>
+
               <Pressable onPress={onIosConfirm} style={styles.iosHeaderBtn}>
                 <Text style={[styles.iosHeaderBtnText, { color: colors.text, fontWeight: '700' }]}>
-                  Done
+                  {t('carelog.uvb.iosPicker.done')}
                 </Text>
               </Pressable>
             </View>
+
             <DateTimePicker
               value={iosTemp}
               onChange={(_, d) => d && setIosTemp(d)}
@@ -381,6 +392,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryButtonText: { fontSize: 16, fontWeight: '600' },
+
   iosOverlay: {
     position: 'absolute',
     left: 0,

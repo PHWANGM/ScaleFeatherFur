@@ -14,12 +14,14 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/rootNavigator';
+import { useTranslation } from 'react-i18next';
 
 import { getAuthedUserId, type ProfileRow } from '../../lib/supabase/repos/profile.repo';
 import { fetchCandidateProfiles, fetchRelationSets, sendFriendRequest } from '../../lib/supabase/repos/friends.repo';
 import { createOrGetDm } from '../../lib/supabase/repos/message.repo';
 
 export default function ProfileMatchScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [myId, setMyId] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export default function ProfileMatchScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
-        <Text style={styles.muted}>Loading matches…</Text>
+        <Text style={styles.muted}>{t('match.loading')}</Text>
       </View>
     );
   }
@@ -106,21 +108,21 @@ export default function ProfileMatchScreen() {
   if (!myId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.title}>Match</Text>
-        <Text style={styles.muted}>Please sign in to find friends.</Text>
+        <Text style={styles.title}>{t('match.title')}</Text>
+        <Text style={styles.muted}>{t('match.signInToUse')}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Match</Text>
-      <Text style={styles.muted}>Find people to connect with.</Text>
+      <Text style={styles.title}>{t('match.title')}</Text>
+      <Text style={styles.muted}>{t('match.subtitle')}</Text>
 
       <TextInput
         value={query}
         onChangeText={setQuery}
-        placeholder="Search users…"
+        placeholder={t('match.searchPlaceholder')}
         style={styles.search}
         autoCorrect={false}
         autoCapitalize="none"
@@ -143,45 +145,52 @@ export default function ProfileMatchScreen() {
               )}
             </View>
 
-            {/* ✅ NEW: Message button */}
+            {/* Message */}
             <TouchableOpacity
               style={styles.btnGhost}
               onPress={async () => {
                 try {
                   const res = await createOrGetDm(item.id);
                   if (!res) {
-                    Alert.alert('Error', 'Failed to create conversation.');
+                    Alert.alert(t('match.alerts.errorTitle'), t('match.alerts.createConversationFailed'));
                     return;
                   }
-                  navigation.navigate('ChatThread', {
-                    conversationId: res.conversationId,
-                    title: res.title,
-                  } as never);
+                  navigation.navigate(
+                    'ChatThread',
+                    {
+                      conversationId: res.conversationId,
+                      title: res.title,
+                    } as never
+                  );
                 } catch {
-                  Alert.alert('Error', 'Failed to open chat.');
+                  Alert.alert(t('match.alerts.errorTitle'), t('match.alerts.openChatFailed'));
                 }
               }}
             >
-              <Text style={styles.btnTextGhost}>Message</Text>
+              <Text style={styles.btnTextGhost}>{t('match.actions.message')}</Text>
             </TouchableOpacity>
 
+            {/* Add */}
             <TouchableOpacity
               style={styles.btnPrimary}
               onPress={async () => {
                 try {
                   await sendFriendRequest(myId, item.id);
-                  Alert.alert('Sent', `Friend request sent to ${item.display_name}.`);
+                  Alert.alert(
+                    t('match.alerts.sentTitle'),
+                    t('match.alerts.requestSentTo', { name: item.display_name })
+                  );
                   await load();
                 } catch {
-                  Alert.alert('Error', 'Failed to send friend request.');
+                  Alert.alert(t('match.alerts.errorTitle'), t('match.alerts.sendRequestFailed'));
                 }
               }}
             >
-              <Text style={styles.btnTextPrimary}>Add</Text>
+              <Text style={styles.btnTextPrimary}>{t('match.actions.add')}</Text>
             </TouchableOpacity>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.muted}>No candidates right now. Try again later.</Text>}
+        ListEmptyComponent={<Text style={styles.muted}>{t('match.list.empty')}</Text>}
       />
     </View>
   );
@@ -226,7 +235,6 @@ const styles = StyleSheet.create({
   },
   btnTextPrimary: { color: '#fff', fontWeight: '800' },
 
-  // ✅ Message button style (ghost)
   btnGhost: {
     paddingHorizontal: 12,
     paddingVertical: 10,

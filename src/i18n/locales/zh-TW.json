@@ -369,5 +369,394 @@
     "warnings": {
       "bootstrapPetFailed": "[LogsScreen] 初始化 currentPetId 失敗："
     }
+  },
+  "authCallback": {
+    "title": "Email 驗證",
+    "messages": {
+      "verifying": "正在驗證中…",
+      "exchanging": "正在交換 session…",
+      "success": "驗證成功！正在進入 App…",
+      "failed": "驗證失敗，請重試",
+      "noLink": "沒有收到回跳連結。請從 Email 驗證信點入。"
+    },
+    "actions": {
+      "backToLogin": "回登入",
+      "enterApp": "進入 App"
+    }
+  },
+  "forgotPassword": {
+    "title": "忘記密碼",
+    "subtitle": "輸入註冊用 Email，我們會寄一封重設密碼信給你。",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "success": "已寄出重設密碼信，請檢查信箱。",
+    "errors": {
+      "sendFailed": "寄送失敗"
+    },
+    "actions": {
+      "send": "寄送重設密碼信",
+      "sending": "寄送中…"
+    }
+  },
+  "login": {
+    "title": "登入",
+    "subtitle": "用 Email / 密碼登入你的帳號",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "至少 6 碼",
+    "forgot": "忘記密碼？重設",
+    "actions": {
+      "submit": "登入"
+    },
+    "links": {
+      "toSignup": "還沒有帳號？去註冊"
+    },
+    "errors": {
+      "failedFallback": "登入失敗"
+    }
+  },
+  "resetPassword": {
+    "title": "重設密碼",
+    "phases": {
+      "waiting": "等待重設連結...",
+      "enterNew": "請輸入新密碼",
+      "failed": "驗證失敗"
+    },
+    "fields": {
+      "newPassword": "新密碼",
+      "confirmPassword": "再輸入一次"
+    },
+    "placeholders": {
+      "min6": "至少 6 碼",
+      "confirm": "請再輸入一次"
+    },
+    "errors": {
+      "updateFailed": "更新失敗"
+    },
+    "actions": {
+      "updating": "更新中...",
+      "update": "更新密碼",
+      "backToLogin": "回登入"
+    }
+  },
+  "signup": {
+    "title": "註冊",
+    "subtitle": "建立帳號後即可同步雲端個人資料",
+    "fields": {
+      "displayNameOptional": "顯示名稱（可選）",
+      "email": "Email",
+      "password": "Password"
+    },
+    "placeholders": {
+      "displayName": "例如：Joseph",
+      "email": "you@example.com",
+      "passwordMin6": "至少 6 碼"
+    },
+    "hints": {
+      "verifyEmailSent": "已送出驗證信，請到信箱完成驗證。"
+    },
+    "actions": {
+      "submit": "建立帳號"
+    },
+    "links": {
+      "toLogin": "已經有帳號？回登入"
+    },
+    "errors": {
+      "failedFallback": "註冊失敗"
+    }
+  },
+  "nav": {
+    "tabs": {
+      "home": "首頁",
+      "care": "照護",
+      "petForum": "社群",
+      "profile": "我的"
+    },
+    "stack": {
+      "login": "登入",
+      "signup": "註冊",
+      "forgotPassword": "忘記密碼",
+      "resetPassword": "重設密碼",
+      "authCallback": "Email 驗證",
+
+      "profileFriends": "好友",
+      "profileMessages": "私訊",
+      "profileMatch": "配對",
+      "profileMyPosts": "我的貼文",
+      "chatThread": "聊天",
+
+      "petSelect": "選擇寵物",
+      "speciesNeeds": "需求選單",
+      "petsAdd": "新增寵物",
+      "weigh": "體重記錄",
+      "feed": "餵食記錄",
+      "uvb": "UVB 記錄",
+      "clean": "清潔記錄",
+      "settings": "設定"
+    }
+  },
+  "carelog": {
+    "clean": {
+      "date": "日期",
+      "time": "時間",
+      "action": "執行清潔",
+      "noteDefault": "已清潔飼養箱",
+      "selectPetTitle": "請先選擇寵物",
+      "selectPetMessage": "請先選擇一隻寵物後再記錄清潔。",
+      "saveFailedTitle": "儲存失敗",
+      "saveFailedMessage": "清潔紀錄儲存失敗，請稍後再試。",
+      "ios": {
+        "selectDate": "選擇日期",
+        "selectTime": "選擇時間"
+      }
+    },
+    "feed": {
+      "headerTitle": "今日照護",
+      "headerDateFallback": "使用今日日期",
+
+      "ai": {
+        "title": "AI 食物分析",
+        "subtitle": "拍照自動辨識食物類型與重量",
+        "camera": "拍照",
+        "library": "相簿",
+        "analyzing": "AI 分析中...",
+        "detected": "偵測到：",
+        "estimatedWeight": "估計重量：",
+        "identifiedItems": "識別項目：",
+        "confidence": "信心度：",
+        "apply": "套用到表單",
+        "mixedTitle": "偵測到混合食物",
+        "mixedMessage": "請根據圖片內容手動分配各類食物的重量。",
+        "ok": "好的"
+      },
+
+      "foodTypes": {
+        "vegetables": "蔬菜",
+        "meat": "肉類",
+        "fruit": "水果",
+        "mixed": "混合食物",
+        "unknown": "未知"
+      },
+
+      "form": {
+        "title": "餵食",
+        "subtitle": "記錄餵食量（g）",
+        "veg": "蔬菜",
+        "meat": "肉類",
+        "fruit": "水果"
+      },
+
+      "supplements": {
+        "title": "補充品",
+        "subtitle": "補鈣 / 維他命",
+        "calcium": "補鈣",
+        "vitamin": "維他命"
+      },
+
+      "save": {
+        "button": "儲存紀錄",
+        "saving": "儲存中...",
+        "noPetTitle": "請先選擇寵物",
+        "noPetMessage": "目前沒有選中的寵物，無法寫入紀錄。",
+        "noInputTitle": "尚未輸入任何資料",
+        "noInputMessage": "請輸入餵食克數或勾選補充品。",
+        "failedTitle": "儲存失敗",
+        "failedMessage": "寫入資料庫時發生錯誤，請稍後再試。",
+        "noPetHint": "提示：目前尚未選擇寵物，請先在首頁選取寵物再新增紀錄。"
+      }
+    },
+    "uvb": {
+      "date": "日期",
+      "time": "時間",
+      "timerMinutes": "計時器（分鐘）",
+      "elapsed": "已照射",
+      "remaining": "剩餘",
+      "overExposure": "超過照射時間！",
+      "countingDown": "倒數中",
+      "start": "開始照射",
+      "end": "結束照射",
+
+      "alerts": {
+        "noPetTitle": "請先選擇寵物",
+        "noPetMessage": "請先選擇寵物後再記錄 UVB。",
+        "invalidTimerTitle": "計時器無效",
+        "invalidTimerMessage": "請設定大於 0 的分鐘數。",
+        "saveFailedTitle": "儲存失敗",
+        "saveFailedMessage": "UVB 紀錄儲存失敗，請稍後再試。"
+      },
+
+      "note": "UVB 照射 {{minutes}} 分鐘",
+
+      "iosPicker": {
+        "cancel": "取消",
+        "done": "完成",
+        "selectDate": "選擇日期",
+        "selectTime": "選擇時間"
+      }
+    },
+    "weigh": {
+      "title": "體重記錄",
+      "pet": "寵物",
+      "weight": "體重",
+      "loading": "載入中…",
+      "choosePet": "請選擇寵物",
+      "placeholderG": "例如 123",
+      "placeholderKg": "例如 0.12",
+
+      "save": "儲存記錄",
+      "saving": "儲存中…",
+
+      "modal": {
+        "title": "選擇寵物",
+        "close": "關閉",
+        "empty": "尚無寵物，請先建立寵物資料。"
+      },
+
+      "alerts": {
+        "loadFailedTitle": "讀取失敗",
+        "loadFailedMessage": "無法載入寵物清單。",
+        "needPetTitle": "請選擇寵物",
+        "needPetMessage": "你尚未選擇要記錄的寵物。",
+        "invalidWeightTitle": "體重數值不正確",
+        "invalidWeightMessage": "請輸入大於 0 的數值。",
+        "writeMaybeFailedTitle": "寫入疑似失敗",
+        "writeMaybeFailedMessage": "找不到最近一次體重紀錄。請稍後再試或檢查資料庫連線。",
+        "writeMismatchTitle": "寫入結果不一致",
+        "saveFailedTitle": "儲存失敗",
+        "saveFailedMessage": "寫入資料庫時發生問題。",
+        "savedTitle": "已儲存"
+      },
+
+      "confirm": {
+        "latestWeight": "最近一次體重：{{kg}} kg",
+        "time": "時間：{{at}}",
+        "expected": "期望值：{{kg}} kg",
+        "hint": "（提示：可能是時間精度或其他流程寫入）",
+        "ok": "OK"
+      },
+
+      "petDisplay": {
+        "withSpecies": "{{name}}（{{species}}）"
+      }
+    }
+  },
+  "chat": {
+    "thread": {
+      "titleFallback": "聊天",
+      "loading": "載入中…",
+      "empty": "目前還沒有訊息",
+      "emptyHint": "傳個訊息開始聊天吧。",
+      "inputPlaceholder": "輸入訊息…"
+    }
+  },
+  "friends": {
+    "title": "好友",
+    "loading": "正在載入好友…",
+    "signInToUse": "請先登入才能使用好友功能。",
+    "searchPlaceholder": "搜尋好友…",
+
+    "sections": {
+      "requests": "好友邀請",
+      "pendingSent": "已送出等待中",
+      "yourFriends": "我的好友"
+    },
+
+    "incoming": {
+      "count": "{{count}} 則邀請",
+      "none": "目前沒有收到邀請",
+      "wantsToAddYou": "想加你為好友",
+      "accept": "接受",
+      "reject": "拒絕"
+    },
+
+    "outgoing": {
+      "count": "{{count}} 已送出",
+      "none": "目前沒有等待中的送出邀請",
+      "pending": "等待中…",
+      "cancel": "取消"
+    },
+
+    "list": {
+      "count": "{{count}} 位好友",
+      "empty": "目前還沒有好友。去「配對」加一些吧！"
+    },
+
+    "actions": {
+      "message": "私訊",
+      "remove": "移除"
+    },
+
+    "alerts": {
+      "errorTitle": "錯誤",
+      "acceptFailed": "接受邀請失敗。",
+      "rejectFailed": "拒絕邀請失敗。",
+      "cancelFailed": "取消邀請失敗。",
+      "createConversationFailed": "建立對話失敗。",
+      "openChatFailed": "開啟聊天失敗。",
+      "removeFailed": "移除好友失敗。",
+
+      "removeConfirmTitle": "要移除好友嗎？",
+      "removeConfirmMessage": "要把 {{name}} 從好友中移除嗎？",
+      "cancel": "取消",
+      "removeDestructive": "移除",
+
+      "unknownUser": "這位使用者"
+    }
+  },
+  "match": {
+    "title": "配對",
+    "subtitle": "找人互相連結成為好友。",
+    "loading": "正在載入配對…",
+    "signInToUse": "請先登入才能找朋友。",
+    "searchPlaceholder": "搜尋使用者…",
+
+    "list": {
+      "empty": "目前沒有適合的候選人，稍後再試。"
+    },
+
+    "actions": {
+      "message": "私訊",
+      "add": "加好友"
+    },
+
+    "alerts": {
+      "errorTitle": "錯誤",
+      "sentTitle": "已送出",
+      "createConversationFailed": "建立對話失敗。",
+      "openChatFailed": "開啟聊天失敗。",
+      "sendRequestFailed": "送出好友邀請失敗。",
+      "requestSentTo": "已送出好友邀請給 {{name}}。"
+    }
+  },
+  "messages": {
+    "title": "訊息",
+    "loading": "正在載入訊息…",
+    "signInToUse": "請先登入才能查看聊天。",
+    "empty": {
+      "line1": "目前還沒有任何對話。",
+      "line2": "試試先加好友，然後開啟聊天。"
+    },
+    "alerts": {
+      "errorTitle": "錯誤",
+      "openChatFailed": "開啟聊天失敗。"
+    }
+  },
+  "myPosts": {
+    "title": "我的貼文",
+    "loading": "正在載入我的貼文…",
+    "signInToUse": "請先登入才能查看你的貼文。",
+    "empty": {
+      "line1": "你目前還沒有發布任何貼文。",
+      "line2": "前往 PetForum 分享你的第一篇貼文吧！"
+    },
+    "alerts": {
+      "errorTitle": "錯誤",
+      "loadFailed": "載入我的貼文失敗。"
+    },
+    "fallback": {
+      "noTitle": "（無標題）",
+      "noContent": "（沒有內容）"
+    }
   }
 }

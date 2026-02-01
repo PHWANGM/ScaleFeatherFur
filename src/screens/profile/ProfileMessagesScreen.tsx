@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/rootNavigator';
+import { useTranslation } from 'react-i18next';
 
 import { getAuthedUserId } from '../../lib/supabase/repos/profile.repo';
 import {
@@ -23,6 +24,7 @@ import {
 } from '../../lib/supabase/repos/message.repo';
 
 export default function ProfileMessagesScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [myId, setMyId] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export default function ProfileMessagesScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
-        <Text style={styles.muted}>Loading messages…</Text>
+        <Text style={styles.muted}>{t('messages.loading')}</Text>
       </View>
     );
   }
@@ -77,15 +79,15 @@ export default function ProfileMessagesScreen() {
   if (!myId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.title}>Messages</Text>
-        <Text style={styles.muted}>Please sign in to view your chats.</Text>
+        <Text style={styles.title}>{t('messages.title')}</Text>
+        <Text style={styles.muted}>{t('messages.signInToUse')}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Messages</Text>
+      <Text style={styles.title}>{t('messages.title')}</Text>
 
       <FlatList
         data={items}
@@ -100,13 +102,12 @@ export default function ProfileMessagesScreen() {
                 await markConversationRead(item.conversation_id, myId);
                 await load();
 
-                // ✅ 這行就是你要改的：直接導到 ChatThread
                 navigation.navigate('ChatThread', {
                   conversationId: item.conversation_id,
                   title: item.displayTitle,
                 });
               } catch {
-                Alert.alert('Error', 'Failed to open chat.');
+                Alert.alert(t('messages.alerts.errorTitle'), t('messages.alerts.openChatFailed'));
               }
             }}
           >
@@ -125,7 +126,9 @@ export default function ProfileMessagesScreen() {
 
             {item.unread && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.unreadCount > 99 ? '99+' : String(item.unreadCount)}</Text>
+                <Text style={styles.badgeText}>
+                  {item.unreadCount > 99 ? '99+' : String(item.unreadCount)}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -133,8 +136,8 @@ export default function ProfileMessagesScreen() {
         ListEmptyComponent={
           empty ? (
             <View style={{ paddingTop: 16 }}>
-              <Text style={styles.muted}>No conversations yet.</Text>
-              <Text style={styles.muted}>Try adding friends and starting a chat.</Text>
+              <Text style={styles.muted}>{t('messages.empty.line1')}</Text>
+              <Text style={styles.muted}>{t('messages.empty.line2')}</Text>
             </View>
           ) : null
         }

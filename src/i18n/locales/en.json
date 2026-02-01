@@ -369,5 +369,394 @@
     "warnings": {
       "bootstrapPetFailed": "[LogsScreen] Failed to bootstrap currentPetId:"
     }
+  },
+  "authCallback": {
+    "title": "Email verification",
+    "messages": {
+      "verifying": "Verifying…",
+      "exchanging": "Exchanging session…",
+      "success": "Verified! Entering app…",
+      "failed": "Verification failed. Please try again.",
+      "noLink": "No callback link received. Please open from the verification email."
+    },
+    "actions": {
+      "backToLogin": "Back to login",
+      "enterApp": "Enter app"
+    }
+  },
+  "forgotPassword": {
+    "title": "Forgot password",
+    "subtitle": "Enter the email you used to sign up. We'll send you a password reset email.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "success": "Password reset email sent. Please check your inbox.",
+    "errors": {
+      "sendFailed": "Failed to send"
+    },
+    "actions": {
+      "send": "Send reset email",
+      "sending": "Sending…"
+    }
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Sign in with your email and password",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "forgot": "Forgot password? Reset",
+    "actions": {
+      "submit": "Sign in"
+    },
+    "links": {
+      "toSignup": "No account yet? Sign up"
+    },
+    "errors": {
+      "failedFallback": "Login failed"
+    }
+  },
+  "resetPassword": {
+    "title": "Reset password",
+    "phases": {
+      "waiting": "Waiting for reset link...",
+      "enterNew": "Please enter a new password",
+      "failed": "Verification failed"
+    },
+    "fields": {
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password"
+    },
+    "placeholders": {
+      "min6": "At least 6 characters",
+      "confirm": "Enter again"
+    },
+    "errors": {
+      "updateFailed": "Update failed"
+    },
+    "actions": {
+      "updating": "Updating...",
+      "update": "Update password",
+      "backToLogin": "Back to login"
+    }
+  },
+  "signup": {
+    "title": "Sign up",
+    "subtitle": "Create an account to sync your cloud profile",
+    "fields": {
+      "displayNameOptional": "Display name (optional)",
+      "email": "Email",
+      "password": "Password"
+    },
+    "placeholders": {
+      "displayName": "e.g. Joseph",
+      "email": "you@example.com",
+      "passwordMin6": "At least 6 characters"
+    },
+    "hints": {
+      "verifyEmailSent": "Verification email sent. Please check your inbox to complete verification."
+    },
+    "actions": {
+      "submit": "Create account"
+    },
+    "links": {
+      "toLogin": "Already have an account? Back to login"
+    },
+    "errors": {
+      "failedFallback": "Sign up failed"
+    }
+  },
+  "nav": {
+    "tabs": {
+      "home": "Home",
+      "care": "Care",
+      "petForum": "Forum",
+      "profile": "Profile"
+    },
+    "stack": {
+      "login": "Sign in",
+      "signup": "Sign up",
+      "forgotPassword": "Forgot password",
+      "resetPassword": "Reset password",
+      "authCallback": "Email verification",
+
+      "profileFriends": "Friends",
+      "profileMessages": "Messages",
+      "profileMatch": "Match",
+      "profileMyPosts": "My posts",
+      "chatThread": "Chat",
+
+      "petSelect": "Choose pet",
+      "speciesNeeds": "Needs",
+      "petsAdd": "Add pet",
+      "weigh": "Weight log",
+      "feed": "Feeding log",
+      "uvb": "UVB Log",
+      "clean": "Cleaning log",
+      "settings": "Settings"
+    }
+  },
+  "carelog": {
+    "clean": {
+      "date": "Date",
+      "time": "Time",
+      "action": "Log cleaning",
+      "noteDefault": "Cleaned enclosure",
+      "selectPetTitle": "Select a pet first",
+      "selectPetMessage": "Please choose a pet before logging cleaning.",
+      "saveFailedTitle": "Save failed",
+      "saveFailedMessage": "Failed to save cleaning log. Please try again.",
+      "ios": {
+        "selectDate": "Select Date",
+        "selectTime": "Select Time"
+      }
+    },
+    "feed": {
+      "headerTitle": "Today's Care",
+      "headerDateFallback": "Using today's date",
+
+      "ai": {
+        "title": "AI Food Analysis",
+        "subtitle": "Recognize food type and estimate weight from photos",
+        "camera": "Camera",
+        "library": "Library",
+        "analyzing": "Analyzing...",
+        "detected": "Detected:",
+        "estimatedWeight": "Estimated weight:",
+        "identifiedItems": "Items:",
+        "confidence": "Confidence:",
+        "apply": "Apply to form",
+        "mixedTitle": "Mixed food detected",
+        "mixedMessage": "Please manually split the weight by food types based on the image.",
+        "ok": "OK"
+      },
+
+      "foodTypes": {
+        "vegetables": "Vegetables",
+        "meat": "Meat",
+        "fruit": "Fruit",
+        "mixed": "Mixed",
+        "unknown": "Unknown"
+      },
+
+      "form": {
+        "title": "Feeding",
+        "subtitle": "Log feeding amount (g)",
+        "veg": "Vegetables",
+        "meat": "Meat",
+        "fruit": "Fruit"
+      },
+
+      "supplements": {
+        "title": "Supplements",
+        "subtitle": "Calcium / Vitamins",
+        "calcium": "Calcium",
+        "vitamin": "Vitamin"
+      },
+
+      "save": {
+        "button": "Save log",
+        "saving": "Saving...",
+        "noPetTitle": "Please select a pet",
+        "noPetMessage": "No pet is selected. Cannot save logs.",
+        "noInputTitle": "No data entered",
+        "noInputMessage": "Please enter grams or enable supplements.",
+        "failedTitle": "Save failed",
+        "failedMessage": "Database error. Please try again later.",
+        "noPetHint": "Tip: No pet selected. Please pick a pet on the Home screen before logging."
+      }
+    },
+    "uvb": {
+      "date": "Date",
+      "time": "Time",
+      "timerMinutes": "Timer (minutes)",
+      "elapsed": "Elapsed",
+      "remaining": "Remaining",
+      "overExposure": "Over exposure time!",
+      "countingDown": "Counting down",
+      "start": "Start Exposure",
+      "end": "End Exposure",
+
+      "alerts": {
+        "noPetTitle": "Select a pet first",
+        "noPetMessage": "Please choose a pet before logging UVB.",
+        "invalidTimerTitle": "Invalid timer",
+        "invalidTimerMessage": "Please set a positive duration in minutes.",
+        "saveFailedTitle": "Save failed",
+        "saveFailedMessage": "Failed to save UVB logs. Please try again."
+      },
+
+      "note": "UVB exposure {{minutes}} min",
+
+      "iosPicker": {
+        "cancel": "Cancel",
+        "done": "Done",
+        "selectDate": "Select Date",
+        "selectTime": "Select Time"
+      }
+    },
+    "weigh": {
+      "title": "Weight Log",
+      "pet": "Pet",
+      "weight": "Weight",
+      "loading": "Loading…",
+      "choosePet": "Choose a pet",
+      "placeholderG": "e.g. 123",
+      "placeholderKg": "e.g. 0.12",
+
+      "save": "Save log",
+      "saving": "Saving…",
+
+      "modal": {
+        "title": "Choose Pet",
+        "close": "Close",
+        "empty": "No pets yet. Please create a pet first."
+      },
+
+      "alerts": {
+        "loadFailedTitle": "Load failed",
+        "loadFailedMessage": "Unable to load pet list.",
+        "needPetTitle": "Choose a pet",
+        "needPetMessage": "You haven't selected a pet to log.",
+        "invalidWeightTitle": "Invalid weight",
+        "invalidWeightMessage": "Please enter a value greater than 0.",
+        "writeMaybeFailedTitle": "Write might have failed",
+        "writeMaybeFailedMessage": "Couldn't find the latest weight record. Please try again later or check your database.",
+        "writeMismatchTitle": "Write mismatch",
+        "saveFailedTitle": "Save failed",
+        "saveFailedMessage": "Something went wrong while writing to the database.",
+        "savedTitle": "Saved"
+      },
+
+      "confirm": {
+        "latestWeight": "Latest weight: {{kg}} kg",
+        "time": "Time: {{at}}",
+        "expected": "Expected: {{kg}} kg",
+        "hint": "(Tip: this could be caused by time precision or another write flow.)",
+        "ok": "OK"
+      },
+
+      "petDisplay": {
+        "withSpecies": "{{name}} ({{species}})"
+      }
+    }
+  },
+  "chat": {
+    "thread": {
+      "titleFallback": "Chat",
+      "loading": "Loading…",
+      "empty": "No messages yet",
+      "emptyHint": "Say hi to start the conversation.",
+      "inputPlaceholder": "Message…"
+    }
+  },
+  "friends": {
+    "title": "Friends",
+    "loading": "Loading friends…",
+    "signInToUse": "Please sign in to use Friends.",
+    "searchPlaceholder": "Search friends…",
+
+    "sections": {
+      "requests": "Friend Requests",
+      "pendingSent": "Pending Sent",
+      "yourFriends": "Your Friends"
+    },
+
+    "incoming": {
+      "count": "{{count}} incoming",
+      "none": "No incoming requests",
+      "wantsToAddYou": "wants to add you",
+      "accept": "Accept",
+      "reject": "Reject"
+    },
+
+    "outgoing": {
+      "count": "{{count}} sent",
+      "none": "No pending sent requests",
+      "pending": "pending…",
+      "cancel": "Cancel"
+    },
+
+    "list": {
+      "count": "{{count}} friends",
+      "empty": "No friends yet. Go to “Match” to add some!"
+    },
+
+    "actions": {
+      "message": "Message",
+      "remove": "Remove"
+    },
+
+    "alerts": {
+      "errorTitle": "Error",
+      "acceptFailed": "Failed to accept request.",
+      "rejectFailed": "Failed to reject request.",
+      "cancelFailed": "Failed to cancel request.",
+      "createConversationFailed": "Failed to create conversation.",
+      "openChatFailed": "Failed to open chat.",
+      "removeFailed": "Failed to remove friend.",
+
+      "removeConfirmTitle": "Remove friend?",
+      "removeConfirmMessage": "Remove {{name}} from friends?",
+      "cancel": "Cancel",
+      "removeDestructive": "Remove",
+
+      "unknownUser": "this user"
+    }
+  },
+  "match": {
+    "title": "Match",
+    "subtitle": "Find people to connect with.",
+    "loading": "Loading matches…",
+    "signInToUse": "Please sign in to find friends.",
+    "searchPlaceholder": "Search users…",
+
+    "list": {
+      "empty": "No candidates right now. Try again later."
+    },
+
+    "actions": {
+      "message": "Message",
+      "add": "Add"
+    },
+
+    "alerts": {
+      "errorTitle": "Error",
+      "sentTitle": "Sent",
+      "createConversationFailed": "Failed to create conversation.",
+      "openChatFailed": "Failed to open chat.",
+      "sendRequestFailed": "Failed to send friend request.",
+      "requestSentTo": "Friend request sent to {{name}}."
+    }
+  },
+ "messages": {
+    "title": "Messages",
+    "loading": "Loading messages…",
+    "signInToUse": "Please sign in to view your chats.",
+    "empty": {
+      "line1": "No conversations yet.",
+      "line2": "Try adding friends and starting a chat."
+    },
+    "alerts": {
+      "errorTitle": "Error",
+      "openChatFailed": "Failed to open chat."
+    }
+  },
+  "myPosts": {
+    "title": "My Posts",
+    "loading": "Loading my posts…",
+    "signInToUse": "Please sign in to view your posts.",
+    "empty": {
+      "line1": "You haven’t posted anything yet.",
+      "line2": "Go to PetForum and share your first post!"
+    },
+    "alerts": {
+      "errorTitle": "Error",
+      "loadFailed": "Failed to load my posts."
+    },
+    "fallback": {
+      "noTitle": "(Untitled)",
+      "noContent": "(No content)"
+    }
   }
 }

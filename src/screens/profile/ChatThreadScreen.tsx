@@ -13,6 +13,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { useTranslation } from 'react-i18next';
 
 import { theme } from '../../styles/tokens';
 import { useThemeColors } from '../../styles/themesColors';
@@ -46,6 +47,7 @@ const Avatar = ({ url, size = 32 }: { url?: string | null; size?: number }) => (
 );
 
 export default function ChatThreadScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { colors } = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -72,6 +74,9 @@ export default function ChatThreadScreen() {
   const loadInitial = useCallback(async () => {
     setLoading(true);
     try {
+      // 先給一個 fallback title（避免 header 空白）
+      navigation.setOptions({ title: t('chat.thread.titleFallback') });
+
       const res = await loadChatThreadInitial({ conversationId, pageLimit: 30 });
       setMyId(res.myId);
       setOtherProfile(res.otherProfile);
@@ -89,11 +94,14 @@ export default function ChatThreadScreen() {
             </View>
           ),
         });
+      } else {
+        // 如果拿不到對方資料，也至少要有 title
+        navigation.setOptions({ title: t('chat.thread.titleFallback') });
       }
     } finally {
       setLoading(false);
     }
-  }, [conversationId, navigation, colors.text]);
+  }, [conversationId, navigation, colors.text, t]);
 
   useEffect(() => {
     loadInitial();
@@ -133,6 +141,8 @@ export default function ChatThreadScreen() {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color={colors.primary} />
+        {/* 如果你想顯示文字 loading，可以取消註解 */}
+        {/* <Text style={{ marginTop: 10, color: textDim }}>{t('chat.thread.loading')}</Text> */}
       </View>
     );
   }
@@ -141,7 +151,6 @@ export default function ChatThreadScreen() {
     <View style={[styles.safeArea, { backgroundColor: colors.bg }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        // iOS 靠 padding，Android 靠我們在 InputBar 寫的 transform
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={headerHeight}
       >
@@ -154,7 +163,8 @@ export default function ChatThreadScreen() {
             contentContainerStyle={[
               styles.listContent,
               {
-                /* ✅ 重要：Inverted 列表的底部其實是 paddingTop。
+                /*
+                  ✅ 重要：Inverted 列表的底部其實是 paddingTop。
                   我們加上 liftPx，確保當輸入框抬升時，最後一則訊息也會被推上去，不被遮擋。
                 */
                 paddingTop: theme.spacing.md + (Platform.OS === 'android' ? liftPx : 0),
@@ -174,12 +184,19 @@ export default function ChatThreadScreen() {
             keyExtractor={(item) => item.id}
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={[styles.center, { paddingTop: 40 }]}>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>
+                  {t('chat.thread.empty')}
+                </Text>
+                <Text style={{ color: textDim, marginTop: 6, fontSize: 13 }}>
+                  {t('chat.thread.emptyHint')}
+                </Text>
+              </View>
+            }
           />
         </View>
 
-        {/* ✅ 注入量測與位移回傳函數 
-          確保 MessageInputBar 內部有實作 Animated Transform 與鍵盤監聽
-        */}
         <MessageInputBar
           value={text}
           onChangeText={setText}
@@ -191,6 +208,9 @@ export default function ChatThreadScreen() {
           onLiftPxChange={setLiftPx}
           androidCandidateBar={84}
           extraGap={12}
+
+          // ✅ 如果你的 MessageInputBar 支援 placeholder，建議加上
+          // placeholder={t('chat.thread.inputPlaceholder')}
         />
       </KeyboardAvoidingView>
     </View>
@@ -203,5 +223,10 @@ const styles = StyleSheet.create({
   headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: 240 },
   headerName: { fontWeight: '700', fontSize: 16 },
   listContent: { paddingHorizontal: theme.spacing.md },
-  avatarPlaceholder: { backgroundColor: '#202637', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarPlaceholder: {
+    backgroundColor: '#202637',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
 });

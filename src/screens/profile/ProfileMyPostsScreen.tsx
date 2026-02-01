@@ -9,14 +9,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { supabase } from '../../lib/supabase'; // ✅ 依你專案實際路徑調整（如果你是 ../../lib/supabase/index.ts 就改那個）
+import { supabase } from '../../lib/supabase'; // ✅ 依你專案實際路徑調整
 import { getAuthedUserId } from '../../lib/supabase/repos/profile.repo';
 
 import ForumPostCard, { type ForumPost } from '../../components/ForumPostCard';
 
 // 你 posts.repo.ts 的 PostsFeedItem 結構（這裡只取畫面會用到的欄位）
-// 若你願意，也可把這個 type export 出來，這邊就不用重寫
 type MyPostsRow = {
   id: string;
   author_id: string;
@@ -44,16 +44,6 @@ const paletteLight = {
   linkBg: 'rgba(11,92,255,0.10)',
 };
 
-function safeTitle(row: MyPostsRow) {
-  return (row.title && row.title.trim().length > 0) ? row.title : '（無標題）';
-}
-
-function safePreview(row: MyPostsRow) {
-  const txt = (row.body_md ?? '').trim();
-  if (!txt) return '（沒有內容）';
-  return txt.length > 120 ? `${txt.slice(0, 120)}…` : txt;
-}
-
 // 讓 UI 的 petType badge 不會全部變 🐰（ForumPostCard 目前只判 dog/cat/else）
 function mapSpeciesToPetType(speciesKey?: string | null) {
   const s = (speciesKey ?? '').toLowerCase();
@@ -62,26 +52,9 @@ function mapSpeciesToPetType(speciesKey?: string | null) {
   return speciesKey ?? 'other';
 }
 
-// 把 DB row 轉成 ForumPostCard 需要的型別
-function toForumPost(row: MyPostsRow): ForumPost {
-  return {
-    id: row.id,
-    userId: row.author_id,
-    title: safeTitle(row),
-    content: safePreview(row),
-    imageUrl: row.image_url ?? undefined,
-    productLink: undefined, // 你若未來有 post_products / products 可補上
-    petType: mapSpeciesToPetType(row.species_key),
-    likes: row.likes_count ?? 0,
-    createdAt: row.created_at,
-  };
-}
-
 /**
  * 從 posts + post_media(最新一張) + post_likes(count)
  * 拉回「我的貼文」(依 created_at desc)
- *
- * 這裡用 2~3 個 query 避免 join 太複雜、也比較好 debug
  */
 async function fetchMyPosts(myId: string, limit = 50): Promise<MyPostsRow[]> {
   // 1) posts
@@ -149,13 +122,50 @@ async function fetchMyPosts(myId: string, limit = 50): Promise<MyPostsRow[]> {
 }
 
 export default function ProfileMyPostsScreen() {
+  const { t } = useTranslation();
+
   const [myId, setMyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const [posts, setPosts] = useState<MyPostsRow[]>([]);
 
-  const forumPosts = useMemo(() => posts.map(toForumPost), [posts]);
+  // ✅ i18n fallback helpers（依語系顯示）
+  const safeTitle = useCallback(
+    (row: MyPostsRow) => {
+      return row.title && row.title.trim().length > 0 ? row.title : t('myPosts.fallback.noTitle');
+    },
+    [t]
+  );
+
+  const safePreview = useCallback(
+    (row: MyPostsRow) => {
+      const txt = (row.body_md ?? '').trim();
+      if (!txt) return t('myPosts.fallback.noContent');
+      return txt.length > 120 ? `${txt.slice(0, 120)}…` : txt;
+    },
+    [t]
+  );
+
+  // 把 DB row 轉成 ForumPostCard 需要的型別（依語系 fallback）
+  const toForumPost = useCallback(
+    (row: MyPostsRow): ForumPost => {
+      return {
+        id: row.id,
+        userId: row.author_id,
+        title: safeTitle(row),
+        content: safePreview(row),
+        imageUrl: row.image_url ?? undefined,
+        productLink: undefined,
+        petType: mapSpeciesToPetType(row.species_key),
+        likes: row.likes_count ?? 0,
+        createdAt: row.created_at,
+      };
+    },
+    [safePreview, safeTitle]
+  );
+
+  const forumPosts = useMemo(() => posts.map(toForumPost), [posts, toForumPost]);
   const empty = useMemo(() => !loading && forumPosts.length === 0, [loading, forumPosts.length]);
 
   const load = useCallback(async () => {
@@ -173,11 +183,14 @@ export default function ProfileMyPostsScreen() {
       setPosts(rows);
     } catch (e: any) {
       console.warn('[ProfileMyPostsScreen] load error', e);
-      Alert.alert('Error', e?.message ?? 'Failed to load my posts.');
+      Alert.alert(
+        t('myPosts.alerts.errorTitle'),
+        e?.message ?? t('myPosts.alerts.loadFailed')
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -196,7 +209,7 @@ export default function ProfileMyPostsScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator />
-        <Text style={styles.muted}>Loading my posts…</Text>
+        <Text style={styles.muted}>{t('myPosts.loading')}</Text>
       </View>
     );
   }
@@ -204,29 +217,27 @@ export default function ProfileMyPostsScreen() {
   if (!myId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.title}>My Posts</Text>
-        <Text style={styles.muted}>Please sign in to view your posts.</Text>
+        <Text style={styles.title}>{t('myPosts.title')}</Text>
+        <Text style={styles.muted}>{t('myPosts.signInToUse')}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Posts</Text>
+      <Text style={styles.title}>{t('myPosts.title')}</Text>
 
       <FlatList
         data={forumPosts}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{ paddingBottom: 24 }}
-        renderItem={({ item }) => (
-          <ForumPostCard post={item} palette={paletteLight} />
-        )}
+        renderItem={({ item }) => <ForumPostCard post={item} palette={paletteLight} />}
         ListEmptyComponent={
           empty ? (
             <View style={{ paddingTop: 16 }}>
-              <Text style={styles.muted}>You haven’t posted anything yet.</Text>
-              <Text style={styles.muted}>Go to PetForum and share your first post!</Text>
+              <Text style={styles.muted}>{t('myPosts.empty.line1')}</Text>
+              <Text style={styles.muted}>{t('myPosts.empty.line2')}</Text>
             </View>
           ) : null
         }

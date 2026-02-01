@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import {
   insertCareLog,
@@ -29,12 +30,12 @@ import {
 } from '../../state/slices/petsSlice';
 
 import PrimaryButton from '../../components/buttons/PrimaryButton';
-// 🆕 使用主題顏色
 import { useThemeColors } from '../../styles/themesColors';
 
 type Unit = 'g' | 'kg';
 
 const WeighScreen: React.FC = () => {
+  const { t } = useTranslation();
   const isFocused = useIsFocused();
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
@@ -51,7 +52,6 @@ const WeighScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 🆕 取得 theme 顏色
   const { colors } = useThemeColors();
 
   useEffect(() => {
@@ -70,7 +70,7 @@ const WeighScreen: React.FC = () => {
         }
       } catch (err) {
         console.error(err);
-        Alert.alert('讀取失敗', '無法載入寵物清單。');
+        Alert.alert(t('carelog.weigh.alerts.loadFailedTitle'), t('carelog.weigh.alerts.loadFailedMessage'));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -78,10 +78,10 @@ const WeighScreen: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [isFocused, reduxPetId]);
+  }, [isFocused, reduxPetId, t]);
 
   const selectedPet = useMemo(
-    () => pets.find(p => p.id === petId),
+    () => pets.find((p) => p.id === petId),
     [pets, petId]
   );
 
@@ -97,12 +97,12 @@ const WeighScreen: React.FC = () => {
 
   async function handleSave() {
     if (!petId) {
-      Alert.alert('請選擇寵物', '你尚未選擇要記錄的寵物。');
+      Alert.alert(t('carelog.weigh.alerts.needPetTitle'), t('carelog.weigh.alerts.needPetMessage'));
       return;
     }
     const n = parseNumberLoose(weightText);
     if (n === null || n <= 0) {
-      Alert.alert('體重數值不正確', '請輸入大於 0 的數值。');
+      Alert.alert(t('carelog.weigh.alerts.invalidWeightTitle'), t('carelog.weigh.alerts.invalidWeightMessage'));
       return;
     }
 
@@ -124,11 +124,12 @@ const WeighScreen: React.FC = () => {
       });
 
       const latest = await getLatestWeighOnOrBefore(petId, new Date().toISOString());
-      console.log('✅ 最新體重紀錄：', latest);
+      console.log('✅ latest weigh:', latest);
+
       if (!latest) {
         Alert.alert(
-          '寫入疑似失敗',
-          '找不到最近一次體重紀錄。請稍後再試或檢查資料庫連線。'
+          t('carelog.weigh.alerts.writeMaybeFailedTitle'),
+          t('carelog.weigh.alerts.writeMaybeFailedMessage')
         );
         return;
       }
@@ -138,19 +139,20 @@ const WeighScreen: React.FC = () => {
         (latest.at && latest.at >= nowISO);
 
       const confirmMessage =
-        `最近一次體重：${(latest.value ?? 0).toFixed(3)} kg\n時間：${latest.at}`;
+        `${t('carelog.weigh.confirm.latestWeight', { kg: (latest.value ?? 0).toFixed(3) })}\n` +
+        `${t('carelog.weigh.confirm.time', { at: latest.at })}`;
 
       if (!ok) {
         Alert.alert(
-          '寫入結果不一致',
-          `期望值：${valueKg} kg\n${confirmMessage}\n\n（提示：可能是時間精度或其他流程寫入）`
+          t('carelog.weigh.alerts.writeMismatchTitle'),
+          `${t('carelog.weigh.confirm.expected', { kg: valueKg })}\n${confirmMessage}\n\n${t('carelog.weigh.confirm.hint')}`
         );
         return;
       }
 
-      Alert.alert('已儲存', confirmMessage, [
+      Alert.alert(t('carelog.weigh.alerts.savedTitle'), confirmMessage, [
         {
-          text: 'OK',
+          text: t('carelog.weigh.confirm.ok'),
           onPress: () => {
             navigation.navigate('MainTabs', { screen: 'Care' });
           },
@@ -160,7 +162,7 @@ const WeighScreen: React.FC = () => {
       setWeightText('');
     } catch (err) {
       console.error(err);
-      Alert.alert('儲存失敗', '寫入資料庫時發生問題。');
+      Alert.alert(t('carelog.weigh.alerts.saveFailedTitle'), t('carelog.weigh.alerts.saveFailedMessage'));
     } finally {
       setIsSaving(false);
     }
@@ -172,11 +174,15 @@ const WeighScreen: React.FC = () => {
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         style={styles.container}
       >
-        <Text style={[styles.title, { color: colors.text }]}>體重記錄</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {t('carelog.weigh.title')}
+        </Text>
 
-        {/* 寵物選擇 */}
+        {/* Pet picker */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.subText }]}>寵物</Text>
+          <Text style={[styles.label, { color: colors.subText }]}>
+            {t('carelog.weigh.pet')}
+          </Text>
           <Pressable
             style={[
               styles.selector,
@@ -189,14 +195,20 @@ const WeighScreen: React.FC = () => {
             disabled={isLoading}
           >
             <Text style={[styles.selectorText, { color: colors.text }]}>
-              {selectedPet ? displayPet(selectedPet) : isLoading ? '載入中…' : '請選擇寵物'}
+              {selectedPet
+                ? displayPet(selectedPet, t)
+                : isLoading
+                  ? t('carelog.weigh.loading')
+                  : t('carelog.weigh.choosePet')}
             </Text>
           </Pressable>
         </View>
 
-        {/* 體重輸入 */}
+        {/* Weight input */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: colors.subText }]}>體重</Text>
+          <Text style={[styles.label, { color: colors.subText }]}>
+            {t('carelog.weigh.weight')}
+          </Text>
           <View style={styles.row}>
             <TextInput
               style={[
@@ -212,7 +224,7 @@ const WeighScreen: React.FC = () => {
               onChangeText={setWeightText}
               inputMode="decimal"
               keyboardType="decimal-pad"
-              placeholder={unit === 'g' ? '例如 123' : '例如 0.12'}
+              placeholder={unit === 'g' ? t('carelog.weigh.placeholderG') : t('carelog.weigh.placeholderKg')}
               placeholderTextColor={colors.subText}
             />
             <View style={{ width: 12 }} />
@@ -223,39 +235,37 @@ const WeighScreen: React.FC = () => {
                 { label: 'kg', value: 'kg' },
               ]}
               onChange={(v) => setUnit(v as Unit)}
-              // 🆕 把顏色往下傳
               colors={colors}
             />
           </View>
         </View>
 
-        {/* 儲存（PrimaryButton 已經使用 theme） */}
         <PrimaryButton
-          title={isSaving ? '儲存中…' : '儲存記錄'}
+          title={isSaving ? t('carelog.weigh.saving') : t('carelog.weigh.save')}
           onPress={handleSave}
           disabled={isSaving || !petId}
           loading={isSaving}
           style={styles.saveButton}
         />
 
-        {/* 寵物選擇 Modal */}
+        {/* Pet picker modal */}
         <Modal
           visible={petPickerOpen}
           animationType="slide"
           onRequestClose={() => setPetPickerOpen(false)}
         >
           <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.bg }]}>
-            <View
-              style={[
-                styles.modalHeader,
-                { borderBottomColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.modalTitle, { color: colors.text }]}>選擇寵物</Text>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {t('carelog.weigh.modal.title')}
+              </Text>
               <TouchableOpacity onPress={() => setPetPickerOpen(false)}>
-                <Text style={[styles.modalClose, { color: colors.primary }]}>關閉</Text>
+                <Text style={[styles.modalClose, { color: colors.primary }]}>
+                  {t('carelog.weigh.modal.close')}
+                </Text>
               </TouchableOpacity>
             </View>
+
             <FlatList
               data={pets}
               keyExtractor={(item) => item.id}
@@ -294,7 +304,9 @@ const WeighScreen: React.FC = () => {
               )}
               ListEmptyComponent={
                 <View style={{ padding: 16 }}>
-                  <Text style={{ color: colors.text }}>尚無寵物，請先建立寵物資料。</Text>
+                  <Text style={{ color: colors.text }}>
+                    {t('carelog.weigh.modal.empty')}
+                  </Text>
                 </View>
               }
             />
@@ -305,12 +317,12 @@ const WeighScreen: React.FC = () => {
   );
 };
 
-function displayPet(p: PetWithSpeciesRow) {
+function displayPet(p: PetWithSpeciesRow, t: (key: string, opts?: any) => string) {
   const species = p.species_name ?? p.species_key ?? '';
-  return species ? `${p.name}（${species}）` : p.name;
+  if (!species) return p.name;
+  return t('carelog.weigh.petDisplay.withSpecies', { name: p.name, species });
 }
 
-/** 🆕 Segmented 多帶一個 colors 進來，讓它也吃 theme */
 const Segmented: React.FC<{
   value: string;
   options: { label: string; value: string }[];
@@ -318,12 +330,7 @@ const Segmented: React.FC<{
   colors: ReturnType<typeof useThemeColors>['colors'];
 }> = ({ value, options, onChange, colors }) => {
   return (
-    <View
-      style={[
-        styles.segmented,
-        { backgroundColor: colors.card, borderColor: colors.border },
-      ]}
-    >
+    <View style={[styles.segmented, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {options.map((opt, idx) => {
         const active = opt.value === value;
         return (
@@ -337,12 +344,7 @@ const Segmented: React.FC<{
             ]}
             onPress={() => onChange(opt.value)}
           >
-            <Text
-              style={[
-                styles.segmentText,
-                { color: active ? colors.bg : colors.subText },
-              ]}
-            >
+            <Text style={[styles.segmentText, { color: active ? colors.bg : colors.subText }]}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -377,22 +379,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // button 樣式保留給其他地方用（目前 PrimaryButton 處理顏色）
-  button: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  buttonText: { fontWeight: '700', fontSize: 16 },
-
   saveButton: { marginTop: 6 },
-  buttonDisabled: { opacity: 0.5 },
-
-  help: { fontSize: 12, marginTop: 6, lineHeight: 18 },
-  helpStrong: { fontWeight: '700' },
-  mono: {
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }),
-  },
 
   modalSafe: { flex: 1 },
   modalHeader: {

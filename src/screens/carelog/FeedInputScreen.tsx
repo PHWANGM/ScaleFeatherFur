@@ -1,5 +1,5 @@
 // src/screens/FeedInputScreen.tsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useSelector } from 'react-redux';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 
 import {
   selectCurrentPetId,
@@ -34,7 +35,6 @@ type RootStackParamList = {
 };
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
-
 type NewCareLog = Omit<CareLogRow, 'id' | 'created_at' | 'updated_at'>;
 
 const buildAtIso = (selectedDate: string | null): string => {
@@ -44,28 +44,21 @@ const buildAtIso = (selectedDate: string | null): string => {
   return d.toISOString();
 };
 
-const FOOD_TYPE_LABELS: Record<string, string> = {
-  vegetables: '蔬菜',
-  meat: '肉類',
-  fruit: '水果',
-  mixed: '混合食物',
-  unknown: '未知',
-};
-
 const FeedInputScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<Navigation>();
   const currentPetId = useSelector(selectCurrentPetId);
   const selectedDate = useSelector(selectSelectedDate);
   const { colors, isDark } = useThemeColors();
 
-  const palette = {
+  const palette = useMemo(() => ({
     bg: colors.bg,
     card: colors.card,
     text: colors.text,
     subText: colors.subText ?? '#97A3B6',
     border: colors.border,
     primary: colors.primary ?? '#38e07b',
-  };
+  }), [colors]);
 
   // 餵食輸入狀態
   const [vegGrams, setVegGrams] = useState('');
@@ -91,6 +84,12 @@ const FeedInputScreen: React.FC = () => {
     checkApiKey();
   }, [checkApiKey]);
 
+  // food type label (i18n)
+  const foodTypeLabel = useCallback((foodType?: string) => {
+    const key = foodType ?? 'unknown';
+    return t(`carelog.feed.foodTypes.${key}`, { defaultValue: key });
+  }, [t]);
+
   // 套用 AI 分析結果到表單
   const applyAnalysisResult = useCallback(() => {
     if (!analysisState.result) return;
@@ -115,22 +114,24 @@ const FeedInputScreen: React.FC = () => {
         break;
       case 'mixed':
         Alert.alert(
-          '偵測到混合食物',
-          '請根據圖片內容手動分配各類食物的重量。',
-          [{ text: '好的' }]
+          t('carelog.feed.ai.mixedTitle'),
+          t('carelog.feed.ai.mixedMessage'),
+          [{ text: t('carelog.feed.ai.ok') }]
         );
         break;
       default:
         break;
     }
 
-    // 清除分析結果
     clearResult();
-  }, [analysisState.result, clearResult]);
+  }, [analysisState.result, clearResult, t]);
 
   const handleSave = async () => {
     if (!currentPetId) {
-      Alert.alert('請先選擇寵物', '目前沒有選中的寵物，無法寫入紀錄。');
+      Alert.alert(
+        t('carelog.feed.save.noPetTitle'),
+        t('carelog.feed.save.noPetMessage')
+      );
       return;
     }
 
@@ -206,7 +207,10 @@ const FeedInputScreen: React.FC = () => {
     }
 
     if (logs.length === 0) {
-      Alert.alert('尚未輸入任何資料', '請輸入餵食克數或勾選補充品。');
+      Alert.alert(
+        t('carelog.feed.save.noInputTitle'),
+        t('carelog.feed.save.noInputMessage')
+      );
       return;
     }
 
@@ -227,7 +231,10 @@ const FeedInputScreen: React.FC = () => {
       navigation.navigate('MainTabs', { screen: 'Care' });
     } catch (err) {
       console.error('Failed to save care logs', err);
-      Alert.alert('儲存失敗', '寫入資料庫時發生錯誤，請稍後再試。');
+      Alert.alert(
+        t('carelog.feed.save.failedTitle'),
+        t('carelog.feed.save.failedMessage')
+      );
     } finally {
       setSaving(false);
     }
@@ -247,10 +254,10 @@ const FeedInputScreen: React.FC = () => {
         {/* 日期 / 狀態 */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: palette.text }]}>
-            Today&apos;s Care
+            {t('carelog.feed.headerTitle')}
           </Text>
           <Text style={[styles.sectionHint, { color: palette.subText }]}>
-            {selectedDate ?? '使用今日日期'}
+            {selectedDate ?? t('carelog.feed.headerDateFallback')}
           </Text>
         </View>
 
@@ -267,10 +274,10 @@ const FeedInputScreen: React.FC = () => {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardTitle, { color: palette.text }]}>
-                AI Food Analysis
+                {t('carelog.feed.ai.title')}
               </Text>
               <Text style={[styles.cardSub, { color: palette.subText }]}>
-                拍照自動辨識食物類型與重量
+                {t('carelog.feed.ai.subtitle')}
               </Text>
             </View>
           </View>
@@ -287,9 +294,10 @@ const FeedInputScreen: React.FC = () => {
             >
               <Feather name="camera" size={18} color="#6366f1" />
               <Text style={[styles.analysisButtonText, { color: '#6366f1' }]}>
-                拍照
+                {t('carelog.feed.ai.camera')}
               </Text>
             </Pressable>
+
             <Pressable
               style={[
                 styles.analysisButton,
@@ -300,7 +308,7 @@ const FeedInputScreen: React.FC = () => {
             >
               <Feather name="image" size={18} color="#6366f1" />
               <Text style={[styles.analysisButtonText, { color: '#6366f1' }]}>
-                相簿
+                {t('carelog.feed.ai.library')}
               </Text>
             </Pressable>
           </View>
@@ -310,7 +318,7 @@ const FeedInputScreen: React.FC = () => {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color="#6366f1" />
               <Text style={[styles.loadingText, { color: palette.subText }]}>
-                AI 分析中...
+                {t('carelog.feed.ai.analyzing')}
               </Text>
             </View>
           )}
@@ -329,69 +337,82 @@ const FeedInputScreen: React.FC = () => {
               {imageUri && (
                 <Image source={{ uri: imageUri }} style={styles.previewImage} />
               )}
+
               <View style={styles.resultInfo}>
                 <View style={styles.resultRow}>
                   <Text style={[styles.resultLabel, { color: palette.subText }]}>
-                    偵測到：
+                    {t('carelog.feed.ai.detected')}
                   </Text>
                   <Text style={[styles.resultValue, { color: palette.text }]}>
-                    {FOOD_TYPE_LABELS[result.foodType] ?? result.foodType}
+                    {foodTypeLabel(result.foodType)}
                   </Text>
                 </View>
+
                 <View style={styles.resultRow}>
                   <Text style={[styles.resultLabel, { color: palette.subText }]}>
-                    估計重量：
+                    {t('carelog.feed.ai.estimatedWeight')}
                   </Text>
                   <Text style={[styles.resultValue, { color: palette.text }]}>
                     {result.estimatedWeightGrams}g
                   </Text>
                 </View>
+
                 {result.identifiedItems.length > 0 && (
                   <View style={styles.resultRow}>
                     <Text style={[styles.resultLabel, { color: palette.subText }]}>
-                      識別項目：
+                      {t('carelog.feed.ai.identifiedItems')}
                     </Text>
                     <Text style={[styles.resultValue, { color: palette.text }]}>
                       {result.identifiedItems.slice(0, 3).join(', ')}
                     </Text>
                   </View>
                 )}
+
                 <View style={styles.resultRow}>
                   <Text style={[styles.resultLabel, { color: palette.subText }]}>
-                    信心度：
+                    {t('carelog.feed.ai.confidence')}
                   </Text>
                   <Text style={[styles.resultValue, { color: palette.text }]}>
                     {Math.round(result.confidence * 100)}%
                   </Text>
                 </View>
               </View>
+
               <Pressable
                 style={[styles.applyButton, { backgroundColor: palette.primary }]}
                 onPress={applyAnalysisResult}
               >
                 <Feather name="check" size={16} color="#022c22" />
-                <Text style={styles.applyButtonText}>套用到表單</Text>
+                <Text style={styles.applyButtonText}>{t('carelog.feed.ai.apply')}</Text>
               </Pressable>
             </View>
           )}
 
-          {/* 營養建議 */}
+          {/* 營養建議（這段多半是 AI 回傳內容，不強制翻譯；只翻譯標題） */}
           {suggestion && !analyzing && (
-            <View style={[styles.suggestionContainer, { backgroundColor: isDark ? 'rgba(56,224,123,0.1)' : 'rgba(56,224,123,0.08)' }]}>
+            <View
+              style={[
+                styles.suggestionContainer,
+                { backgroundColor: isDark ? 'rgba(56,224,123,0.1)' : 'rgba(56,224,123,0.08)' },
+              ]}
+            >
               <View style={styles.suggestionHeader}>
                 <MaterialCommunityIcons name="lightbulb-outline" size={18} color={palette.primary} />
                 <Text style={[styles.suggestionTitle, { color: palette.text }]}>
-                  營養建議
+                  {t('carelog.feed.aiSuggestionTitle', { defaultValue: 'Nutrition tips' })}
                 </Text>
               </View>
+
               <Text style={[styles.suggestionMessage, { color: palette.text }]}>
                 {suggestion.message}
               </Text>
+
               {suggestion.details && (
                 <Text style={[styles.suggestionDetails, { color: palette.subText }]}>
                   {suggestion.details}
                 </Text>
               )}
+
               {suggestion.warnings.length > 0 && (
                 <View style={styles.warningsList}>
                   {suggestion.warnings.map((w, i) => (
@@ -401,11 +422,12 @@ const FeedInputScreen: React.FC = () => {
                   ))}
                 </View>
               )}
+
               {suggestion.tips.length > 0 && (
                 <View style={styles.tipsList}>
-                  {suggestion.tips.map((t, i) => (
+                  {suggestion.tips.map((tip, i) => (
                     <Text key={i} style={[styles.tipItem, { color: palette.subText }]}>
-                      {t}
+                      {tip}
                     </Text>
                   ))}
                 </View>
@@ -427,18 +449,16 @@ const FeedInputScreen: React.FC = () => {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardTitle, { color: palette.text }]}>
-                Feeding
+                {t('carelog.feed.form.title')}
               </Text>
               <Text style={[styles.cardSub, { color: palette.subText }]}>
-                記錄餵食量（g）
+                {t('carelog.feed.form.subtitle')}
               </Text>
             </View>
           </View>
 
           <View style={styles.inputRow}>
-            <Text style={[styles.label, { color: palette.text }]}>
-              蔬菜
-            </Text>
+            <Text style={[styles.label, { color: palette.text }]}>{t('carelog.feed.form.veg')}</Text>
             <View style={styles.inputBox}>
               <TextInput
                 style={[
@@ -459,9 +479,7 @@ const FeedInputScreen: React.FC = () => {
           </View>
 
           <View style={styles.inputRow}>
-            <Text style={[styles.label, { color: palette.text }]}>
-              肉類
-            </Text>
+            <Text style={[styles.label, { color: palette.text }]}>{t('carelog.feed.form.meat')}</Text>
             <View style={styles.inputBox}>
               <TextInput
                 style={[
@@ -482,9 +500,7 @@ const FeedInputScreen: React.FC = () => {
           </View>
 
           <View style={styles.inputRow}>
-            <Text style={[styles.label, { color: palette.text }]}>
-              水果
-            </Text>
+            <Text style={[styles.label, { color: palette.text }]}>{t('carelog.feed.form.fruit')}</Text>
             <View style={styles.inputBox}>
               <TextInput
                 style={[
@@ -509,54 +525,35 @@ const FeedInputScreen: React.FC = () => {
         <View
           style={[
             styles.card,
-            {
-              backgroundColor: palette.card,
-              borderColor: palette.border,
-              marginTop: 16,
-            },
+            { backgroundColor: palette.card, borderColor: palette.border, marginTop: 16 },
           ]}
         >
           <View style={styles.cardHeaderRow}>
-            <View
-              style={[
-                styles.cardIconBox,
-                { backgroundColor: 'rgba(56,224,123,0.12)' },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="pill"
-                size={20}
-                color={palette.primary}
-              />
+            <View style={[styles.cardIconBox, { backgroundColor: 'rgba(56,224,123,0.12)' }]}>
+              <MaterialCommunityIcons name="pill" size={20} color={palette.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardTitle, { color: palette.text }]}>
-                Supplements
+                {t('carelog.feed.supplements.title')}
               </Text>
               <Text style={[styles.cardSub, { color: palette.subText }]}>
-                補鈣 / 維他命
+                {t('carelog.feed.supplements.subtitle')}
               </Text>
             </View>
           </View>
 
           <View style={styles.switchRow}>
             <Text style={[styles.switchLabel, { color: palette.text }]}>
-              Calcium（補鈣）
+              {t('carelog.feed.supplements.calcium')}
             </Text>
-            <Switch
-              value={calciumChecked}
-              onValueChange={setCalciumChecked}
-            />
+            <Switch value={calciumChecked} onValueChange={setCalciumChecked} />
           </View>
 
           <View style={styles.switchRow}>
             <Text style={[styles.switchLabel, { color: palette.text }]}>
-              Vitamin（維他命）
+              {t('carelog.feed.supplements.vitamin')}
             </Text>
-            <Switch
-              value={vitaminChecked}
-              onValueChange={setVitaminChecked}
-            />
+            <Switch value={vitaminChecked} onValueChange={setVitaminChecked} />
           </View>
         </View>
 
@@ -566,21 +563,20 @@ const FeedInputScreen: React.FC = () => {
             style={[
               styles.saveButton,
               {
-                backgroundColor: currentPetId
-                  ? palette.primary
-                  : 'rgba(148,163,184,0.6)',
+                backgroundColor: currentPetId ? palette.primary : 'rgba(148,163,184,0.6)',
               },
             ]}
             disabled={saving || !currentPetId}
             onPress={handleSave}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? '儲存中...' : '儲存紀錄'}
+              {saving ? t('carelog.feed.save.saving') : t('carelog.feed.save.button')}
             </Text>
           </Pressable>
+
           {!currentPetId && (
             <Text style={[styles.warningText, { color: '#f97316' }]}>
-              提示：目前尚未選擇寵物，請先在首頁選取寵物再新增紀錄。
+              {t('carelog.feed.save.noPetHint')}
             </Text>
           )}
         </View>
@@ -626,11 +622,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '600' },
   cardSub: { fontSize: 12, marginTop: 2 },
 
-  // AI 分析按鈕
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  buttonRow: { flexDirection: 'row', gap: 12 },
   analysisButton: {
     flex: 1,
     flexDirection: 'row',
@@ -640,12 +632,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  analysisButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  analysisButtonText: { fontSize: 14, fontWeight: '600' },
 
-  // 載入狀態
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -654,11 +642,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 12,
   },
-  loadingText: {
-    fontSize: 14,
-  },
+  loadingText: { fontSize: 14 },
 
-  // 錯誤狀態
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -668,38 +653,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(239,68,68,0.1)',
     borderRadius: 8,
   },
-  errorText: {
-    flex: 1,
-    color: '#ef4444',
-    fontSize: 13,
-  },
+  errorText: { flex: 1, color: '#ef4444', fontSize: 13 },
 
-  // 分析結果
-  resultContainer: {
-    marginTop: 16,
-  },
+  resultContainer: { marginTop: 16 },
   previewImage: {
     width: '100%',
     height: 150,
     borderRadius: 8,
     marginBottom: 12,
   },
-  resultInfo: {
-    gap: 4,
-  },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  resultLabel: {
-    fontSize: 13,
-    width: 80,
-  },
-  resultValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-  },
+  resultInfo: { gap: 4 },
+  resultRow: { flexDirection: 'row', alignItems: 'center' },
+  resultLabel: { fontSize: 13, width: 96 },
+  resultValue: { fontSize: 14, fontWeight: '500', flex: 1 },
   applyButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -709,64 +675,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
   },
-  applyButtonText: {
-    color: '#022c22',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  applyButtonText: { color: '#022c22', fontSize: 14, fontWeight: '600' },
 
-  // 營養建議
-  suggestionContainer: {
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
-  },
+  suggestionContainer: { marginTop: 16, padding: 12, borderRadius: 8 },
   suggestionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     marginBottom: 8,
   },
-  suggestionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  suggestionMessage: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  suggestionDetails: {
-    fontSize: 13,
-    marginTop: 4,
-  },
-  warningsList: {
-    marginTop: 8,
-  },
-  warningItem: {
-    fontSize: 13,
-    color: '#f97316',
-    marginTop: 4,
-  },
-  tipsList: {
-    marginTop: 8,
-  },
-  tipItem: {
-    fontSize: 12,
-    marginTop: 4,
-  },
+  suggestionTitle: { fontSize: 14, fontWeight: '600' },
+  suggestionMessage: { fontSize: 14, fontWeight: '500' },
+  suggestionDetails: { fontSize: 13, marginTop: 4 },
+  warningsList: { marginTop: 8 },
+  warningItem: { fontSize: 13, color: '#f97316', marginTop: 4 },
+  tipsList: { marginTop: 8 },
+  tipItem: { fontSize: 12, marginTop: 4 },
 
-  // 輸入欄位
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
     gap: 10,
   },
-  label: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  label: { flex: 1, fontSize: 14, fontWeight: '500' },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -785,33 +717,22 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontSize: 14,
   },
-  unit: {
-    marginLeft: 4,
-    fontSize: 12,
-  },
+  unit: { marginLeft: 4, fontSize: 12 },
+
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 6,
   },
-  switchLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  switchLabel: { fontSize: 14, fontWeight: '500' },
+
   saveButton: {
     borderRadius: 999,
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveButtonText: {
-    color: '#022c22',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  warningText: {
-    marginTop: 8,
-    fontSize: 12,
-  },
+  saveButtonText: { color: '#022c22', fontSize: 16, fontWeight: '700' },
+  warningText: { marginTop: 8, fontSize: 12 },
 });
