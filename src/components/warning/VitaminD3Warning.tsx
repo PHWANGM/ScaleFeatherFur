@@ -19,7 +19,7 @@ const VitaminD3Warning: React.FC<Props> = ({ petId }) => {
   const palette = useMemo(
     () => ({
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       primary: colors.primary ?? "#38e07b",
     }),
     [colors],
@@ -45,9 +45,9 @@ const VitaminD3Warning: React.FC<Props> = ({ petId }) => {
           setResult(r)
           console.log("[VitaminD3Warning] schedule result", r)
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
-          const msg = String(e?.message ?? e)
+          const msg = e instanceof Error ? e.message : String(e)
           setError(msg)
           console.log("[VitaminD3Warning] error", msg)
         }

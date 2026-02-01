@@ -26,7 +26,7 @@ export async function fileUriToBase64(uri: string): Promise<string> {
 
     console.log("[imageUtils] Base64 length:", base64.length)
     return base64
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[imageUtils] Failed to convert file to base64:", err)
     throw new Error("IMAGE_READ_ERROR")
   }

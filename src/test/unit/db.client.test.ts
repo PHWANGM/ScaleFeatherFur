@@ -5,19 +5,21 @@ import {
   transaction,
 } from "../../lib/db/db.client"
 
+type TestDb = Parameters<typeof __setTestDB>[0]
+
 test("query/execute propagate errors with SQL attached", async () => {
   const badDb = {
-    getAllAsync: async () => {
+    getAllAsync: () => {
       throw new Error("boom")
     },
-    runAsync: async () => {
+    runAsync: () => {
       throw new Error("kaboom")
     },
     execAsync: async () => {},
-    withTransactionAsync: async (fn: any) => {
+    withTransactionAsync: async (fn: () => Promise<void>) => {
       await fn()
     },
-  } as any
+  } as unknown as TestDb
 
   __setTestDB(badDb)
 
@@ -30,21 +32,21 @@ test("query/execute propagate errors with SQL attached", async () => {
 test("transaction wraps calls", async () => {
   const calls: string[] = []
   const fakeDb = {
-    getAllAsync: async (sql: string) => {
+    getAllAsync: (sql: string) => {
       calls.push("get:" + sql)
       return []
     },
-    runAsync: async (sql: string) => {
+    runAsync: (sql: string) => {
       calls.push("run:" + sql)
       return { changes: 1, lastInsertRowId: 1 }
     },
     execAsync: async () => {},
-    withTransactionAsync: async (fn: any) => {
+    withTransactionAsync: async (fn: () => Promise<void>) => {
       calls.push("begin")
       await fn()
       calls.push("commit")
     },
-  } as any
+  } as unknown as TestDb
 
   __setTestDB(fakeDb)
 

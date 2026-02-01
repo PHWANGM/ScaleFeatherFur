@@ -45,10 +45,10 @@ export function useFoodAnalysis(petId: string | null): UseFoodAnalysisReturn {
   const { pickFromLibrary, takePhoto } = useImagePicker()
   const analysisIdRef = useRef(0)
 
-  const checkApiKey = useCallback(async () => {
+  const checkApiKey = useCallback(() => {
     // Supabase 版不需要 Gemini Key（key 在 edge function secrets）
     setState((prev) => ({ ...prev, hasApiKey: true }))
-    return true
+    return Promise.resolve(true)
   }, [])
 
   const performAnalysis = useCallback(
@@ -88,7 +88,7 @@ export function useFoodAnalysis(petId: string | null): UseFoodAnalysisReturn {
           suggestion,
           error: null,
         }))
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (currentId !== analysisIdRef.current) return
 
         const msg = e?.message ?? "分析失敗，請稍後再試"

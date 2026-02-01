@@ -46,7 +46,7 @@ export default function ChartLineWeight({
 
   // ✅ Y 軸從 0 開始
   const rawYMax = Math.max(...ys)
-  let yMin = 0
+  const yMin = 0
   let yMax = rawYMax
 
   // 避免全部數值都一樣（或都是 0）時 range = 0 導致除以 0

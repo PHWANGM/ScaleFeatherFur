@@ -100,7 +100,8 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
           },
         )
 
-    const uvbUnit = (target.extra && (target.extra as any).uvb_unit) || "%"
+    const extra = target.extra as { uvb_unit?: string } | null | undefined
+    const uvbUnit = extra?.uvb_unit || "%"
     const uvbIntensity =
       target.uvb_intensity_min != null || target.uvb_intensity_max != null
         ? `${target.uvb_intensity_min ?? target.uvb_intensity_max}-${
@@ -177,7 +178,7 @@ export default function SpeciesNeedsScreen({ route, navigation }: Props) {
   }, [target, t])
 
   const onPressNeed = (routeName: DemandRoute) => {
-    navigation.navigate(routeName as any, { petId })
+    navigation.navigate(routeName as never, { petId } as never)
   }
 
   return (

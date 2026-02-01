@@ -82,8 +82,8 @@ export default function PetsHeader({ onAddPress }: Props) {
         }
       }
       console.log("[PetPickerModal] Current pet ID changed:", currentPetId)
-    } catch (e: any) {
-      console.warn("[PetsHeader] loadFromSlice failed:", e?.message ?? e)
+    } catch (e: unknown) {
+      console.warn("[PetsHeader] loadFromSlice failed:", e instanceof Error ? e.message : e)
       if (mountedRef.current) setPet(null)
     } finally {
       if (mountedRef.current) setLoading(false)
@@ -104,7 +104,8 @@ export default function PetsHeader({ onAddPress }: Props) {
       onAddPress()
       return
     }
-    const parent = (navigation as any)?.getParent?.()
+    const parent = (navigation as unknown as { getParent?: () => { navigate?: (name: string) => void } | undefined })
+      .getParent?.()
     if (parent?.navigate) {
       parent.navigate("PetsAdd" as never)
     } else {

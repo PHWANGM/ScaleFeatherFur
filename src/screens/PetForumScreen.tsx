@@ -42,29 +42,43 @@ import ProductCreateForm, { type ProductCreateInput } from "./ProductCreateForm"
 // --- UI Type ---
 type Post = ForumPost
 
+type Palette = {
+  bg: string
+  card: string
+  text: string
+  subText: string
+  border: string
+  primary: string
+  inputBg: string
+  link: string
+  linkBg: string
+  orange: string
+}
+
 export default function PetForumScreen() {
   const { t } = useTranslation()
   const { colors, isDark } = useThemeColors()
-  const navigation = useNavigation<any>()
+  const navigation = useNavigation()
 
   // 🎨 palette
-  const palette = useMemo(() => {
+  const palette = useMemo<Palette>(() => {
+    const extraColors = colors as Record<string, string | undefined>
     const base = {
       bg: colors.bg,
       card: colors.card,
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? extraColors.textDim ?? "#97A3B6",
       border: colors.border,
       primary: colors.primary ?? "#38e07b",
     }
     return {
       ...base,
-      inputBg: (colors as any).inputBg ??
+      inputBg: extraColors.inputBg ??
         (isDark ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.9)"),
-      link: (colors as any).link ?? base.primary,
-      linkBg: (colors as any).linkBg ??
+      link: extraColors.link ?? base.primary,
+      linkBg: extraColors.linkBg ??
         (isDark ? "rgba(56,224,123,0.25)" : "rgba(56,224,123,0.08)"),
-      orange: (colors as any).orange ?? "#f97316",
+      orange: extraColors.orange ?? "#f97316",
     }
   }, [colors, isDark])
 
@@ -306,7 +320,7 @@ export default function PetForumScreen() {
       if (currentView === "create") {
         return (
           <ProductCreateForm
-            palette={palette as any}
+            palette={palette}
             onCreateProduct={handleCreateProduct}
             onSuccess={handleCreateSuccessProduct}
             onCancel={() => setCurrentView("feed")}

@@ -47,7 +47,7 @@ export function useCurrentLocation(
         return
       }
 
-      let pos = await Location.getCurrentPositionAsync({
+      const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       }).catch(async () => {
         return await Location.getLastKnownPositionAsync()
@@ -72,7 +72,9 @@ export function useCurrentLocation(
           locationName = [city, region || country].filter(Boolean).join(", ") ||
             "Unknown"
         }
-      } catch {}
+      } catch {
+        // ignore reverse geocode errors
+      }
 
       const next: UseCurrentLocationState = {
         coords,
@@ -83,12 +85,12 @@ export function useCurrentLocation(
 
       cached = { sessionId, state: next }
       setState(next)
-    } catch (e: any) {
+    } catch (e: unknown) {
       const next: UseCurrentLocationState = {
         coords: null,
         locationName: "Unknown",
         loading: false,
-        error: String(e?.message ?? e),
+        error: String(e instanceof Error ? e.message : e),
       }
       cached = { sessionId, state: next }
       setState(next)

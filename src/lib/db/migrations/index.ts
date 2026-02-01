@@ -4,7 +4,7 @@ import { Asset } from "expo-asset"
 
 /** Migration 項目可來自打包資產（.sql 檔）或內嵌字串（測試、熱修補） */
 export type MigrationEntry =
-  | ({ name: string } & { asset: any }) // 例如 require('./V1__init.sql')
+  | ({ name: string } & { asset: unknown }) // 例如 require('./V1__init.sql')
   | ({ name: string } & { sql: string }) // 若直接內嵌 SQL 文字（測試用）
 
 /** 正式註冊：依執行順序排列 */

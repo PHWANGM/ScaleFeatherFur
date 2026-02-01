@@ -40,7 +40,7 @@ type Unit = "g" | "kg"
 const WeighScreen: React.FC = () => {
   const { t } = useTranslation()
   const isFocused = useIsFocused()
-  const navigation = useNavigation<any>()
+  const navigation = useNavigation()
   const dispatch = useDispatch()
 
   const reduxPetId = useSelector(selectCurrentPetId) as string | null
@@ -358,7 +358,7 @@ const WeighScreen: React.FC = () => {
 
 function displayPet(
   p: PetWithSpeciesRow,
-  t: (key: string, opts?: any) => string,
+  t: (key: string, opts?: unknown) => string,
 ) {
   const species = p.species_name ?? p.species_key ?? ""
   if (!species) return p.name

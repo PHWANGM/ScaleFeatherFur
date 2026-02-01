@@ -26,7 +26,7 @@ export async function fetchOtherParticipantProfile(params: {
 
   if (error || !data) return null
 
-  const profile = (data as any).profiles as any | null
+  const profile = (data as { profiles?: { display_name?: string | null; avatar_url?: string | null } | null }).profiles
   if (!profile) return null
 
   return {
@@ -65,7 +65,9 @@ export async function loadChatThreadInitial(params: {
   // 已讀不影響畫面，失敗就忽略
   try {
     await markConversationRead(conversationId, myId)
-  } catch {}
+  } catch {
+    // ignore mark read errors
+  }
 
   return { myId, otherProfile, messages }
 }
@@ -90,7 +92,9 @@ export function subscribeChatThread(params: {
       if (autoMarkRead && msg.sender_id !== myId) {
         try {
           await markConversationRead(conversationId, myId)
-        } catch {}
+        } catch {
+    // ignore mark read errors
+  }
       }
     },
   })

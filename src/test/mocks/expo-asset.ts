@@ -1,6 +1,6 @@
 // src/test/mocks/expo-asset.ts
 export class Asset {
-  static fromModule(_mod: any) {
+  static fromModule(_mod: unknown) {
     return {
       downloaded: true,
       localUri: "mock://migration.sql",

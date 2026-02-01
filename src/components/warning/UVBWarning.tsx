@@ -19,7 +19,7 @@ const UVBWarning: React.FC<Props> = ({ uvbRisk }) => {
 
   const palette = useMemo(
     () => ({
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
     }),
     [colors],
   )
@@ -27,7 +27,7 @@ const UVBWarning: React.FC<Props> = ({ uvbRisk }) => {
   // 沒有風險結果或根本不需要警示 → 不顯示
   if (!uvbRisk || !uvbRisk.shouldWarn) return null
 
-  const { segments = [], hourly = [], uvbMin, uvbMax } = uvbRisk
+  const { segments = [], hourly = [] } = uvbRisk
 
   // ✅ 只保留 too_high / too_low 的 segments
   const dangerSegments: UvbRiskSegment[] = segments.filter(

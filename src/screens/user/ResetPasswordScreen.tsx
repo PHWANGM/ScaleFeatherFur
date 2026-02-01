@@ -44,7 +44,7 @@ export default function ResetPasswordScreen() {
       card: colors.card,
       text: colors.text,
       border: colors.border,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       primary: colors.primary ?? theme.colors.primary,
       inputBg: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
       danger: theme.colors.critical,
@@ -60,7 +60,7 @@ export default function ResetPasswordScreen() {
         if (error) throw error
         setPhase("ready")
         setMsg(t("resetPassword.phases.enterNew"))
-      } catch (e: any) {
+      } catch (e: unknown) {
         setPhase("error")
         setErr(e?.message ?? t("resetPassword.phases.failed"))
       }
@@ -89,7 +89,7 @@ export default function ResetPasswordScreen() {
       const { error } = await supabase.auth.updateUser({ password: pw1 })
       if (error) throw error
       navigation.replace("Login")
-    } catch (e: any) {
+    } catch (e: unknown) {
       setErr(e?.message ?? t("resetPassword.errors.updateFailed"))
     } finally {
       setSaving(false)

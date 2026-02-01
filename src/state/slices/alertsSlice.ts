@@ -17,7 +17,7 @@ export type AlertRow = {
 // 以 petId 載入 alerts（明確標註返回型別與參數型別）
 export const loadAlerts = createAsyncThunk<AlertRow[], string>(
   "alerts/load",
-  async (petId) => {
+  (petId) => {
     return query<AlertRow>(
       `SELECT * FROM alerts WHERE pet_id=? ORDER BY at DESC LIMIT 50`,
       [petId],

@@ -122,7 +122,9 @@ export async function createOrGetDm(
       "display_name",
     ).eq("id", otherUserId).single()
     if (!pErr && p?.display_name) title = p.display_name
-  } catch {}
+  } catch {
+    // ignore mark read errors
+  }
 
   return { conversationId, title }
 }
@@ -195,7 +197,14 @@ export function subscribeToConversationMessages(
         filter: `conversation_id=eq.${conversationId}`,
       },
       (payload) => {
-        const msg = payload.new as any
+        const msg = payload.new as {
+          id: string
+          conversation_id: string
+          sender_id: string
+          body: string
+          created_at: string
+          deleted_at?: string | null
+        }
         if (msg?.deleted_at) return
 
         onInsert({
@@ -236,7 +245,7 @@ export async function fetchOtherParticipantProfile(params: {
 
   if (error || !data) return null
 
-  const profile = (data as any).profiles as any | null
+  const profile = (data as { profiles?: { display_name?: string | null; avatar_url?: string | null } | null }).profiles
   if (!profile) return null
 
   return {
@@ -265,7 +274,9 @@ export async function loadChatThreadInitial(params: {
 
   try {
     await markConversationRead(conversationId, myId)
-  } catch {}
+  } catch {
+    // ignore mark read errors
+  }
 
   return { myId, otherProfile, messages }
 }
@@ -286,7 +297,9 @@ export function subscribeChatThread(params: {
       if (autoMarkRead && msg.sender_id !== myId) {
         try {
           await markConversationRead(conversationId, myId)
-        } catch {}
+        } catch {
+    // ignore mark read errors
+  }
       }
     },
   })

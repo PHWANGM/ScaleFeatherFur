@@ -26,9 +26,9 @@ export type CareLog = {
 export const loadLogsByPet = createAsyncThunk<
   CareLog[],
   { petId: string; type?: CareLog["type"] }
->("logs/loadByPet", async ({ petId, type }) => {
+>("logs/loadByPet", ({ petId, type }) => {
   const where: string[] = ["pet_id = ?"]
-  const params: any[] = [petId]
+  const params: unknown[] = [petId]
   if (type) {
     where.push("type = ?")
     params.push(type)

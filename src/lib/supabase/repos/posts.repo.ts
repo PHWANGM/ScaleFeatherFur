@@ -155,8 +155,9 @@ async function fetchLatestPostMedia(postIds: string[]) {
 
   // 因為已排序 created_at desc，所以同 post_id 第一筆即最新
   const map = new Map<string, PostMediaRow>()
-  ;(data ?? []).forEach((r: any) => {
-    if (!map.has(r.post_id)) map.set(r.post_id, r as PostMediaRow)
+  const mediaRows = (data ?? []) as PostMediaRow[]
+  mediaRows.forEach((r) => {
+    if (!map.has(r.post_id)) map.set(r.post_id, r)
   })
   return map
 }
@@ -197,7 +198,8 @@ export async function fetchPostsFeed(params?: {
   if (pErr) console.warn("[fetchPostsFeed] profiles error", pErr)
 
   const profileMap = new Map<string, ProfileRow>()
-  ;(profiles ?? []).forEach((p: any) => profileMap.set(p.id, p as ProfileRow))
+  const profileRows = (profiles ?? []) as ProfileRow[]
+  profileRows.forEach((p) => profileMap.set(p.id, p))
 
   // likes count（two-step）
   const { data: likesRows, error: lErr } = await supabase
@@ -208,8 +210,9 @@ export async function fetchPostsFeed(params?: {
   if (lErr) console.warn("[fetchPostsFeed] likes error", lErr)
 
   const likeCountMap = new Map<string, number>()
-  ;(likesRows ?? []).forEach((lr: any) => {
-    const pid = lr.post_id as string
+  const likeRows = (likesRows ?? []) as { post_id: string }[]
+  likeRows.forEach((lr) => {
+    const pid = lr.post_id
     likeCountMap.set(pid, (likeCountMap.get(pid) ?? 0) + 1)
   })
 
@@ -276,7 +279,7 @@ export async function createPostWithImage(input: {
 
   if (postErr) throw postErr
 
-  const postId = (post as any).id as string
+  const postId = (post as { id: string }).id
 
   // 2) pick image source
   const sourceUri = input.imageUri && input.imageUri.trim().length > 0

@@ -380,7 +380,7 @@ const CustomCalendar: React.FC = () => {
         )}
         enableSwipeMonths
         markingType="multi-dot"
-        markedDates={marked as unknown as Record<string, any>}
+        markedDates={marked as unknown as Record<string, unknown>}
         displayLoadingIndicator={loading}
         monthFormat="yyyy MM"
         theme={{

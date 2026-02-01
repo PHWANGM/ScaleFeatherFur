@@ -86,7 +86,7 @@ function useAppActiveSessionId() {
   return sessionId
 }
 
-export default function HomeScreen({ navigation }: Props) {
+export default function HomeScreen({ navigation: _navigation }: Props) {
   const { t } = useTranslation()
 
   const dispatch = useDispatch()
@@ -98,7 +98,7 @@ export default function HomeScreen({ navigation }: Props) {
       bg: colors.bg,
       card: colors.card,
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       border: colors.border,
       primary: colors.primary ?? "#38e07b",
     }),
@@ -154,8 +154,8 @@ export default function HomeScreen({ navigation }: Props) {
           setPet(null)
         }
       }
-    } catch (e: any) {
-      Alert.alert(t("home.dbErrorTitle"), String(e?.message ?? e))
+    } catch (e: unknown) {
+      Alert.alert(t("home.dbErrorTitle"), String(e instanceof Error ? e.message : e))
     } finally {
       setLoading(false)
     }
@@ -185,7 +185,7 @@ export default function HomeScreen({ navigation }: Props) {
 
       setSyncState({ status: "ok", ok: r.ok, failed: r.failed })
       return r
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.log("[flushOutboxToSupabase] failed", e)
       setSyncState({ status: "error", message: e?.message ?? String(e) })
 
@@ -193,7 +193,9 @@ export default function HomeScreen({ navigation }: Props) {
       try {
         const pending = await listUnsyncedOutbox(999)
         setPendingCount(pending.length)
-      } catch {}
+      } catch {
+      // ignore restore errors
+    }
       return { ok: 0, failed: 0 }
     }
   }, [])
@@ -227,7 +229,7 @@ export default function HomeScreen({ navigation }: Props) {
         )
         setDailyTasks(rows as TaskStatus[])
         return
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.warn(
           "[HomeScreen] supabase daily tasks failed, fallback local:",
           e,
@@ -241,7 +243,7 @@ export default function HomeScreen({ navigation }: Props) {
         dayEndISO,
       )
       setDailyTasks(localRows)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn("[HomeScreen] refreshDailyTasks failed:", e)
       setDailyTasks([])
     } finally {
@@ -274,7 +276,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         // 2) refresh (sync + load)
         await refreshDailyTasks()
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.warn("[HomeScreen] handleManualToggle failed:", e)
       }
     },

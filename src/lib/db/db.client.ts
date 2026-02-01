@@ -7,7 +7,7 @@ let _dbPromise: Promise<SQLite.SQLiteDatabase> | null = null
 // 測試替換（unit test 時可注入 :memory:）
 let _overrideDb: SQLite.SQLiteDatabase | null = null
 
-export async function getDB(): Promise<SQLite.SQLiteDatabase> {
+export function getDB(): Promise<SQLite.SQLiteDatabase> {
   if (_overrideDb) return _overrideDb
   if (!_dbPromise) {
     _dbPromise = (async () => {
@@ -35,7 +35,7 @@ export type ExecuteResult = {
   lastInsertRowid?: number | null
 }
 
-export async function query<T = any>(
+export async function query<T = unknown>(
   sql: string,
   params: SQLParams = [],
 ): Promise<T[]> {
@@ -78,7 +78,7 @@ export async function execute(
 export async function transaction(
   fn: (tx: {
     execute: (sql: string, params?: SQLParams) => Promise<ExecuteResult>
-    query: <T = any>(sql: string, params?: SQLParams) => Promise<T[]>
+    query: <T = unknown>(sql: string, params?: SQLParams) => Promise<T[]>
   }) => Promise<void>,
 ): Promise<void> {
   const db = await getDB()
@@ -90,7 +90,7 @@ export async function transaction(
           lastInsertRowid: (res.lastInsertRowId as number | null | undefined) ??
             null,
         })),
-      query: <T = any>(sql: string, params: SQLParams = []) =>
+      query: <T = unknown>(sql: string, params: SQLParams = []) =>
         db.getAllAsync<T>(sql, params),
     }
     await fn(txApi)

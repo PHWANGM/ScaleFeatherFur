@@ -50,8 +50,8 @@ export async function flushOutboxToSupabase(
         await markOutboxFailed(row.id, `Unknown outbox type: ${row.type}`)
         failed += 1
       }
-    } catch (e: any) {
-      await markOutboxFailed(row.id, String(e?.message ?? e))
+    } catch (e: unknown) {
+      await markOutboxFailed(row.id, String(e instanceof Error ? e.message : e))
       failed += 1
     }
   }

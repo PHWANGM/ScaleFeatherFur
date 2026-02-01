@@ -19,7 +19,7 @@ const TemperatureWarning: React.FC<Props> = ({ tempRisk }) => {
 
   const palette = useMemo(
     () => ({
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
     }),
     [colors],
   )
@@ -27,7 +27,7 @@ const TemperatureWarning: React.FC<Props> = ({ tempRisk }) => {
   // 沒有風險結果或根本不需要警示 → 不顯示
   if (!tempRisk || !tempRisk.shouldWarn) return null
 
-  const { segments = [], hourly = [], ambientMin, ambientMax } = tempRisk
+  const { segments = [], hourly = [] } = tempRisk
 
   // ⚠️ 跟原本 HomeScreen 一樣：不過濾 risk，全部 segments 都列出來
   const shownSegments: TempRiskSegment[] = segments

@@ -71,7 +71,9 @@ export default function ProductCreateForm({
     return JSON.stringify(arr)
   }, [tagsRaw])
 
-  const normalizePickerResult = (result: any): string | null => {
+  const normalizePickerResult = (
+    result: ImagePicker.ImagePickerResult,
+  ): string | null => {
     // 新版：result.canceled + result.assets[0].uri
     if (result && typeof result === "object") {
       if (result.canceled === true) return null

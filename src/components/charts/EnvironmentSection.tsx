@@ -38,7 +38,7 @@ export default function EnvironmentSection({
     bg: colors.bg,
     card: colors.card,
     text: colors.text,
-    subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+    subText: colors.subText ?? colors.textDim ?? "#97A3B6",
     border: colors.border,
     primary: colors.primary ?? "#38e07b",
   }

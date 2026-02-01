@@ -117,7 +117,7 @@ export default function PetPickerModal(
       try {
         const idStr = String(pet.id)
         setSelectingId(idStr) // 防止連點
-        const res: any = dispatch(setCurrentPetId(idStr))
+        const res = dispatch(setCurrentPetId(idStr))
         if (res && typeof res.then === "function") {
           await res
         }

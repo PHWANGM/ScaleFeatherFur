@@ -96,9 +96,9 @@ export default function App() {
 
         console.log("[App] boot done")
         if (!cancelled) setReady(true)
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("Boot failed", e)
-        if (!cancelled) setBootErr(e)
+        if (!cancelled) setBootErr(e as Error)
       } finally {
         clearTimeout(timeout)
       }

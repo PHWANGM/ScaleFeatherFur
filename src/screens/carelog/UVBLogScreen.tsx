@@ -48,7 +48,7 @@ const combineDateTime = (datePart: Date, timePart: Date) =>
 
 const UVBLogScreen: React.FC = () => {
   const { t } = useTranslation()
-  const navigation = useNavigation<any>()
+  const navigation = useNavigation()
   const dispatch = useDispatch()
   const currentPetId = useAppSelector(selectCurrentPetId)
   const selectedDate = useAppSelector(selectSelectedDate)

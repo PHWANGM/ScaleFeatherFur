@@ -70,7 +70,7 @@ type InvokeErrLike = {
 /**
  * 從 FunctionsHttpError 抽出 status/body（RN 常拿不到 body，拿得到就印出來）
  */
-async function readInvokeErrorDetail(err: unknown): Promise<{
+async function _readInvokeErrorDetail(err: unknown): Promise<{
   status?: number
   bodyText?: string
   message: string
@@ -119,6 +119,9 @@ function stringifyUnknown(x: unknown): string {
 }
 
 async function invokeAiAnalyzeRaw(jobId: string): Promise<RawFnOk> {
+  const process = (globalThis as { process?: { env: Record<string, string | undefined> } }).process as {
+    env: Record<string, string | undefined>
+  }
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
   const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
 

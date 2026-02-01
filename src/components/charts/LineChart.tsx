@@ -18,7 +18,6 @@ import type {
   Next24hUvbRiskResult,
   UvbRiskKind,
 } from "../../lib/compliance/uvbForecast.service"
-import { theme } from "../../styles/tokens"
 
 type Props = {
   title: string
@@ -44,7 +43,7 @@ export default function LineChart({
   height = 120,
   maxY,
   minY,
-  color = "#38e07b",
+  color: _color = "#38e07b",
   tempRisk = null,
   uvbRisk = null,
 }: Props) {

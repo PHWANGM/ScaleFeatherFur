@@ -2,8 +2,8 @@
 export type SQLiteRunResult = { changes?: number; lastInsertRowId?: number }
 export type SQLiteDatabase = {
   execAsync: (sql?: string) => Promise<void>
-  runAsync: (sql: string, params?: any[]) => Promise<SQLiteRunResult>
-  getAllAsync: <T = any>(sql: string, params?: any[]) => Promise<T[]>
+  runAsync: (sql: string, params?: unknown[]) => Promise<SQLiteRunResult>
+  getAllAsync: <T = unknown>(sql: string, params?: unknown[]) => Promise<T[]>
   withTransactionAsync: (fn: () => Promise<void>) => Promise<void>
 }
 
@@ -11,7 +11,7 @@ export type SQLiteDatabase = {
  * 在單元測試中若有人直接呼叫 openDatabaseAsync，
  * 我們故意拋錯，強迫你改用 __setTestDB 注入測試用 DB。
  */
-export async function openDatabaseAsync(
+export function openDatabaseAsync(
   _name: string,
 ): Promise<SQLiteDatabase> {
   throw new Error(
@@ -26,7 +26,7 @@ export async function openDatabaseAsync(
  * 用純 JS 模擬 SQLite；只覆蓋目前測試用得到的 SQL。
  * 後續若有新查詢樣式，再在 parse/handler 補分支即可。
  */
-type Row = Record<string, any>
+type Row = Record<string, unknown>
 
 type Tables = {
   species: Map<string, Row>
@@ -51,7 +51,7 @@ export function createTestDB(): SQLiteDatabase {
   const tables = ensureTables({})
 
   /** 允許多語句，僅處理 CREATE TABLE 與 PRAGMA，其他忽略 */
-  async function execAsync(sql?: string) {
+  function execAsync(sql?: string) {
     if (!sql) return
     const stmts = sql
       .split(";")
@@ -80,9 +80,9 @@ export function createTestDB(): SQLiteDatabase {
   }
 
   /** 僅支援本專案測試會用到的 INSERT/UPDATE/DELETE */
-  async function runAsync(
+  function runAsync(
     sql: string,
-    params: any[] = [],
+    params: unknown[] = [],
   ): Promise<SQLiteRunResult> {
     const up = sql.trim().toUpperCase()
 
@@ -175,7 +175,7 @@ export function createTestDB(): SQLiteDatabase {
       )
       const cols = setPart.split(",").map((s) => s.trim().split("=")[0].trim())
       const vals = params.slice(0, cols.length)
-      const patch: Record<string, any> = {}
+      const patch: Record<string, unknown> = {}
       cols.forEach((c, i) => (patch[c] = vals[i]))
 
       // 驗證 habitat（若有）
@@ -249,9 +249,9 @@ export function createTestDB(): SQLiteDatabase {
   }
 
   /** 僅支援目前測試會用到的 SELECT */
-  async function getAllAsync<T = any>(
+  function getAllAsync<T = unknown>(
     sql: string,
-    params: any[] = [],
+    params: unknown[] = [],
   ): Promise<T[]> {
     const up = sql.trim().toUpperCase()
 

@@ -39,7 +39,7 @@ export async function enqueueOutbox(
   )
 }
 
-export async function listUnsyncedOutbox(limit = 50): Promise<OutboxRow[]> {
+export function listUnsyncedOutbox(limit = 50): Promise<OutboxRow[]> {
   return query<OutboxRow>(
     `SELECT id, type, payload_json, created_at, synced_at, tries, last_error
      FROM sync_outbox

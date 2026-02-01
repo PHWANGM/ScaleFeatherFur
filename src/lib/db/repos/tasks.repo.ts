@@ -1,5 +1,5 @@
 // src/lib/db/repos/tasks.repo.ts
-import { execute, query, type SQLParams } from "../db.client"
+import { execute, query } from "../db.client"
 import { genId, nowIso } from "./_helpers"
 import { type CareLogRow, listCareLogsByPetBetween } from "./care.logs"
 import { enqueueOutbox, makeTaskCompleteOutboxId } from "./sync.outbox.repo"
@@ -64,13 +64,13 @@ export function dayRangeIsoLocal(date: Date): [string, string] {
   return [startLocal.toISOString(), endLocal.toISOString()]
 }
 
-export async function listTasks(): Promise<TaskRow[]> {
+export function listTasks(): Promise<TaskRow[]> {
   return query<TaskRow>(
     `SELECT key, title, description, points FROM tasks ORDER BY key ASC`,
   )
 }
 
-async function listTaskCompletionsByPetBetween(
+function listTaskCompletionsByPetBetween(
   petId: string,
   dayStartISO: string,
   dayEndISO: string,

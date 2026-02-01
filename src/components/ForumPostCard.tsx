@@ -24,7 +24,7 @@ type PaletteLike = {
   inputBg?: string
   link: string
   linkBg: string
-  [key: string]: any
+  [key: string]: string | undefined
 }
 
 type Props = {

@@ -1,5 +1,5 @@
 // src/lib/db/repos/pets.repo.ts
-import { execute, query, transaction } from "../db.client"
+import { execute, query } from "../db.client"
 import { buildSetClause, genId, nowIso } from "./_helpers"
 
 /** 與資料表一致的列型別 */
@@ -94,9 +94,9 @@ export async function getPetById(id: string): Promise<PetRow | null> {
 }
 
 /** 既有：清單（不含 species_name） */
-export async function listPets(filter: PetFilter = {}): Promise<PetRow[]> {
+export function listPets(filter: PetFilter = {}): Promise<PetRow[]> {
   const where: string[] = []
-  const params: any[] = []
+  const params: unknown[] = []
 
   if (filter.species_key) {
     where.push(`p.species_key = ?`)
@@ -172,11 +172,11 @@ export async function getPetWithSpeciesById(
 }
 
 /** 清單（含 species_name），過濾條件與原本一致 */
-export async function listPetsWithSpecies(
+export function listPetsWithSpecies(
   filter: PetFilter = {},
 ): Promise<PetWithSpeciesRow[]> {
   const where: string[] = []
-  const params: any[] = []
+  const params: unknown[] = []
 
   if (filter.species_key) {
     where.push(`p.species_key = ?`)

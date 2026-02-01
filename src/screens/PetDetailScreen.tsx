@@ -12,7 +12,13 @@ import { AppDispatch, RootState } from "../state/store"
 import { loadLogsByPet } from "../state/slices/logsSlice"
 import type { CareLogType } from "../lib/db/repos/care.logs"
 
-export default function PetDetailScreen({ route }: any) {
+type PetDetailRoute = {
+  params: {
+    pet: { id: string; name: string }
+  }
+}
+
+export default function PetDetailScreen({ route }: { route: PetDetailRoute }) {
   const { t } = useTranslation()
 
   const pet = route.params.pet as { id: string; name: string }

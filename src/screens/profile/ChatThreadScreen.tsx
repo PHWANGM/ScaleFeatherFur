@@ -62,9 +62,9 @@ const Avatar = ({ url, size = 32 }: { url?: string | null; size?: number }) => (
 
 export default function ChatThreadScreen() {
   const { t } = useTranslation()
-  const navigation = useNavigation<any>()
+  const navigation = useNavigation()
   const { colors } = useThemeColors()
-  const insets = useSafeAreaInsets()
+  const _insets = useSafeAreaInsets()
   const headerHeight = useHeaderHeight()
   const route = useRoute<ChatThreadRoute>()
   const { conversationId } = route.params
@@ -81,7 +81,7 @@ export default function ChatThreadScreen() {
   const listRef = useRef<FlatList<MessageRow>>(null)
 
   // ✅ 用來動態調整內容間距的量測值
-  const [inputBarHeight, setInputBarHeight] = useState(72)
+  const [_inputBarHeight, setInputBarHeight] = useState(72)
   const [liftPx, setLiftPx] = useState(0)
 
   // 1. 載入初始資料與 Header 設定
@@ -130,7 +130,7 @@ export default function ChatThreadScreen() {
     return subscribeChatThread({
       conversationId,
       myId,
-      onInsert: async (msg) => {
+      onInsert: (msg) => {
         setMessages((
           prev,
         ) => (prev.some((x) => x.id === msg.id) ? prev : [msg, ...prev]))

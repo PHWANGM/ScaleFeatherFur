@@ -14,7 +14,7 @@ type PaletteLike = {
   text: string
   subText: string
   link: string
-  [key: string]: any
+  [key: string]: string | undefined
 }
 
 type Props = {
@@ -65,10 +65,11 @@ const PetSpeciesDropdown: React.FC<Props> = ({
           label: row.common_name || row.key,
         }))
         setDbOptions(mapped)
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!mounted) return
         console.error("load species error", e)
-        setLoadError(e?.message ?? "載入物種失敗")
+        const message = e instanceof Error ? e.message : undefined
+        setLoadError(message ?? "載入物種失敗")
         setDbOptions(null)
       } finally {
         if (mounted) setLoading(false)

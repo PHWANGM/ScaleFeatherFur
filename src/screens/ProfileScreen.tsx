@@ -58,7 +58,7 @@ export default function ProfileScreen() {
       bg: colors.bg,
       card: colors.card,
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       border: colors.border,
       primary: colors.primary ?? "#38e07b",
     }),
@@ -121,8 +121,8 @@ export default function ProfileScreen() {
       const cloudTotal = await getUserPointsTotal(supabase)
       setTaskPoints(cloudTotal)
       setPointsSource("cloud")
-    } catch (e: any) {
-      const msg = String(e?.message ?? e ?? "load points failed")
+    } catch (e: unknown) {
+      const msg = String(e instanceof Error ? e.message : e ?? "load points failed")
       console.warn("[ProfileScreen] load points failed:", msg)
 
       try {

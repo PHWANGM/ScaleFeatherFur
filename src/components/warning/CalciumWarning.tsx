@@ -19,7 +19,7 @@ const CalciumWarning: React.FC<Props> = ({ petId }) => {
   const palette = useMemo(
     () => ({
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       primary: colors.primary ?? "#38e07b",
     }),
     [colors],
@@ -48,10 +48,10 @@ const CalciumWarning: React.FC<Props> = ({ petId }) => {
           console.log("[CalciumWarning] result", r)
           setResult(r)
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
           console.log("[CalciumWarning] error", e)
-          setError(String(e?.message ?? e))
+          setError(String(e instanceof Error ? e.message : e))
         }
       } finally {
         if (!cancelled) {

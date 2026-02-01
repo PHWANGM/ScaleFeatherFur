@@ -30,7 +30,7 @@ type WeatherHourly = {
   uviMax: number | null
   date: string
   locationKey: string
-  raw: any
+  raw: unknown
 }
 
 /** 使用 GPS 座標建立一個 location key（目前保留三位小數） */

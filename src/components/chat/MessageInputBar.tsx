@@ -1,5 +1,5 @@
 // src/components/chat/MessageInputBar.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   ActivityIndicator,
   Animated,
@@ -13,15 +13,24 @@ import {
   TextInput,
   View,
 } from "react-native"
+import type { KeyboardEvent } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { theme } from "../../styles/tokens"
+
+type MessageInputBarColors = {
+  bg: string
+  border: string
+  card: string
+  text: string
+  primary: string
+}
 
 export type MessageInputBarProps = {
   value: string
   onChangeText: (t: string) => void
   onSend: () => void | Promise<void>
   sending?: boolean
-  colors: any
+  colors: MessageInputBarColors
   textDim: string
   placeholder?: string
   onHeightChange?: (h: number) => void
@@ -71,10 +80,10 @@ const MessageInputBar = (props: MessageInputBarProps) => {
   useEffect(() => {
     if (Platform.OS !== "android") return
 
-    const onShow = (e: any) => {
+    const onShow = (e: KeyboardEvent) => {
       const keyboardHeight = e.endCoordinates.height
       // 測量輸入框目前在螢幕上的位置
-      containerRef.current?.measureInWindow((x, y, width, height) => {
+      containerRef.current?.measureInWindow((_x, y, _width, height) => {
         const inputBottomY = y + height
         const keyboardTopY = windowHeight - keyboardHeight
 

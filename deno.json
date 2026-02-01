@@ -14,7 +14,8 @@
   "lint": {
     "rules": {
       "include": ["recommended"]
-    }
+    },
+    "exclude": [".pnp.cjs", ".pnp.loader.mjs"]
   },
   "tasks": {
     "fmt": "deno fmt",

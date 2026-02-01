@@ -12,7 +12,7 @@ export type Product = {
 
 export const searchProductsByTags = createAsyncThunk(
   "products/searchByTags",
-  async (tags: string[]) => {
+  (tags: string[]) => {
     // tags 為 JSON 陣列字串包含關鍵字（用 LIKE 簡易實作）
     const ors = tags.map((_) => `tags LIKE ?`).join(" OR ")
     const params = tags.map((t) => `%${t}%`)

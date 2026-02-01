@@ -1,5 +1,5 @@
 // src/lib/db/repos/_helpers.ts
-import { execute, query, type SQLParams } from "../db.client"
+import { query, type SQLParams } from "../db.client"
 
 export type ISODate = string
 
@@ -17,7 +17,7 @@ export function buildSetClause(patch: Record<string, unknown>): {
     throw new Error("Nothing to update")
   }
   const cols = entries.map(([k]) => `${k} = ?`).join(", ")
-  const params = entries.map(([_, v]) => v as any)
+  const params = entries.map(([_, v]) => v as SQLParams[number])
   return { sql: cols, params }
 }
 
@@ -33,10 +33,12 @@ export async function existsBy<T = { n: number }>(
 /** 允許使用 Web Crypto 的 UUID；若環境不支援，退回簡易隨機字串 */
 export function genId(prefix: string): string {
   try {
-    // @ts-ignore
+    // @ts-ignore: crypto.randomUUID may be unavailable in some runtimes
     const id = crypto?.randomUUID?.()
     if (id) return id
-  } catch {}
+  } catch {
+    // ignore crypto failures
+  }
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${
     Date.now().toString(36)
   }`

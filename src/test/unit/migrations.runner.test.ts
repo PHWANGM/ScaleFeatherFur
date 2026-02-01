@@ -9,21 +9,21 @@ function makeFakeDb() {
   const journalQueries: string[] = []
 
   const db = {
-    execAsync: jest.fn(async (sql?: string) => {
+    execAsync: jest.fn((sql?: string) => {
       if (sql) executed.push(sql)
       // 支援 PRAGMA journal_mode; 的讀取回傳
       if (sql?.trim().toLowerCase() === "pragma journal_mode") {
         // do nothing here; this path is for real DB in smoke test
       }
     }),
-    runAsync: jest.fn(async (_sql: string, _params?: any[]) => {
+    runAsync: jest.fn((_sql: string, _params?: unknown[]) => {
       return { changes: 1, lastInsertRowId: 1 }
     }),
-    getAllAsync: jest.fn(async (sql: string) => {
+    getAllAsync: jest.fn((sql: string) => {
       if (sql.includes("SELECT name FROM migrations")) return [] // 初次遷移
       return []
     }),
-    withTransactionAsync: jest.fn(async (fn: any) => {
+    withTransactionAsync: jest.fn(async (fn: () => Promise<void>) => {
       await fn()
     }),
   } as unknown as SQLite.SQLiteDatabase
@@ -34,7 +34,7 @@ function makeFakeDb() {
 describe("runMigrations (mocked DB)", () => {
   beforeAll(() => {
     // 用 inline SQL 覆蓋 MIGRATIONS，避免讀資產檔
-    // @ts-ignore
+    // @ts-ignore: overwrite MIGRATIONS for test
     MIGRATIONS.splice(0, MIGRATIONS.length, {
       name: "V1__init.sql",
       sql: `

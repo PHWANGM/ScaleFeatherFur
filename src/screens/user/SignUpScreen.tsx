@@ -44,7 +44,7 @@ export default function SignUpScreen() {
       card: colors.card,
       text: colors.text,
       border: colors.border,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       primary: colors.primary ?? theme.colors.primary,
       inputBg: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
       danger: theme.colors.critical,
@@ -68,7 +68,7 @@ export default function SignUpScreen() {
 
       if (!res.session) setHint(t("signup.hints.verifyEmailSent"))
       else navigation.replace("MainTabs")
-    } catch (e: any) {
+    } catch (e: unknown) {
       setErr(toUserMessage(e, t("signup.errors.failedFallback")))
     } finally {
       setLoading(false)

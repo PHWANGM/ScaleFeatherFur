@@ -101,7 +101,7 @@ export async function getCareLogById(id: string): Promise<CareLogRow | null> {
 }
 
 // ========= 常用查詢 =========
-export async function listCareLogsByPetBetween(
+export function listCareLogsByPetBetween(
   petId: string,
   startISOInclusive: string,
   endISOExclusive: string,
@@ -267,7 +267,7 @@ export async function getDailyAggregatesSQL(
   }
 }
 
-export async function getSupplementCounts(
+export function getSupplementCounts(
   petId: string,
   fromISO: string,
   toISO: string,

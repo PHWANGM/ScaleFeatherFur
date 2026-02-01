@@ -113,7 +113,7 @@ export default function SpeciesEditorScreen() {
           // new mode: focus common name
           setTimeout(() => refCommon.current?.focus(), 0)
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         Alert.alert(
           t("speciesEditor.alerts.loadFailed.title"),
           err?.message ?? String(err),
@@ -204,7 +204,7 @@ export default function SpeciesEditorScreen() {
       }
 
       navigation.goBack()
-    } catch (err: any) {
+    } catch (err: unknown) {
       Alert.alert(
         t("speciesEditor.alerts.saveFailed.title"),
         err?.message ?? String(err),
@@ -249,7 +249,7 @@ export default function SpeciesEditorScreen() {
                 return
               }
               navigation.goBack()
-            } catch (err: any) {
+            } catch (err: unknown) {
               Alert.alert(
                 t("speciesEditor.alerts.deleteFailed.title"),
                 err?.message ?? String(err),

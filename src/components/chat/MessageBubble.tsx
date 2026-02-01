@@ -5,6 +5,13 @@ import { Image, StyleSheet, Text, View } from "react-native"
 import { theme } from "../../styles/tokens"
 import { type MessageRow } from "../../lib/supabase/repos/message.repo"
 
+type MessageBubbleColors = {
+  primary: string
+  card: string
+  border: string
+  text: string
+}
+
 type AvatarProps = { url?: string | null; size?: number }
 
 const Avatar = ({ url, size = 32 }: AvatarProps) => (
@@ -29,7 +36,7 @@ const Avatar = ({ url, size = 32 }: AvatarProps) => (
 export type MessageBubbleProps = {
   item: MessageRow
   isMine: boolean
-  colors: any
+  colors: MessageBubbleColors
   textDim: string
   otherAvatar?: string | null
 

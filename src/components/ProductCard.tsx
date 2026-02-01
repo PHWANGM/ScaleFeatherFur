@@ -70,8 +70,11 @@ export default function ProductCard({
         if (Array.isArray(parsed)) {
           tagsText = parsed.filter((x) => typeof x === "string").join(" · ")
         } else if (parsed && typeof parsed === "object") {
-          if (Array.isArray((parsed as any).tags)) {
-            tagsText = (parsed as any).tags.join(" · ")
+          const tags = (parsed as { tags?: unknown }).tags
+          if (Array.isArray(tags)) {
+            tagsText = tags
+              .filter((t): t is string => typeof t === "string")
+              .join(" · ")
           }
         } else if (typeof parsed === "string") {
           tagsText = parsed

@@ -59,7 +59,7 @@ export default function AuthCallbackScreen() {
     () => ({
       bg: colors.bg,
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       card: colors.card,
       border: colors.border,
       primary: colors.primary ?? theme.colors.primary,
@@ -78,14 +78,13 @@ export default function AuthCallbackScreen() {
 
       setPhase("success")
       navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] })
-    } catch (e: any) {
+    } catch (e: unknown) {
       setPhase("error")
-      setErrorDetail(e?.message ?? null)
+      setErrorDetail(e instanceof Error ? e.message : null)
     }
   }
 
   useEffect(() => {
-    let sub: any
     ;(async () => {
       setPhase("verifying")
       setErrorDetail(null)
@@ -98,7 +97,7 @@ export default function AuthCallbackScreen() {
       }
     })()
 
-    sub = Linking.addEventListener("url", ({ url }) => {
+    const sub = Linking.addEventListener("url", ({ url }) => {
       handleUrl(url)
     })
 

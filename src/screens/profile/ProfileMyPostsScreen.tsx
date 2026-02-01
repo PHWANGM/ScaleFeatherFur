@@ -82,8 +82,9 @@ async function fetchMyPosts(myId: string, limit = 50): Promise<MyPostsRow[]> {
   if (lErr) console.warn("[fetchMyPosts] likes error", lErr)
 
   const likeCountMap = new Map<string, number>()
-  ;(likesRows ?? []).forEach((lr: any) => {
-    const pid = lr.post_id as string
+  const likeRows = (likesRows ?? []) as { post_id: string }[]
+  likeRows.forEach((lr) => {
+    const pid = lr.post_id
     likeCountMap.set(pid, (likeCountMap.get(pid) ?? 0) + 1)
   })
 
@@ -97,10 +98,11 @@ async function fetchMyPosts(myId: string, limit = 50): Promise<MyPostsRow[]> {
   if (mErr) console.warn("[fetchMyPosts] post_media error", mErr)
 
   const latestMediaMap = new Map<string, { storage_path: string }>()
-  ;(mediaRows ?? []).forEach((mr: any) => {
+  const latestMediaRows = (mediaRows ?? []) as { post_id: string; storage_path: string }[]
+  latestMediaRows.forEach((mr) => {
     if (!latestMediaMap.has(mr.post_id)) {
       latestMediaMap.set(mr.post_id, {
-        storage_path: mr.storage_path as string,
+        storage_path: mr.storage_path,
       })
     }
   })
@@ -190,11 +192,11 @@ export default function ProfileMyPostsScreen() {
 
       const rows = await fetchMyPosts(uid, 80)
       setPosts(rows)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.warn("[ProfileMyPostsScreen] load error", e)
       Alert.alert(
         t("myPosts.alerts.errorTitle"),
-        e?.message ?? t("myPosts.alerts.loadFailed"),
+        e instanceof Error ? e.message : t("myPosts.alerts.loadFailed"),
       )
     } finally {
       setLoading(false)

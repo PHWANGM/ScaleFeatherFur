@@ -11,7 +11,7 @@ export type SpeciesRow = {
   updated_at: string
 }
 
-export async function listSpecies(): Promise<SpeciesRow[]> {
+export function listSpecies(): Promise<SpeciesRow[]> {
   const sql =
     `SELECT key, common_name, scientific_name, notes, created_at, updated_at
                FROM species ORDER BY updated_at DESC`
@@ -59,7 +59,7 @@ export async function updateSpecies(key: string, patch: {
 }): Promise<SpeciesRow> {
   const updated = nowIso()
   const fields: string[] = []
-  const params: any[] = []
+  const params: unknown[] = []
   if (patch.common_name !== undefined) {
     fields.push("common_name = ?")
     params.push(patch.common_name)

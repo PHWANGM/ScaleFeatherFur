@@ -17,7 +17,7 @@ export function normalizeEmail(email: string) {
 }
 
 export function toUserMessage(err: unknown, fallback = "發生錯誤，請稍後再試") {
-  const msg = (err as any)?.message ?? ""
+  const msg = err instanceof Error ? err.message : ""
   if (!msg) return fallback
 
   // 你可以在這裡做更完整的 supabase error mapping

@@ -41,7 +41,7 @@ export default function LoginScreen() {
       card: colors.card,
       text: colors.text,
       border: colors.border,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       primary: colors.primary ?? theme.colors.primary,
       inputBg: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
       danger: theme.colors.critical,
@@ -72,7 +72,7 @@ export default function LoginScreen() {
         .catch((e) => console.log("[flushOutboxToSupabase] failed", e))
 
       navigation.replace("MainTabs")
-    } catch (e: any) {
+    } catch (e: unknown) {
       setErr(e?.message ?? t("login.errors.failedFallback"))
     } finally {
       setLoading(false)

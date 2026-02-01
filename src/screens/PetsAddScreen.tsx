@@ -80,7 +80,7 @@ export default function PetsAddScreen() {
       bg: colors.bg,
       card: colors.card,
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       border: colors.border,
       primary: colors.primary ?? "#38e07b",
     }),
@@ -177,7 +177,7 @@ export default function PetsAddScreen() {
       } else if (sp.length > 0 && !speciesKey) {
         setSpeciesKey(sp[0].key)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       Alert.alert(t("petsAdd.loadFailed.title"), err?.message ?? String(err))
     } finally {
       setLoading(false)
@@ -197,7 +197,9 @@ export default function PetsAddScreen() {
         try {
           const sp = await listSpecies()
           if (alive) setSpecies(sp)
-        } catch {}
+        } catch {
+          // ignore picker errors
+        }
       })()
       return () => {
         alive = false
@@ -332,7 +334,7 @@ export default function PetsAddScreen() {
       }
 
       navigation.goBack()
-    } catch (err: any) {
+    } catch (err: unknown) {
       Alert.alert(t("petsAdd.saveFailed.title"), err?.message ?? String(err))
     } finally {
       setSaving(false)

@@ -33,7 +33,7 @@ export default function ForgotPasswordScreen() {
       bg: colors.bg,
       card: colors.card,
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      subText: colors.subText ?? colors.textDim ?? "#97A3B6",
       border: colors.border,
       primary: colors.primary ?? theme.colors.primary,
       inputBg: isDark ? "rgba(255,255,255,0.04)" : "#ffffff",
@@ -61,7 +61,7 @@ export default function ForgotPasswordScreen() {
       if (error) throw error
 
       setMsg(t("forgotPassword.success"))
-    } catch (e: any) {
+    } catch (e: unknown) {
       setErr(e?.message ?? t("forgotPassword.errors.sendFailed"))
     } finally {
       setLoading(false)

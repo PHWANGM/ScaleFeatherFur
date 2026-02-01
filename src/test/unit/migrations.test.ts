@@ -5,6 +5,16 @@
 import { __setTestDB } from "../../lib/db/db.client"
 import { runMigrations } from "../../lib/db/migrate"
 
+type FakeDb = {
+  execAsync: (sql?: string) => Promise<void>
+  runAsync: (sql: string, params?: unknown[]) => Promise<{
+    changes: number
+    lastInsertRowId: number
+  }>
+  getAllAsync: (sql: string) => Promise<unknown[]>
+  withTransactionAsync: (fn: () => Promise<void>) => Promise<void>
+}
+
 // ★ 把 migrations 模組直接 mock 成 inline SQL，避免 require .sql 檔
 jest.mock("../../lib/db/migrations", () => ({
   MIGRATIONS: [
@@ -32,14 +42,14 @@ jest.mock("../../lib/db/migrations", () => ({
 function makeFakeDb() {
   const executed: string[] = []
   const db = {
-    execAsync: jest.fn(async (sql?: string) => {
+    execAsync: jest.fn((sql?: string) => {
       if (sql) executed.push(sql)
     }),
-    runAsync: jest.fn(async (sql: string, params?: any[]) => {
+    runAsync: jest.fn((_sql: string, _params?: unknown[]) => {
       // 當 runner 寫入 migrations 紀錄時，這裡會被呼叫
       return { changes: 1, lastInsertRowId: 1 }
     }),
-    getAllAsync: jest.fn(async (sql: string) => {
+    getAllAsync: jest.fn((sql: string) => {
       // 第一次查詢 migrations 名單 → 回空陣列（表示尚未執行）
       if (sql.includes("SELECT name FROM migrations")) return []
       // 測最後驗證：查 sqlite_master 確認 species 已建立
@@ -48,10 +58,10 @@ function makeFakeDb() {
       }
       return []
     }),
-    withTransactionAsync: jest.fn(async (fn: any) => {
+    withTransactionAsync: jest.fn(async (fn: () => Promise<void>) => {
       await fn()
     }),
-  } as any
+  } as unknown as FakeDb
   return { db, executed }
 }
 

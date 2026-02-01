@@ -58,6 +58,8 @@ const weatherCache = new Map<string, CachedWeather>()
 const round2 = (n: number) => Math.round(n * 100) / 100
 const makeKey = (coords: Coords, maxAgeHours: number) =>
   `${round2(coords.latitude)}:${round2(coords.longitude)}:age=${maxAgeHours}`
+const toErrorMessage = (e: unknown) =>
+  e instanceof Error ? e.message : String(e)
 
 const emptyBase = {
   tempHourly: [],
@@ -140,8 +142,9 @@ export function useNext24HourlyWeatherByCoords(
       const cloudHourly: number[] = Array.isArray(hourly.cloudcover)
         ? hourly.cloudcover
         : []
-      const timesLocal: string[] = Array.isArray((hourly as any).timesLocal)
-        ? (hourly as any).timesLocal
+      const timesLocalRaw = (hourly as { timesLocal?: unknown }).timesLocal
+      const timesLocal: string[] = Array.isArray(timesLocalRaw)
+        ? timesLocalRaw.filter((t): t is string => typeof t === "string")
         : []
 
       // 這裡的陣列已經代表「從現在起往後 24 小時」
@@ -176,15 +179,15 @@ export function useNext24HourlyWeatherByCoords(
         error: undefined,
         // tempRisk/uvbRisk 由下面另一個 effect 重新計算
       }))
-    } catch (e: any) {
-      console.warn("weather load error:", e?.message ?? e)
+    } catch (e: unknown) {
+      console.warn("weather load error:", toErrorMessage(e))
       setState((prev) => ({
         ...prev,
         loading: false,
         ...emptyBase,
         tempRisk: null,
         uvbRisk: null,
-        error: String(e?.message ?? e),
+        error: toErrorMessage(e),
       }))
     }
   }, [coords, key, maxAgeHours, sessionId])
@@ -241,15 +244,15 @@ export function useNext24HourlyWeatherByCoords(
           tempRisk,
           uvbRisk,
         }))
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (riskJobIdRef.current !== jobId) return
-        console.warn("risk calc error:", e?.message ?? e)
+        console.warn("risk calc error:", toErrorMessage(e))
         // 風險算失敗不清空天氣，只把 risk 設 null 並保留 error
         setState((prev) => ({
           ...prev,
           tempRisk: null,
           uvbRisk: null,
-          error: prev.error ?? String(e?.message ?? e),
+          error: prev.error ?? toErrorMessage(e),
         }))
       }
     }

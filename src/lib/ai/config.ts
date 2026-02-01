@@ -23,8 +23,8 @@ export async function getGeminiApiKey(): Promise<string> {
       throw new Error("API_KEY_NOT_SET")
     }
     return key
-  } catch (err: any) {
-    if (err?.message === "API_KEY_NOT_SET") throw err
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "API_KEY_NOT_SET") throw err
     console.error("[config] Failed to get API key:", err)
     throw new Error("API_KEY_ACCESS_ERROR")
   }

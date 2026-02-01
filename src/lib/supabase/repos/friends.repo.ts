@@ -38,7 +38,6 @@ function normalizePair(
   b: string,
 ): { user_a: string; user_b: string } {
   return a < b ? { user_a: a, user_b: b } : { user_a: b, user_b: a }
-  console.log("Normalized pair:", { a })
 }
 
 export async function fetchProfilesByIds(

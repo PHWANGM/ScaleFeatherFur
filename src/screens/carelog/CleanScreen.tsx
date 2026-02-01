@@ -39,7 +39,7 @@ const combineDateTime = (datePart: Date, timePart: Date) =>
 
 const CleanScreen: React.FC = () => {
   const { t } = useTranslation()
-  const navigation = useNavigation<any>()
+  const navigation = useNavigation()
   const currentPetId = useAppSelector(selectCurrentPetId)
   const { colors } = useThemeColors()
 

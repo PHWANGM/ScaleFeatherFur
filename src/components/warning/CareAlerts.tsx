@@ -10,6 +10,12 @@ import UVBWarning from "./UVBWarning"
 import FeedingWarning from "./FeedingWarning"
 import CalciumWarning from "./CalciumWarning"
 import VitaminD3Warning from "./VitaminD3Warning"
+import type {
+  Next24hTempRiskResult,
+} from "../../lib/compliance/envTempForecast.service"
+import type {
+  Next24hUvbRiskResult,
+} from "../../lib/compliance/uvbForecast.service"
 
 type Palette = {
   card: string
@@ -23,8 +29,8 @@ type Props = {
   palette: Palette
   speciesLabel: string
   currentPetId: string | null
-  tempRisk: any
-  uvbRisk: any
+  tempRisk: Next24hTempRiskResult | null
+  uvbRisk: Next24hUvbRiskResult | null
 }
 
 export default function CareAlerts({

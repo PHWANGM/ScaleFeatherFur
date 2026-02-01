@@ -25,7 +25,7 @@ type PaletteLike = {
   border: string
   primary: string
   inputBg?: string
-  [key: string]: any
+  [key: string]: string | undefined
 }
 
 export type ForumCreatePostInput = {
@@ -74,7 +74,7 @@ const ForumCreatePost: React.FC<ForumCreatePostProps> = ({
         productLink: productLink.trim(),
       })
       onSuccess()
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
       Alert.alert("錯誤", e?.message ?? "無法發布貼文")
     } finally {
