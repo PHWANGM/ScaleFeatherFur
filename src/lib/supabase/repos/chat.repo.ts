@@ -26,7 +26,11 @@ export async function fetchOtherParticipantProfile(params: {
 
   if (error || !data) return null
 
-  const profile = (data as { profiles?: { display_name?: string | null; avatar_url?: string | null } | null }).profiles
+  const profile = (data as {
+    profiles?:
+      | { display_name?: string | null; avatar_url?: string | null }
+      | null
+  }).profiles
   if (!profile) return null
 
   return {
@@ -93,8 +97,8 @@ export function subscribeChatThread(params: {
         try {
           await markConversationRead(conversationId, myId)
         } catch {
-    // ignore mark read errors
-  }
+          // ignore mark read errors
+        }
       }
     },
   })

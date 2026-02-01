@@ -155,7 +155,10 @@ export default function HomeScreen({ navigation: _navigation }: Props) {
         }
       }
     } catch (e: unknown) {
-      Alert.alert(t("home.dbErrorTitle"), String(e instanceof Error ? e.message : e))
+      Alert.alert(
+        t("home.dbErrorTitle"),
+        String(e instanceof Error ? e.message : e),
+      )
     } finally {
       setLoading(false)
     }
@@ -194,8 +197,8 @@ export default function HomeScreen({ navigation: _navigation }: Props) {
         const pending = await listUnsyncedOutbox(999)
         setPendingCount(pending.length)
       } catch {
-      // ignore restore errors
-    }
+        // ignore restore errors
+      }
       return { ok: 0, failed: 0 }
     }
   }, [])

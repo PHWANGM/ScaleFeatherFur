@@ -122,7 +122,9 @@ export default function ProfileScreen() {
       setTaskPoints(cloudTotal)
       setPointsSource("cloud")
     } catch (e: unknown) {
-      const msg = String(e instanceof Error ? e.message : e ?? "load points failed")
+      const msg = String(
+        e instanceof Error ? e.message : e ?? "load points failed",
+      )
       console.warn("[ProfileScreen] load points failed:", msg)
 
       try {

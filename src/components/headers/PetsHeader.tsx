@@ -83,7 +83,10 @@ export default function PetsHeader({ onAddPress }: Props) {
       }
       console.log("[PetPickerModal] Current pet ID changed:", currentPetId)
     } catch (e: unknown) {
-      console.warn("[PetsHeader] loadFromSlice failed:", e instanceof Error ? e.message : e)
+      console.warn(
+        "[PetsHeader] loadFromSlice failed:",
+        e instanceof Error ? e.message : e,
+      )
       if (mountedRef.current) setPet(null)
     } finally {
       if (mountedRef.current) setLoading(false)
@@ -104,7 +107,9 @@ export default function PetsHeader({ onAddPress }: Props) {
       onAddPress()
       return
     }
-    const parent = (navigation as unknown as { getParent?: () => { navigate?: (name: string) => void } | undefined })
+    const parent = (navigation as unknown as {
+      getParent?: () => { navigate?: (name: string) => void } | undefined
+    })
       .getParent?.()
     if (parent?.navigate) {
       parent.navigate("PetsAdd" as never)

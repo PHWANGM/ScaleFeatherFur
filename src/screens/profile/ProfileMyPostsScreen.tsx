@@ -98,7 +98,10 @@ async function fetchMyPosts(myId: string, limit = 50): Promise<MyPostsRow[]> {
   if (mErr) console.warn("[fetchMyPosts] post_media error", mErr)
 
   const latestMediaMap = new Map<string, { storage_path: string }>()
-  const latestMediaRows = (mediaRows ?? []) as { post_id: string; storage_path: string }[]
+  const latestMediaRows = (mediaRows ?? []) as {
+    post_id: string
+    storage_path: string
+  }[]
   latestMediaRows.forEach((mr) => {
     if (!latestMediaMap.has(mr.post_id)) {
       latestMediaMap.set(mr.post_id, {
