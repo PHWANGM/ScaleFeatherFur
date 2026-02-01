@@ -1,7 +1,7 @@
 // src/lib/compliance/envTempForecast.service.ts
-import { getEffectiveTargetForPet } from '../db/repos/species.targets.repo';
+import { getEffectiveTargetForPet } from "../db/repos/species.targets.repo"
 
-export type TempRiskKind = 'ok' | 'too_cold' | 'too_hot' | 'unknown';
+export type TempRiskKind = "ok" | "too_cold" | "too_hot" | "unknown"
 
 export type HourlyTempRisk = {
   /**
@@ -10,46 +10,46 @@ export type HourlyTempRisk = {
    * - 1 = next24TempC[1] / timesLocal[1]
    * - ...
    */
-  hourOffset: number;
+  hourOffset: number
   /**
    * 當地小時（0–23），直接由 timesLocal 解析出 HH，
    * 不依賴裝置時區。
    */
-  localHour: number | null;
+  localHour: number | null
   /** 該小時的當地時間 ISO 字串（含 offset），例如 "2025-11-11T17:00+08:00" */
-  localIso: string | null;
-  temp_c: number | null;
-  risk: TempRiskKind;
-};
+  localIso: string | null
+  temp_c: number | null
+  risk: TempRiskKind
+}
 
 export type TempRiskSegment = {
   /** 從「第 0 筆」起算的 offset 起點（含） */
-  fromOffset: number;
+  fromOffset: number
   /** 從「第 0 筆」起算的 offset 終點（含） */
-  toOffset: number;
+  toOffset: number
   /** 起始小時（0–23，用來顯示幾點） */
-  fromHour: number | null;
+  fromHour: number | null
   /** 結束小時（0–23，用來顯示幾點） */
-  toHour: number | null;
-  risk: TempRiskKind;
-};
+  toHour: number | null
+  risk: TempRiskKind
+}
 
 export type Next24hTempRiskResult = {
-  petId: string;
+  petId: string
   /** 實際有幾個小時被檢查（通常是 24） */
-  hoursChecked: number;
+  hoursChecked: number
 
-  ambientMin: number | null;
-  ambientMax: number | null;
+  ambientMin: number | null
+  ambientMax: number | null
 
-  hasTooCold: boolean;
-  hasTooHot: boolean;
+  hasTooCold: boolean
+  hasTooHot: boolean
   /** 只要有 too_cold 或 too_hot 就 true → UI 可以直接用來顯示預警 */
-  shouldWarn: boolean;
+  shouldWarn: boolean
 
-  hourly: HourlyTempRisk[];
-  segments: TempRiskSegment[];
-};
+  hourly: HourlyTempRisk[]
+  segments: TempRiskSegment[]
+}
 
 /**
  * 由當地時間字串（含 offset）解析「當地小時」：
@@ -60,17 +60,19 @@ export type Next24hTempRiskResult = {
  *
  * 我們只取 T 之後前兩位的 HH，不依賴裝置時區。
  */
-function extractLocalHourFromIso(iso: string | null | undefined): number | null {
-  if (!iso) return null;
-  const parts = iso.split('T');
-  if (parts.length < 2) return null;
-  const timePart = parts[1];
+function extractLocalHourFromIso(
+  iso: string | null | undefined,
+): number | null {
+  if (!iso) return null
+  const parts = iso.split("T")
+  if (parts.length < 2) return null
+  const timePart = parts[1]
 
   // timePart 可能是 "17:00+08:00" / "09:00Z" / "17:00:30+08:00"
-  const hhStr = timePart.slice(0, 2);
-  const hh = Number(hhStr);
-  if (Number.isNaN(hh) || hh < 0 || hh > 23) return null;
-  return hh;
+  const hhStr = timePart.slice(0, 2)
+  const hh = Number(hhStr)
+  if (Number.isNaN(hh) || hh < 0 || hh > 23) return null
+  return hh
 }
 
 /**
@@ -89,38 +91,38 @@ function extractLocalHourFromIso(iso: string | null | undefined): number | null 
 export async function evaluateNext24hAmbientTempForPetFromTodayHourly(
   petId: string,
   next24TempC: number[],
-  timesLocal: string[]
+  timesLocal: string[],
 ): Promise<Next24hTempRiskResult | null> {
-  const target = await getEffectiveTargetForPet(petId);
-  if (!target) return null;
+  const target = await getEffectiveTargetForPet(petId)
+  if (!target) return null
 
-  const min = target.ambient_temp_c_min ?? null;
-  const max = target.ambient_temp_c_max ?? null;
+  const min = target.ambient_temp_c_min ?? null
+  const max = target.ambient_temp_c_max ?? null
   if (min == null || max == null) {
     // 沒有 ambient 範圍 → 無法評估
-    return null;
+    return null
   }
 
-  const hourly: HourlyTempRisk[] = [];
-  let hasTooCold = false;
-  let hasTooHot = false;
+  const hourly: HourlyTempRisk[] = []
+  let hasTooCold = false
+  let hasTooHot = false
 
   // 逐小時判斷風險
   next24TempC.forEach((t, offset) => {
-    const localIso = timesLocal[offset] ?? null;
-    const localHour = extractLocalHourFromIso(localIso);
+    const localIso = timesLocal[offset] ?? null
+    const localHour = extractLocalHourFromIso(localIso)
 
-    let risk: TempRiskKind;
+    let risk: TempRiskKind
     if (t == null || Number.isNaN(t)) {
-      risk = 'unknown';
+      risk = "unknown"
     } else if (t < min) {
-      risk = 'too_cold';
-      hasTooCold = true;
+      risk = "too_cold"
+      hasTooCold = true
     } else if (t > max) {
-      risk = 'too_hot';
-      hasTooHot = true;
+      risk = "too_hot"
+      hasTooHot = true
     } else {
-      risk = 'ok';
+      risk = "ok"
     }
 
     hourly.push({
@@ -129,24 +131,24 @@ export async function evaluateNext24hAmbientTempForPetFromTodayHourly(
       localIso,
       temp_c: t ?? null,
       risk,
-    });
-  });
+    })
+  })
 
-  const hoursChecked = hourly.length;
-  const shouldWarn = hasTooCold || hasTooHot;
+  const hoursChecked = hourly.length
+  const shouldWarn = hasTooCold || hasTooHot
 
   // 將連續同一 risk 的小時依 hourOffset 合併成 segments
-  const segments: TempRiskSegment[] = [];
+  const segments: TempRiskSegment[] = []
   for (const h of hourly) {
-    const last = segments[segments.length - 1];
+    const last = segments[segments.length - 1]
 
     if (
       last &&
       last.risk === h.risk &&
       h.hourOffset === last.toOffset + 1 // 依 offset 判斷是否連續（支援跨午夜）
     ) {
-      last.toOffset = h.hourOffset;
-      last.toHour = h.localHour;
+      last.toOffset = h.hourOffset
+      last.toHour = h.localHour
     } else {
       segments.push({
         fromOffset: h.hourOffset,
@@ -154,10 +156,9 @@ export async function evaluateNext24hAmbientTempForPetFromTodayHourly(
         fromHour: h.localHour,
         toHour: h.localHour,
         risk: h.risk,
-      });
+      })
     }
   }
-
 
   return {
     petId,
@@ -169,5 +170,5 @@ export async function evaluateNext24hAmbientTempForPetFromTodayHourly(
     shouldWarn,
     hourly,
     segments,
-  };
+  }
 }

@@ -729,7 +729,7 @@
       "requestSentTo": "Friend request sent to {{name}}."
     }
   },
- "messages": {
+  "messages": {
     "title": "Messages",
     "loading": "Loading messages…",
     "signInToUse": "Please sign in to view your chats.",

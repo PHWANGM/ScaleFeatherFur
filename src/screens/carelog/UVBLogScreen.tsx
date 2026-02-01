@@ -1,5 +1,5 @@
 // src/screens/UVBLogScreen.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Alert,
   Platform,
@@ -9,21 +9,31 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useNavigation } from '@react-navigation/native';
-import { useDispatch } from 'react-redux';
-import { useTranslation } from 'react-i18next';
+} from "react-native"
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker"
+import { useNavigation } from "@react-navigation/native"
+import { useDispatch } from "react-redux"
+import { useTranslation } from "react-i18next"
 
-import { insertCareLog } from '../../lib/db/repos/care.logs';
-import { selectCurrentPetId, selectSelectedDate } from '../../state/slices/petsSlice';
-import { endSession, selectUvbSessionByPetId, startSession } from '../../state/slices/uvbSlice';
-import { useThemeColors } from '../../styles/themesColors';
-import { useAppSelector } from '../../state/hooks';
+import { insertCareLog } from "../../lib/db/repos/care.logs"
+import {
+  selectCurrentPetId,
+  selectSelectedDate,
+} from "../../state/slices/petsSlice"
+import {
+  endSession,
+  selectUvbSessionByPetId,
+  startSession,
+} from "../../state/slices/uvbSlice"
+import { useThemeColors } from "../../styles/themesColors"
+import { useAppSelector } from "../../state/hooks"
 
-const pad2 = (n: number) => String(n).padStart(2, '0');
-const formatDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-const formatTime = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+const pad2 = (n: number) => String(n).padStart(2, "0")
+const formatDate = (d: Date) =>
+  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+const formatTime = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 
 const combineDateTime = (datePart: Date, timePart: Date) =>
   new Date(
@@ -33,213 +43,256 @@ const combineDateTime = (datePart: Date, timePart: Date) =>
     timePart.getHours(),
     timePart.getMinutes(),
     0,
-    0
-  );
+    0,
+  )
 
 const UVBLogScreen: React.FC = () => {
-  const { t } = useTranslation();
-  const navigation = useNavigation<any>();
-  const dispatch = useDispatch();
-  const currentPetId = useAppSelector(selectCurrentPetId);
-  const selectedDate = useAppSelector(selectSelectedDate);
-  const uvbSession = useAppSelector((state) => selectUvbSessionByPetId(state, currentPetId));
-  const { colors } = useThemeColors();
+  const { t } = useTranslation()
+  const navigation = useNavigation<any>()
+  const dispatch = useDispatch()
+  const currentPetId = useAppSelector(selectCurrentPetId)
+  const selectedDate = useAppSelector(selectSelectedDate)
+  const uvbSession = useAppSelector((state) =>
+    selectUvbSessionByPetId(state, currentPetId)
+  )
+  const { colors } = useThemeColors()
 
   const initialDate = useMemo(() => {
-    if (!selectedDate) return new Date();
-    const d = new Date(selectedDate);
-    return Number.isNaN(d.getTime()) ? new Date() : d;
-  }, [selectedDate]);
+    if (!selectedDate) return new Date()
+    const d = new Date(selectedDate)
+    return Number.isNaN(d.getTime()) ? new Date() : d
+  }, [selectedDate])
 
-  const [datePart, setDatePart] = useState<Date>(initialDate);
-  const [timePart, setTimePart] = useState<Date>(new Date());
-  const [durationMinutes, setDurationMinutes] = useState<string>('30');
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [saving, setSaving] = useState(false);
+  const [datePart, setDatePart] = useState<Date>(initialDate)
+  const [timePart, setTimePart] = useState<Date>(new Date())
+  const [durationMinutes, setDurationMinutes] = useState<string>("30")
+  const [elapsedMs, setElapsedMs] = useState(0)
+  const [saving, setSaving] = useState(false)
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [iosPickerMode, setIosPickerMode] = useState<'date' | 'time' | null>(null);
-  const [iosTemp, setIosTemp] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
+  const [iosPickerMode, setIosPickerMode] = useState<"date" | "time" | null>(
+    null,
+  )
+  const [iosTemp, setIosTemp] = useState<Date>(new Date())
 
-  const sessionStarted = uvbSession.active;
+  const sessionStarted = uvbSession.active
   const sessionStartAt = useMemo(
     () => (uvbSession.startAtIso ? new Date(uvbSession.startAtIso) : null),
-    [uvbSession.startAtIso]
-  );
-  const timerStartMs = uvbSession.timerStartMs;
+    [uvbSession.startAtIso],
+  )
+  const timerStartMs = uvbSession.timerStartMs
 
   const effectiveDurationMinutes = sessionStarted
     ? uvbSession.durationMinutes
-    : Number(durationMinutes);
+    : Number(durationMinutes)
 
   const durationMs = useMemo(() => {
-    const n = effectiveDurationMinutes;
-    return Number.isFinite(n) && n > 0 ? Math.floor(n) * 60_000 : 0;
-  }, [effectiveDurationMinutes]);
+    const n = effectiveDurationMinutes
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) * 60_000 : 0
+  }, [effectiveDurationMinutes])
 
   const remainingMs = useMemo(() => {
-    if (durationMs <= 0) return 0;
-    return Math.max(durationMs - elapsedMs, 0);
-  }, [durationMs, elapsedMs]);
+    if (durationMs <= 0) return 0
+    return Math.max(durationMs - elapsedMs, 0)
+  }, [durationMs, elapsedMs])
 
   useEffect(() => {
-    if (!sessionStarted || timerStartMs == null) return;
-    setElapsedMs(Math.max(Date.now() - timerStartMs, 0));
+    if (!sessionStarted || timerStartMs == null) return
+    setElapsedMs(Math.max(Date.now() - timerStartMs, 0))
     const id = setInterval(() => {
-      const next = Date.now() - timerStartMs;
-      setElapsedMs(next);
-    }, 500);
-    return () => clearInterval(id);
-  }, [sessionStarted, timerStartMs, durationMs]);
+      const next = Date.now() - timerStartMs
+      setElapsedMs(next)
+    }, 500)
+    return () => clearInterval(id)
+  }, [sessionStarted, timerStartMs, durationMs])
 
   useEffect(() => {
-    if (!sessionStarted || !sessionStartAt) return;
-    setDatePart(sessionStartAt);
-    setTimePart(sessionStartAt);
-    setDurationMinutes(String(uvbSession.durationMinutes));
-  }, [sessionStarted, sessionStartAt, uvbSession.durationMinutes]);
+    if (!sessionStarted || !sessionStartAt) return
+    setDatePart(sessionStartAt)
+    setTimePart(sessionStartAt)
+    setDurationMinutes(String(uvbSession.durationMinutes))
+  }, [sessionStarted, sessionStartAt, uvbSession.durationMinutes])
 
   const openDatePicker = useCallback(() => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(true);
+    if (Platform.OS === "android") {
+      setShowDatePicker(true)
     } else {
-      setIosTemp(datePart);
-      setIosPickerMode('date');
+      setIosTemp(datePart)
+      setIosPickerMode("date")
     }
-  }, [datePart]);
+  }, [datePart])
 
   const openTimePicker = useCallback(() => {
-    if (Platform.OS === 'android') {
-      setShowTimePicker(true);
+    if (Platform.OS === "android") {
+      setShowTimePicker(true)
     } else {
-      setIosTemp(timePart);
-      setIosPickerMode('time');
+      setIosTemp(timePart)
+      setIosPickerMode("time")
     }
-  }, [timePart]);
+  }, [timePart])
 
   const onAndroidDateChange = useCallback(
     (_e: DateTimePickerEvent, date?: Date) => {
-      setShowDatePicker(false);
-      if (date) setDatePart(date);
+      setShowDatePicker(false)
+      if (date) setDatePart(date)
     },
-    []
-  );
+    [],
+  )
 
   const onAndroidTimeChange = useCallback(
     (_e: DateTimePickerEvent, date?: Date) => {
-      setShowTimePicker(false);
-      if (date) setTimePart(date);
+      setShowTimePicker(false)
+      if (date) setTimePart(date)
     },
-    []
-  );
+    [],
+  )
 
-  const onIosCancel = useCallback(() => setIosPickerMode(null), []);
+  const onIosCancel = useCallback(() => setIosPickerMode(null), [])
   const onIosConfirm = useCallback(() => {
-    if (iosPickerMode === 'date') setDatePart(iosTemp);
-    if (iosPickerMode === 'time') setTimePart(iosTemp);
-    setIosPickerMode(null);
-  }, [iosPickerMode, iosTemp]);
+    if (iosPickerMode === "date") setDatePart(iosTemp)
+    if (iosPickerMode === "time") setTimePart(iosTemp)
+    setIosPickerMode(null)
+  }, [iosPickerMode, iosTemp])
 
   const handleStart = useCallback(() => {
     if (!currentPetId) {
-      Alert.alert(t('carelog.uvb.alerts.noPetTitle'), t('carelog.uvb.alerts.noPetMessage'));
-      return;
+      Alert.alert(
+        t("carelog.uvb.alerts.noPetTitle"),
+        t("carelog.uvb.alerts.noPetMessage"),
+      )
+      return
     }
-    const minutesValue = Number(durationMinutes);
+    const minutesValue = Number(durationMinutes)
     if (!Number.isFinite(minutesValue) || minutesValue <= 0) {
-      Alert.alert(t('carelog.uvb.alerts.invalidTimerTitle'), t('carelog.uvb.alerts.invalidTimerMessage'));
-      return;
+      Alert.alert(
+        t("carelog.uvb.alerts.invalidTimerTitle"),
+        t("carelog.uvb.alerts.invalidTimerMessage"),
+      )
+      return
     }
-    const startAt = combineDateTime(datePart, timePart);
+    const startAt = combineDateTime(datePart, timePart)
     dispatch(
       startSession({
         petId: currentPetId,
         startAtIso: startAt.toISOString(),
         timerStartMs: Date.now(),
         durationMinutes: Math.floor(minutesValue),
-      })
-    );
-    setElapsedMs(0);
-  }, [currentPetId, datePart, dispatch, durationMinutes, timePart, t]);
+      }),
+    )
+    setElapsedMs(0)
+  }, [currentPetId, datePart, dispatch, durationMinutes, timePart, t])
 
   const handleStop = useCallback(async () => {
-    if (!currentPetId || !sessionStarted || !sessionStartAt) return;
-    const effectiveElapsedMs =
-      timerStartMs != null ? Math.max(Date.now() - timerStartMs, 0) : Math.max(elapsedMs, 0);
-    const endAt = new Date(sessionStartAt.getTime() + effectiveElapsedMs);
-    const durationMin = Math.max(1, Math.round(effectiveElapsedMs / 60000));
+    if (!currentPetId || !sessionStarted || !sessionStartAt) return
+    const effectiveElapsedMs = timerStartMs != null
+      ? Math.max(Date.now() - timerStartMs, 0)
+      : Math.max(elapsedMs, 0)
+    const endAt = new Date(sessionStartAt.getTime() + effectiveElapsedMs)
+    const durationMin = Math.max(1, Math.round(effectiveElapsedMs / 60000))
 
     try {
-      setSaving(true);
+      setSaving(true)
       await insertCareLog({
         pet_id: currentPetId,
-        type: 'uvb',
-        subtype: 'uvb',
-        category: 'light',
+        type: "uvb",
+        subtype: "uvb",
+        category: "light",
         value: durationMin,
-        unit: 'min',
-        note: t('carelog.uvb.note', { minutes: durationMin }),
+        unit: "min",
+        note: t("carelog.uvb.note", { minutes: durationMin }),
         at: endAt.toISOString(),
-      });
+      })
 
-      dispatch(endSession({ petId: currentPetId }));
-      setElapsedMs(0);
+      dispatch(endSession({ petId: currentPetId }))
+      setElapsedMs(0)
 
-      navigation.navigate('MainTabs', { screen: 'Care' });
+      navigation.navigate("MainTabs", { screen: "Care" })
     } catch (err) {
-      console.error('[UVBLogScreen] Failed to save UVB logs:', err);
-      Alert.alert(t('carelog.uvb.alerts.saveFailedTitle'), t('carelog.uvb.alerts.saveFailedMessage'));
+      console.error("[UVBLogScreen] Failed to save UVB logs:", err)
+      Alert.alert(
+        t("carelog.uvb.alerts.saveFailedTitle"),
+        t("carelog.uvb.alerts.saveFailedMessage"),
+      )
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  }, [currentPetId, dispatch, elapsedMs, navigation, sessionStartAt, sessionStarted, timerStartMs, t]);
+  }, [
+    currentPetId,
+    dispatch,
+    elapsedMs,
+    navigation,
+    sessionStartAt,
+    sessionStarted,
+    timerStartMs,
+    t,
+  ])
 
   const elapsedDisplay = useMemo(() => {
-    const totalSec = Math.floor(elapsedMs / 1000);
-    const mm = Math.floor(totalSec / 60);
-    const ss = totalSec % 60;
-    return `${pad2(mm)}:${pad2(ss)}`;
-  }, [elapsedMs]);
+    const totalSec = Math.floor(elapsedMs / 1000)
+    const mm = Math.floor(totalSec / 60)
+    const ss = totalSec % 60
+    return `${pad2(mm)}:${pad2(ss)}`
+  }, [elapsedMs])
 
   const remainingDisplay = useMemo(() => {
-    if (durationMs <= 0) return '--:--';
-    const totalSec = Math.floor(remainingMs / 1000);
-    const mm = Math.floor(totalSec / 60);
-    const ss = totalSec % 60;
-    return `${pad2(mm)}:${pad2(ss)}`;
-  }, [durationMs, remainingMs]);
+    if (durationMs <= 0) return "--:--"
+    const totalSec = Math.floor(remainingMs / 1000)
+    const mm = Math.floor(totalSec / 60)
+    const ss = totalSec % 60
+    return `${pad2(mm)}:${pad2(ss)}`
+  }, [durationMs, remainingMs])
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.uvb.date')}</Text>
+        <Text style={[styles.label, { color: colors.subText }]}>
+          {t("carelog.uvb.date")}
+        </Text>
         <Pressable
-          style={[styles.inputLike, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={[styles.inputLike, {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+          }]}
           onPress={openDatePicker}
           disabled={sessionStarted}
         >
-          <Text style={[styles.valueText, { color: colors.text }]}>{formatDate(datePart)}</Text>
+          <Text style={[styles.valueText, { color: colors.text }]}>
+            {formatDate(datePart)}
+          </Text>
         </Pressable>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.uvb.time')}</Text>
+        <Text style={[styles.label, { color: colors.subText }]}>
+          {t("carelog.uvb.time")}
+        </Text>
         <Pressable
-          style={[styles.inputLike, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={[styles.inputLike, {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+          }]}
           onPress={openTimePicker}
           disabled={sessionStarted}
         >
-          <Text style={[styles.valueText, { color: colors.text }]}>{formatTime(timePart)}</Text>
+          <Text style={[styles.valueText, { color: colors.text }]}>
+            {formatTime(timePart)}
+          </Text>
         </Pressable>
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.label, { color: colors.subText }]}>{t('carelog.uvb.timerMinutes')}</Text>
+        <Text style={[styles.label, { color: colors.subText }]}>
+          {t("carelog.uvb.timerMinutes")}
+        </Text>
         <TextInput
           style={[
             styles.input,
-            { backgroundColor: colors.card, borderColor: colors.border, color: colors.text },
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              color: colors.text,
+            },
           ]}
           value={durationMinutes}
           onChangeText={setDurationMinutes}
@@ -253,22 +306,32 @@ const UVBLogScreen: React.FC = () => {
 
       <View style={styles.timerCard}>
         <View style={styles.timerRow}>
-          <Text style={[styles.timerLabel, { color: colors.subText }]}>{t('carelog.uvb.elapsed')}</Text>
-          <Text style={[styles.timerValue, { color: colors.text }]}>{elapsedDisplay}</Text>
+          <Text style={[styles.timerLabel, { color: colors.subText }]}>
+            {t("carelog.uvb.elapsed")}
+          </Text>
+          <Text style={[styles.timerValue, { color: colors.text }]}>
+            {elapsedDisplay}
+          </Text>
         </View>
         <View style={styles.timerRow}>
-          <Text style={[styles.timerLabel, { color: colors.subText }]}>{t('carelog.uvb.remaining')}</Text>
-          <Text style={[styles.timerValue, { color: colors.text }]}>{remainingDisplay}</Text>
+          <Text style={[styles.timerLabel, { color: colors.subText }]}>
+            {t("carelog.uvb.remaining")}
+          </Text>
+          <Text style={[styles.timerValue, { color: colors.text }]}>
+            {remainingDisplay}
+          </Text>
         </View>
 
         {!!sessionStarted && durationMs > 0 && (
           <Text
             style={[
               styles.timerStatus,
-              { color: elapsedMs >= durationMs ? '#ef4444' : colors.subText },
+              { color: elapsedMs >= durationMs ? "#ef4444" : colors.subText },
             ]}
           >
-            {elapsedMs >= durationMs ? t('carelog.uvb.overExposure') : t('carelog.uvb.countingDown')}
+            {elapsedMs >= durationMs
+              ? t("carelog.uvb.overExposure")
+              : t("carelog.uvb.countingDown")}
           </Text>
         )}
       </View>
@@ -277,27 +340,35 @@ const UVBLogScreen: React.FC = () => {
         <Pressable
           style={[
             styles.primaryButton,
-            { backgroundColor: colors.primary, opacity: sessionStarted || saving ? 0.6 : 1 },
+            {
+              backgroundColor: colors.primary,
+              opacity: sessionStarted || saving ? 0.6 : 1,
+            },
           ]}
           onPress={handleStart}
           disabled={sessionStarted || saving}
         >
-          <Text style={styles.primaryButtonText}>{t('carelog.uvb.start')}</Text>
+          <Text style={styles.primaryButtonText}>{t("carelog.uvb.start")}</Text>
         </Pressable>
 
         <Pressable
           style={[
             styles.secondaryButton,
-            { borderColor: colors.border, opacity: !sessionStarted || saving ? 0.6 : 1 },
+            {
+              borderColor: colors.border,
+              opacity: !sessionStarted || saving ? 0.6 : 1,
+            },
           ]}
           onPress={handleStop}
           disabled={!sessionStarted || saving}
         >
-          <Text style={[styles.secondaryButtonText, { color: colors.text }]}>{t('carelog.uvb.end')}</Text>
+          <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
+            {t("carelog.uvb.end")}
+          </Text>
         </Pressable>
       </View>
 
-      {Platform.OS === 'android' && showDatePicker && (
+      {Platform.OS === "android" && showDatePicker && (
         <DateTimePicker
           value={datePart}
           mode="date"
@@ -306,7 +377,7 @@ const UVBLogScreen: React.FC = () => {
         />
       )}
 
-      {Platform.OS === 'android' && showTimePicker && (
+      {Platform.OS === "android" && showTimePicker && (
         <DateTimePicker
           value={timePart}
           mode="time"
@@ -315,32 +386,45 @@ const UVBLogScreen: React.FC = () => {
         />
       )}
 
-      {Platform.OS === 'ios' && iosPickerMode && (
+      {Platform.OS === "ios" && iosPickerMode && (
         <View style={styles.iosOverlay}>
-          <View style={[styles.iosSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.iosHeader, { borderBottomColor: colors.border }]}>
+          <View
+            style={[styles.iosSheet, {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            }]}
+          >
+            <View
+              style={[styles.iosHeader, { borderBottomColor: colors.border }]}
+            >
               <Pressable onPress={onIosCancel} style={styles.iosHeaderBtn}>
                 <Text style={[styles.iosHeaderBtnText, { color: colors.text }]}>
-                  {t('carelog.uvb.iosPicker.cancel')}
+                  {t("carelog.uvb.iosPicker.cancel")}
                 </Text>
               </Pressable>
 
               <Text style={[styles.iosHeaderTitle, { color: colors.text }]}>
-                {iosPickerMode === 'date'
-                  ? t('carelog.uvb.iosPicker.selectDate')
-                  : t('carelog.uvb.iosPicker.selectTime')}
+                {iosPickerMode === "date"
+                  ? t("carelog.uvb.iosPicker.selectDate")
+                  : t("carelog.uvb.iosPicker.selectTime")}
               </Text>
 
               <Pressable onPress={onIosConfirm} style={styles.iosHeaderBtn}>
-                <Text style={[styles.iosHeaderBtnText, { color: colors.text, fontWeight: '700' }]}>
-                  {t('carelog.uvb.iosPicker.done')}
+                <Text
+                  style={[styles.iosHeaderBtnText, {
+                    color: colors.text,
+                    fontWeight: "700",
+                  }]}
+                >
+                  {t("carelog.uvb.iosPicker.done")}
                 </Text>
               </Pressable>
             </View>
 
             <DateTimePicker
               value={iosTemp}
-              onChange={(_, d) => d && setIosTemp(d)}
+              onChange={(_, d) =>
+                d && setIosTemp(d)}
               mode={iosPickerMode}
               display="spinner"
             />
@@ -348,8 +432,8 @@ const UVBLogScreen: React.FC = () => {
         </View>
       )}
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 16 },
@@ -372,35 +456,39 @@ const styles = StyleSheet.create({
   timerCard: {
     borderRadius: 12,
     padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: "rgba(0,0,0,0.04)",
   },
-  timerRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
+  timerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
   timerLabel: { fontSize: 13 },
-  timerValue: { fontSize: 18, fontWeight: '700' },
-  timerStatus: { marginTop: 6, fontSize: 13, textAlign: 'center' },
+  timerValue: { fontSize: 18, fontWeight: "700" },
+  timerStatus: { marginTop: 6, fontSize: 13, textAlign: "center" },
   buttonRow: { gap: 12, marginTop: 8 },
   primaryButton: {
     borderRadius: 12,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  primaryButtonText: { color: '#022c22', fontSize: 16, fontWeight: '700' },
+  primaryButtonText: { color: "#022c22", fontSize: 16, fontWeight: "700" },
   secondaryButton: {
     borderRadius: 12,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
   },
-  secondaryButtonText: { fontSize: 16, fontWeight: '600' },
+  secondaryButtonText: { fontSize: 16, fontWeight: "600" },
 
   iosOverlay: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   iosSheet: {
     borderTopLeftRadius: 16,
@@ -410,14 +498,14 @@ const styles = StyleSheet.create({
   iosHeader: {
     height: 48,
     paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iosHeaderBtn: { paddingHorizontal: 8, paddingVertical: 6 },
   iosHeaderBtnText: { fontSize: 14 },
-  iosHeaderTitle: { fontSize: 15, fontWeight: '600' },
-});
+  iosHeaderTitle: { fontSize: 15, fontWeight: "600" },
+})
 
-export default UVBLogScreen;
+export default UVBLogScreen

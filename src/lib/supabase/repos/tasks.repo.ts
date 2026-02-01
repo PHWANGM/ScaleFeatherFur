@@ -17,48 +17,51 @@
 // - We keep the same public API shape: listTasks / getDailyTaskStatus / completeTaskManually
 // - Points are awarded ONLY in DB via RPC (client never inserts points_ledger).
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { listCareLogsByPetBetween, type CareLogRow } from '../../db/repos/care.logs';
+import type { SupabaseClient } from "@supabase/supabase-js"
+import {
+  type CareLogRow,
+  listCareLogsByPetBetween,
+} from "../../db/repos/care.logs"
 
 // =====================
 // Types
 // =====================
 export type TaskRow = {
-  key: string;
-  title: string;
-  description: string | null;
-  points: number;
-};
+  key: string
+  title: string
+  description: string | null
+  points: number
+}
 
 export type TaskCompletionRow = {
-  id: string;
-  user_id: string;
-  pet_id: string | null;
-  task_key: string;
-  day: string; // YYYY-MM-DD (date)
-  at: string; // timestamptz (ISO)
-  created_at: string;
-};
+  id: string
+  user_id: string
+  pet_id: string | null
+  task_key: string
+  day: string // YYYY-MM-DD (date)
+  at: string // timestamptz (ISO)
+  created_at: string
+}
 
 export type TaskStatus = TaskRow & {
-  completed: boolean;
-  auto: boolean;
-};
+  completed: boolean
+  auto: boolean
+}
 
 // =====================
 // Auto task mapping
 // =====================
 const AUTO_TASK_KEYS = new Set([
-  'feed',
-  'calcium',
-  'vitamin',
-  'uvb',
-  'heat',
-  'clean',
-  'weigh',
-]);
+  "feed",
+  "calcium",
+  "vitamin",
+  "uvb",
+  "heat",
+  "clean",
+  "weigh",
+])
 
-const isAutoTask = (key: string) => AUTO_TASK_KEYS.has(key);
+const isAutoTask = (key: string) => AUTO_TASK_KEYS.has(key)
 
 // =====================
 // Date helpers
@@ -69,17 +72,19 @@ const isAutoTask = (key: string) => AUTO_TASK_KEYS.has(key);
  * (Same behavior as your old code: local midnight -> next local midnight, then toISOString)
  */
 export function dayRangeIsoLocal(date: Date): [string, string] {
-  const y = date.getFullYear();
-  const m = date.getMonth();
-  const d = date.getDate();
-  const startLocal = new Date(y, m, d, 0, 0, 0, 0);
-  const endLocal = new Date(y, m, d + 1, 0, 0, 0, 0);
-  return [startLocal.toISOString(), endLocal.toISOString()];
+  const y = date.getFullYear()
+  const m = date.getMonth()
+  const d = date.getDate()
+  const startLocal = new Date(y, m, d, 0, 0, 0, 0)
+  const endLocal = new Date(y, m, d + 1, 0, 0, 0, 0)
+  return [startLocal.toISOString(), endLocal.toISOString()]
 }
-export async function getUserPointsTotal(supabase: SupabaseClient): Promise<number> {
-  const { data, error } = await supabase.rpc('get_points_total');
-  if (error) throw new Error(`get_points_total RPC failed: ${error.message}`);
-  return Number(data ?? 0);
+export async function getUserPointsTotal(
+  supabase: SupabaseClient,
+): Promise<number> {
+  const { data, error } = await supabase.rpc("get_points_total")
+  if (error) throw new Error(`get_points_total RPC failed: ${error.message}`)
+  return Number(data ?? 0)
 }
 
 /**
@@ -87,11 +92,11 @@ export async function getUserPointsTotal(supabase: SupabaseClient): Promise<numb
  * Important: uses device local timezone. For your Taiwan users, that's Asia/Taipei.
  */
 function isoToLocalDayString(iso: string): string {
-  const dt = new Date(iso);
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, '0');
-  const d = String(dt.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const dt = new Date(iso)
+  const y = dt.getFullYear()
+  const m = String(dt.getMonth() + 1).padStart(2, "0")
+  const d = String(dt.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
 }
 
 // =====================
@@ -100,29 +105,31 @@ function isoToLocalDayString(iso: string): string {
 
 export async function listTasks(supabase: SupabaseClient): Promise<TaskRow[]> {
   const { data, error } = await supabase
-    .from('tasks')
-    .select('key,title,description,points')
-    .order('key', { ascending: true });
+    .from("tasks")
+    .select("key,title,description,points")
+    .order("key", { ascending: true })
 
-  if (error) throw new Error(`listTasks failed: ${error.message}`);
-  return (data ?? []) as TaskRow[];
+  if (error) throw new Error(`listTasks failed: ${error.message}`)
+  return (data ?? []) as TaskRow[]
 }
 
 async function listTaskCompletionsByPetAndDay(
   supabase: SupabaseClient,
   petId: string,
-  day: string
+  day: string,
 ): Promise<TaskCompletionRow[]> {
   const { data, error } = await supabase
-    .from('task_completion')
-    .select('id,user_id,pet_id,task_key,day,at,created_at')
-    .eq('day', day)
+    .from("task_completion")
+    .select("id,user_id,pet_id,task_key,day,at,created_at")
+    .eq("day", day)
     // If you decided pet_id is nullable and you want "per user per day per task" uniqueness,
     // we still filter by pet_id for UI status for this pet.
-    .eq('pet_id', petId);
+    .eq("pet_id", petId)
 
-  if (error) throw new Error(`listTaskCompletionsByPetAndDay failed: ${error.message}`);
-  return (data ?? []) as TaskCompletionRow[];
+  if (error) {
+    throw new Error(`listTaskCompletionsByPetAndDay failed: ${error.message}`)
+  }
+  return (data ?? []) as TaskCompletionRow[]
 }
 
 /**
@@ -134,15 +141,17 @@ async function rpcCompleteTask(
   supabase: SupabaseClient,
   petId: string,
   taskKey: string,
-  day: string
+  day: string,
 ): Promise<void> {
-  const { error } = await supabase.rpc('complete_task', {
+  const { error } = await supabase.rpc("complete_task", {
     p_task_key: taskKey,
     p_pet_id: petId,
     p_day: day, // YYYY-MM-DD
-  });
+  })
 
-  if (error) throw new Error(`complete_task RPC failed (${taskKey}): ${error.message}`);
+  if (error) {
+    throw new Error(`complete_task RPC failed (${taskKey}): ${error.message}`)
+  }
 }
 
 // =====================
@@ -150,22 +159,24 @@ async function rpcCompleteTask(
 // =====================
 function isTaskDoneByLogs(taskKey: string, logs: CareLogRow[]): boolean {
   switch (taskKey) {
-    case 'feed':
-      return logs.some((l) => l.type === 'feed');
-    case 'calcium':
-      return logs.some((l) => l.type === 'calcium');
-    case 'vitamin':
-      return logs.some((l) => l.type === 'vitamin');
-    case 'uvb':
-      return logs.some((l) => l.type === 'uvb' || l.type === 'uvb_on' || l.type === 'uvb_off');
-    case 'heat':
-      return logs.some((l) => l.type === 'heat_on' || l.type === 'heat_off');
-    case 'clean':
-      return logs.some((l) => l.type === 'clean');
-    case 'weigh':
-      return logs.some((l) => l.type === 'weigh');
+    case "feed":
+      return logs.some((l) => l.type === "feed")
+    case "calcium":
+      return logs.some((l) => l.type === "calcium")
+    case "vitamin":
+      return logs.some((l) => l.type === "vitamin")
+    case "uvb":
+      return logs.some((l) =>
+        l.type === "uvb" || l.type === "uvb_on" || l.type === "uvb_off"
+      )
+    case "heat":
+      return logs.some((l) => l.type === "heat_on" || l.type === "heat_off")
+    case "clean":
+      return logs.some((l) => l.type === "clean")
+    case "weigh":
+      return logs.some((l) => l.type === "weigh")
     default:
-      return false;
+      return false
   }
 }
 
@@ -184,28 +195,28 @@ export async function getDailyTaskStatus(
   supabase: SupabaseClient,
   petId: string,
   dayStartISO: string,
-  dayEndISO: string
+  dayEndISO: string,
 ): Promise<TaskStatus[]> {
-  const day = isoToLocalDayString(dayStartISO);
+  const day = isoToLocalDayString(dayStartISO)
 
   // 1) Load all data needed
   const [tasks, logs, completions] = await Promise.all([
     listTasks(supabase),
     listCareLogsByPetBetween(petId, dayStartISO, dayEndISO),
     listTaskCompletionsByPetAndDay(supabase, petId, day),
-  ]);
+  ])
 
-  const completedSet = new Set(completions.map((c) => c.task_key));
+  const completedSet = new Set(completions.map((c) => c.task_key))
 
   // 2) Auto-complete (by logs) via RPC (safe to call multiple times thanks to unique constraint)
   // Do it sequentially to keep requests sane; you can batch if you want later.
   for (const task of tasks) {
-    if (!isAutoTask(task.key)) continue;
-    if (completedSet.has(task.key)) continue;
-    if (!isTaskDoneByLogs(task.key, logs)) continue;
+    if (!isAutoTask(task.key)) continue
+    if (completedSet.has(task.key)) continue
+    if (!isTaskDoneByLogs(task.key, logs)) continue
 
-    await rpcCompleteTask(supabase, petId, task.key, day);
-    completedSet.add(task.key);
+    await rpcCompleteTask(supabase, petId, task.key, day)
+    completedSet.add(task.key)
   }
 
   // 3) Return status
@@ -213,7 +224,7 @@ export async function getDailyTaskStatus(
     ...t,
     completed: completedSet.has(t.key),
     auto: isAutoTask(t.key),
-  }));
+  }))
 }
 
 /**
@@ -228,8 +239,8 @@ export async function completeTaskManually(
   taskKey: string,
   dayStartISO: string,
   _dayEndISO: string,
-  _points: number
+  _points: number,
 ): Promise<void> {
-  const day = isoToLocalDayString(dayStartISO);
-  await rpcCompleteTask(supabase, petId, taskKey, day);
+  const day = isoToLocalDayString(dayStartISO)
+  await rpcCompleteTask(supabase, petId, taskKey, day)
 }

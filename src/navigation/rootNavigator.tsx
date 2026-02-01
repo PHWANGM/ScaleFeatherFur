@@ -1,108 +1,111 @@
 // src/navigation/rootNavigator.tsx
-import React, { useMemo } from 'react';
-import { View, Pressable, Platform } from 'react-native';
+import React, { useMemo } from "react"
+import { Platform, Pressable, View } from "react-native"
 import {
-  createBottomTabNavigator,
   type BottomTabBarButtonProps,
-} from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator, type NativeStackNavigationOptions } from '@react-navigation/native-stack';
-import { Feather } from '@expo/vector-icons';
-import type { NavigatorScreenParams } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
+  createBottomTabNavigator,
+} from "@react-navigation/bottom-tabs"
+import {
+  createNativeStackNavigator,
+  type NativeStackNavigationOptions,
+} from "@react-navigation/native-stack"
+import { Feather } from "@expo/vector-icons"
+import type { NavigatorScreenParams } from "@react-navigation/native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useTranslation } from "react-i18next"
 
 // ===== Screens =====
-import WelcomeScreen from '../screens/WelcomeScreen';
-import HomeScreen from '../screens/HomeScreen';
-import LogsScreen from '../screens/LogsScreen';
-import PetForumScreen from '../screens/PetForumScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import SpeciesEditorScreen from '../screens/SpeciesEditorScreen';
-import PetSelectScreen from '../screens/PetSelectScreen';
-import SpeciesNeedsScreen from '../screens/SpeciesNeedsScreen';
-import PetsAddScreen from '../screens/PetsAddScreen';
-import SettingsScreen from '../screens/SettingsScreen';
+import WelcomeScreen from "../screens/WelcomeScreen"
+import HomeScreen from "../screens/HomeScreen"
+import LogsScreen from "../screens/LogsScreen"
+import PetForumScreen from "../screens/PetForumScreen"
+import ProfileScreen from "../screens/ProfileScreen"
+import SpeciesEditorScreen from "../screens/SpeciesEditorScreen"
+import PetSelectScreen from "../screens/PetSelectScreen"
+import SpeciesNeedsScreen from "../screens/SpeciesNeedsScreen"
+import PetsAddScreen from "../screens/PetsAddScreen"
+import SettingsScreen from "../screens/SettingsScreen"
 
 // ✅ NEW: Profile friends system screens
-import ProfileFriendsScreen from '../screens/profile/ProfileFriendsScreen';
-import ProfileMessagesScreen from '../screens/profile/ProfileMessagesScreen';
-import ProfileMatchScreen from '../screens/profile/ProfileMatchScreen';
-import ChatThreadScreen from '../screens/profile/ChatThreadScreen';
+import ProfileFriendsScreen from "../screens/profile/ProfileFriendsScreen"
+import ProfileMessagesScreen from "../screens/profile/ProfileMessagesScreen"
+import ProfileMatchScreen from "../screens/profile/ProfileMatchScreen"
+import ChatThreadScreen from "../screens/profile/ChatThreadScreen"
 
 // ✅ NEW: My Posts screen
-import ProfileMyPostsScreen from '../screens/profile/ProfileMyPostsScreen';
+import ProfileMyPostsScreen from "../screens/profile/ProfileMyPostsScreen"
 
 // carelog
-import WeighScreen from '../screens/carelog/WeighScreen';
-import FeedInputScreen from '../screens/carelog/FeedInputScreen';
-import UVBLogScreen from '../screens/carelog/UVBLogScreen';
-import CleanScreen from '../screens/carelog/CleanScreen';
+import WeighScreen from "../screens/carelog/WeighScreen"
+import FeedInputScreen from "../screens/carelog/FeedInputScreen"
+import UVBLogScreen from "../screens/carelog/UVBLogScreen"
+import CleanScreen from "../screens/carelog/CleanScreen"
 
 // auth
-import LoginScreen from '../screens/user/LoginScreen';
-import SignUpScreen from '../screens/user/SignUpScreen';
-import ForgotPasswordScreen from '../screens/user/ForgotPasswordScreen';
-import ResetPasswordScreen from '../screens/user/ResetPasswordScreen';
-import AuthCallbackScreen from '../screens/user/AuthCallbackScreen';
+import LoginScreen from "../screens/user/LoginScreen"
+import SignUpScreen from "../screens/user/SignUpScreen"
+import ForgotPasswordScreen from "../screens/user/ForgotPasswordScreen"
+import ResetPasswordScreen from "../screens/user/ResetPasswordScreen"
+import AuthCallbackScreen from "../screens/user/AuthCallbackScreen"
 
 // ===== Types =====
 export type RootTabParamList = {
-  Home: undefined;
-  Care: undefined;
-  Plus: undefined;
-  PetForum: undefined;
-  Profile: undefined;
-};
+  Home: undefined
+  Care: undefined
+  Plus: undefined
+  PetForum: undefined
+  Profile: undefined
+}
 
 export type RootStackParamList = {
-  Welcome: undefined;
+  Welcome: undefined
 
   // ✅ nested tabs params
-  MainTabs: NavigatorScreenParams<RootTabParamList> | undefined;
+  MainTabs: NavigatorScreenParams<RootTabParamList> | undefined
 
   // ✅ Auth
-  Login: undefined;
-  Signup: undefined;
-  ForgotPassword: undefined;
-  ResetPassword: undefined;
-  AuthCallback: undefined;
+  Login: undefined
+  Signup: undefined
+  ForgotPassword: undefined
+  ResetPassword: undefined
+  AuthCallback: undefined
 
   // ✅ Other screens
-  SpeciesEditor: { key?: string } | undefined;
-  PetSelect: undefined;
-  SpeciesNeeds: { petId: string };
-  PetsAdd: undefined;
+  SpeciesEditor: { key?: string } | undefined
+  PetSelect: undefined
+  SpeciesNeeds: { petId: string }
+  PetsAdd: undefined
 
-  WeighScreen: { petId?: string } | undefined;
-  FeedInputScreen: { petId: string } | undefined;
+  WeighScreen: { petId?: string } | undefined
+  FeedInputScreen: { petId: string } | undefined
 
-  Settings: undefined;
-  UVBLogScreen: { petId: string } | undefined;
-  CleanScreen: { petId: string } | undefined;
+  Settings: undefined
+  UVBLogScreen: { petId: string } | undefined
+  CleanScreen: { petId: string } | undefined
 
   // ✅ Friends system
-  ProfileFriends: undefined;
-  ProfileMessages: undefined;
-  ProfileMatch: undefined;
+  ProfileFriends: undefined
+  ProfileMessages: undefined
+  ProfileMatch: undefined
 
   // ✅ My posts
-  ProfileMyPosts: undefined;
+  ProfileMyPosts: undefined
 
   // ✅ Chat thread
-  ChatThread: { conversationId: string; title?: string } | undefined;
+  ChatThread: { conversationId: string; title?: string } | undefined
 
   // keep placeholder if you want
-  TempMonitorScreen: { petId: string } | undefined;
-};
+  TempMonitorScreen: { petId: string } | undefined
+}
 
 // ===== Colors =====
 const colors = {
-  primary: '#38e07b',
-  darkBg: '#122017',
-};
+  primary: "#38e07b",
+  darkBg: "#122017",
+}
 
 // Placeholder screen for "+" tab
-const NoopScreen: React.FC = () => <View style={{ flex: 1 }} />;
+const NoopScreen: React.FC = () => <View style={{ flex: 1 }} />
 
 // ✅ helper: allow using i18n title for stack headers safely
 function withHeaderTitle(titleKey: string): NativeStackNavigationOptions {
@@ -112,18 +115,18 @@ function withHeaderTitle(titleKey: string): NativeStackNavigationOptions {
   return {
     headerShown: true,
     title: titleKey, // 先塞 key，真正 title 會在 options callback 內 t()
-  };
+  }
 }
 
 // ===== MainTabs =====
-const Tab = createBottomTabNavigator<RootTabParamList>();
+const Tab = createBottomTabNavigator<RootTabParamList>()
 
 function MainTabs() {
-  const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
 
-  const baseHeight = Platform.select({ ios: 88, android: 64 }) ?? 64;
-  const basePaddingBottom = Platform.select({ ios: 24, android: 10 }) ?? 10;
+  const baseHeight = Platform.select({ ios: 88, android: 64 }) ?? 64
+  const basePaddingBottom = Platform.select({ ios: 24, android: 10 }) ?? 10
 
   const tabBarStyle = useMemo(
     () => ({
@@ -131,28 +134,30 @@ function MainTabs() {
       paddingBottom: Math.max(insets.bottom, basePaddingBottom),
       paddingTop: 10,
       borderTopWidth: 0.5,
-      borderTopColor: 'rgba(0,0,0,0.08)',
-      backgroundColor: '#fff',
+      borderTopColor: "rgba(0,0,0,0.08)",
+      backgroundColor: "#fff",
     }),
-    [baseHeight, basePaddingBottom, insets.bottom]
-  );
+    [baseHeight, basePaddingBottom, insets.bottom],
+  )
 
-  const liftMore = Math.min(Math.max(insets.bottom - 6, 0), 12); // 0~12
-  const plusLift = -18 - liftMore;
+  const liftMore = Math.min(Math.max(insets.bottom - 6, 0), 12) // 0~12
+  const plusLift = -18 - liftMore
 
   type PlusTabButtonProps = BottomTabBarButtonProps & {
-    onPressCustom?: () => void;
-  };
+    onPressCustom?: () => void
+  }
 
-  function PlusTabButton({ style, accessibilityState, onPressCustom }: PlusTabButtonProps) {
-    const selected = accessibilityState?.selected;
+  function PlusTabButton(
+    { style, accessibilityState, onPressCustom }: PlusTabButtonProps,
+  ) {
+    const selected = accessibilityState?.selected
 
     return (
       <View
         style={[
           style,
           {
-            alignItems: 'center',
+            alignItems: "center",
             paddingBottom: Math.max(insets.bottom, 0),
           },
         ]}
@@ -166,12 +171,12 @@ function MainTabs() {
             width: 56,
             height: 56,
             borderRadius: 28,
-            alignItems: 'center',
-            justifyContent: 'center',
+            alignItems: "center",
+            justifyContent: "center",
             backgroundColor: colors.primary,
             marginTop: plusLift,
 
-            shadowColor: '#000',
+            shadowColor: "#000",
             shadowOpacity: 0.15,
             shadowRadius: 6,
             shadowOffset: { width: 0, height: 2 },
@@ -181,7 +186,7 @@ function MainTabs() {
           <Feather name="plus" size={28} color={colors.darkBg} />
         </Pressable>
       </View>
-    );
+    )
   }
 
   return (
@@ -189,7 +194,7 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: 'rgba(0,0,0,0.5)',
+        tabBarInactiveTintColor: "rgba(0,0,0,0.5)",
         tabBarStyle,
       }}
     >
@@ -197,8 +202,10 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: t('nav.tabs.home'),
-          tabBarIcon: ({ color, size }) => <Feather name="home" color={color} size={size} />,
+          tabBarLabel: t("nav.tabs.home"),
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="home" color={color} size={size} />
+          ),
         }}
       />
 
@@ -206,8 +213,10 @@ function MainTabs() {
         name="Care"
         component={LogsScreen}
         options={{
-          tabBarLabel: t('nav.tabs.care'),
-          tabBarIcon: ({ color, size }) => <Feather name="activity" color={color} size={size} />,
+          tabBarLabel: t("nav.tabs.care"),
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="activity" color={color} size={size} />
+          ),
         }}
       />
 
@@ -216,13 +225,13 @@ function MainTabs() {
         name="Plus"
         component={NoopScreen}
         options={({ navigation }) => ({
-          tabBarLabel: '',
+          tabBarLabel: "",
           tabBarButton: (p) => (
             <PlusTabButton
               {...p}
               onPressCustom={() => {
-                const parent = navigation.getParent(); // RootStack
-                parent?.navigate('PetSelect' as never);
+                const parent = navigation.getParent() // RootStack
+                parent?.navigate("PetSelect" as never)
               }}
             />
           ),
@@ -233,8 +242,10 @@ function MainTabs() {
         name="PetForum"
         component={PetForumScreen}
         options={{
-          tabBarLabel: t('nav.tabs.petForum'),
-          tabBarIcon: ({ color, size }) => <Feather name="users" color={color} size={size} />,
+          tabBarLabel: t("nav.tabs.petForum"),
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="users" color={color} size={size} />
+          ),
         }}
       />
 
@@ -242,28 +253,33 @@ function MainTabs() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: t('nav.tabs.profile'),
-          tabBarIcon: ({ color, size }) => <Feather name="user" color={color} size={size} />,
+          tabBarLabel: t("nav.tabs.profile"),
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="user" color={color} size={size} />
+          ),
         }}
       />
     </Tab.Navigator>
-  );
+  )
 }
 
 // ===== Root Stack =====
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>()
 
 export default function RootNavigator() {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
 
   // ✅ helper: translate the "titleKey" we placed in withHeaderTitle()
   const translateTitle = (opt: NativeStackNavigationOptions) => ({
     ...opt,
     title: opt.title ? t(opt.title) : undefined,
-  });
+  })
 
   return (
-    <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      initialRouteName="Welcome"
+      screenOptions={{ headerShown: false }}
+    >
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="MainTabs" component={MainTabs} />
 
@@ -271,51 +287,58 @@ export default function RootNavigator() {
       <Stack.Screen
         name="Login"
         component={LoginScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.login'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.login"))}
       />
       <Stack.Screen
         name="Signup"
         component={SignUpScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.signup'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.signup"))}
       />
       <Stack.Screen
         name="ForgotPassword"
         component={ForgotPasswordScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.forgotPassword'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.forgotPassword"))}
       />
       <Stack.Screen
         name="ResetPassword"
         component={ResetPasswordScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.resetPassword'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.resetPassword"))}
       />
       <Stack.Screen
         name="AuthCallback"
         component={AuthCallbackScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.authCallback'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.authCallback"))}
       />
 
       {/* ✅ Friends system */}
       <Stack.Screen
         name="ProfileFriends"
         component={ProfileFriendsScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.profileFriends'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.profileFriends"))}
       />
       <Stack.Screen
         name="ProfileMessages"
         component={ProfileMessagesScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.profileMessages'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.profileMessages"))}
       />
       <Stack.Screen
         name="ProfileMatch"
         component={ProfileMatchScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.profileMatch'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.profileMatch"))}
       />
 
       {/* ✅ My Posts */}
       <Stack.Screen
         name="ProfileMyPosts"
         component={ProfileMyPostsScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.profileMyPosts'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.profileMyPosts"))}
       />
 
       {/* ✅ Chat thread */}
@@ -324,11 +347,11 @@ export default function RootNavigator() {
         component={ChatThreadScreen}
         options={({ route }) => {
           // 如果你想用對話標題（route.params.title），就優先顯示；否則用 i18n
-          const dynamicTitle = route.params?.title?.trim();
+          const dynamicTitle = route.params?.title?.trim()
           return {
             headerShown: true,
-            title: dynamicTitle || t('nav.stack.chatThread'),
-          };
+            title: dynamicTitle || t("nav.stack.chatThread"),
+          }
         }}
       />
 
@@ -337,7 +360,7 @@ export default function RootNavigator() {
         name="SpeciesEditor"
         component={SpeciesEditorScreen}
         options={{
-          presentation: Platform.select({ ios: 'modal', android: 'modal' }),
+          presentation: Platform.select({ ios: "modal", android: "modal" }),
           headerShown: false,
         }}
       />
@@ -345,45 +368,46 @@ export default function RootNavigator() {
       <Stack.Screen
         name="PetSelect"
         component={PetSelectScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.petSelect'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.petSelect"))}
       />
       <Stack.Screen
         name="SpeciesNeeds"
         component={SpeciesNeedsScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.speciesNeeds'))}
+        options={() =>
+          translateTitle(withHeaderTitle("nav.stack.speciesNeeds"))}
       />
       <Stack.Screen
         name="PetsAdd"
         component={PetsAddScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.petsAdd'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.petsAdd"))}
       />
 
       <Stack.Screen
         name="WeighScreen"
         component={WeighScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.weigh'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.weigh"))}
       />
       <Stack.Screen
         name="FeedInputScreen"
         component={FeedInputScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.feed'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.feed"))}
       />
       <Stack.Screen
         name="UVBLogScreen"
         component={UVBLogScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.uvb'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.uvb"))}
       />
       <Stack.Screen
         name="CleanScreen"
         component={CleanScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.clean'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.clean"))}
       />
 
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={() => translateTitle(withHeaderTitle('nav.stack.settings'))}
+        options={() => translateTitle(withHeaderTitle("nav.stack.settings"))}
       />
     </Stack.Navigator>
-  );
+  )
 }

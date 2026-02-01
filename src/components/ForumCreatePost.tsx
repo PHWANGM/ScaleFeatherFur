@@ -1,47 +1,47 @@
 // src/components/ForumCreatePost.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react"
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
   ActivityIndicator,
-  TextInput,
+  Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
-} from 'react-native';
-import PetSpeciesDropdown from './PetSpeciesDropdown';
-import { useImagePicker } from '../lib/ui/useImagePicker';
+  View,
+} from "react-native"
+import PetSpeciesDropdown from "./PetSpeciesDropdown"
+import { useImagePicker } from "../lib/ui/useImagePicker"
 
 type PaletteLike = {
-  bg: string;
-  card: string;
-  text: string;
-  subText: string;
-  border: string;
-  primary: string;
-  inputBg?: string;
-  [key: string]: any;
-};
+  bg: string
+  card: string
+  text: string
+  subText: string
+  border: string
+  primary: string
+  inputBg?: string
+  [key: string]: any
+}
 
 export type ForumCreatePostInput = {
-  title: string;
-  content: string;
-  speciesKey: string;
-  imageUrl?: string;     // 這裡會塞「相簿 / 相機」選到的檔案 URI 或遠端連結
-  productLink?: string;
-};
+  title: string
+  content: string
+  speciesKey: string
+  imageUrl?: string // 這裡會塞「相簿 / 相機」選到的檔案 URI 或遠端連結
+  productLink?: string
+}
 
 export type ForumCreatePostProps = {
-  palette: PaletteLike;
-  onSuccess: () => void;
-  onCreatePost: (input: ForumCreatePostInput) => Promise<void>;
-  onAddSpecies: () => void;
-};
+  palette: PaletteLike
+  onSuccess: () => void
+  onCreatePost: (input: ForumCreatePostInput) => Promise<void>
+  onAddSpecies: () => void
+}
 
 const ForumCreatePost: React.FC<ForumCreatePostProps> = ({
   palette,
@@ -49,64 +49,64 @@ const ForumCreatePost: React.FC<ForumCreatePostProps> = ({
   onCreatePost,
   onAddSpecies,
 }) => {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [productLink, setProductLink] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [title, setTitle] = useState("")
+  const [content, setContent] = useState("")
+  const [productLink, setProductLink] = useState("")
+  const [submitting, setSubmitting] = useState(false)
 
   // 🔄 用 speciesKey + 下拉式 component
-  const [speciesKey, setSpeciesKey] = useState('dog');
+  const [speciesKey, setSpeciesKey] = useState("dog")
 
   // 📷 新增：圖片 / short 媒體 URI（相簿或相機）
-  const [mediaUri, setMediaUri] = useState<string>('');
+  const [mediaUri, setMediaUri] = useState<string>("")
 
-  const { pickFromLibrary, takePhoto } = useImagePicker();
+  const { pickFromLibrary, takePhoto } = useImagePicker()
 
   const handleSubmit = async () => {
-    if (!title.trim() || !content.trim()) return;
-    setSubmitting(true);
+    if (!title.trim() || !content.trim()) return
+    setSubmitting(true)
     try {
       await onCreatePost({
         title: title.trim(),
         content: content.trim(),
         speciesKey,
-        imageUrl: mediaUri.trim(),          // 將媒體 URI 傳出去
+        imageUrl: mediaUri.trim(), // 將媒體 URI 傳出去
         productLink: productLink.trim(),
-      });
-      onSuccess();
+      })
+      onSuccess()
     } catch (e: any) {
-      console.error(e);
-      Alert.alert('錯誤', e?.message ?? '無法發布貼文');
+      console.error(e)
+      Alert.alert("錯誤", e?.message ?? "無法發布貼文")
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
-  const inputBg = palette.inputBg ?? 'rgba(0,0,0,0.04)';
+  const inputBg = palette.inputBg ?? "rgba(0,0,0,0.04)"
 
   const handlePickFromLibrary = async () => {
     try {
-      const uri = await pickFromLibrary();
-      if (uri) setMediaUri(uri);
+      const uri = await pickFromLibrary()
+      if (uri) setMediaUri(uri)
     } catch (err) {
-      console.error(err);
-      Alert.alert('錯誤', '無法開啟相簿');
+      console.error(err)
+      Alert.alert("錯誤", "無法開啟相簿")
     }
-  };
+  }
 
   const handleTakePhoto = async () => {
     try {
-      const uri = await takePhoto();
-      if (uri) setMediaUri(uri);
+      const uri = await takePhoto()
+      if (uri) setMediaUri(uri)
     } catch (err) {
-      console.error(err);
-      Alert.alert('錯誤', '無法開啟相機');
+      console.error(err)
+      Alert.alert("錯誤", "無法開啟相機")
     }
-  };
+  }
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={{ flex: 1 }}
     >
       <FlatList
@@ -153,7 +153,7 @@ const ForumCreatePost: React.FC<ForumCreatePostProps> = ({
                   backgroundColor: inputBg,
                   color: palette.text,
                   height: 100,
-                  textAlignVertical: 'top',
+                  textAlignVertical: "top",
                 },
               ]}
               placeholder="分享一下你家毛孩的趣事吧..."
@@ -168,23 +168,30 @@ const ForumCreatePost: React.FC<ForumCreatePostProps> = ({
               圖片 / Short (選填)
             </Text>
             <View style={[styles.mediaCard, { backgroundColor: inputBg }]}>
-              {mediaUri ? (
-                // 這裡先用 Image 做預覽：若選到影片也只是顯示失敗圖示（之後可改用 expo-av）
-                <Image source={{ uri: mediaUri }} style={styles.mediaPreview} />
-              ) : (
-                <View style={styles.mediaPlaceholder}>
-                  <Text style={{ color: palette.subText, fontSize: 32 }}>📷</Text>
-                  <Text
-                    style={{
-                      color: palette.subText,
-                      marginTop: 4,
-                      fontSize: 12,
-                    }}
-                  >
-                    尚未選擇圖片或短片
-                  </Text>
-                </View>
-              )}
+              {mediaUri
+                ? (
+                  // 這裡先用 Image 做預覽：若選到影片也只是顯示失敗圖示（之後可改用 expo-av）
+                  <Image
+                    source={{ uri: mediaUri }}
+                    style={styles.mediaPreview}
+                  />
+                )
+                : (
+                  <View style={styles.mediaPlaceholder}>
+                    <Text style={{ color: palette.subText, fontSize: 32 }}>
+                      📷
+                    </Text>
+                    <Text
+                      style={{
+                        color: palette.subText,
+                        marginTop: 4,
+                        fontSize: 12,
+                      }}
+                    >
+                      尚未選擇圖片或短片
+                    </Text>
+                  </View>
+                )}
 
               <View style={styles.mediaButtonsRow}>
                 <TouchableOpacity
@@ -221,18 +228,20 @@ const ForumCreatePost: React.FC<ForumCreatePostProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {mediaUri ? (
-                <Pressable
-                  onPress={() => setMediaUri('')}
-                  style={styles.mediaClear}
-                >
-                  <Text
-                    style={{ color: palette.subText, fontSize: 12 }}
+              {mediaUri
+                ? (
+                  <Pressable
+                    onPress={() => setMediaUri("")}
+                    style={styles.mediaClear}
                   >
-                    移除媒體
-                  </Text>
-                </Pressable>
-              ) : null}
+                    <Text
+                      style={{ color: palette.subText, fontSize: 12 }}
+                    >
+                      移除媒體
+                    </Text>
+                  </Pressable>
+                )
+                : null}
             </View>
 
             <Text style={[styles.label, { color: palette.subText }]}>
@@ -261,28 +270,26 @@ const ForumCreatePost: React.FC<ForumCreatePostProps> = ({
                 },
               ]}
             >
-              {submitting ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.submitBtnText}>發布貼文</Text>
-              )}
+              {submitting
+                ? <ActivityIndicator color="white" />
+                : <Text style={styles.submitBtnText}>發布貼文</Text>}
             </Pressable>
           </>
         }
       />
     </KeyboardAvoidingView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 32 },
   // Form
   label: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 6,
     marginTop: 12,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   input: {
     borderRadius: 12,
@@ -295,20 +302,20 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   mediaPreview: {
-    width: '100%',
+    width: "100%",
     height: 220,
     borderRadius: 12,
-    backgroundColor: '#e5e5e5',
+    backgroundColor: "#e5e5e5",
   },
   mediaPlaceholder: {
-    width: '100%',
+    width: "100%",
     height: 220,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   mediaButtonsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 12,
   },
@@ -318,29 +325,29 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   mediaButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   mediaClear: {
     marginTop: 8,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
   },
   submitBtn: {
     marginTop: 24,
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#f97316',
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#f97316",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
-  submitBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-});
+  submitBtnText: { color: "white", fontWeight: "bold", fontSize: 16 },
+})
 
-export default ForumCreatePost;
+export default ForumCreatePost

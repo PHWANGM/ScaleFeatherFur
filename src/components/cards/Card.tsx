@@ -1,11 +1,11 @@
-import React, { PropsWithChildren } from 'react';
-import { View, ViewStyle, StyleSheet } from 'react-native';
-import { theme } from '../../styles/tokens';
+import React, { PropsWithChildren } from "react"
+import { StyleSheet, View, ViewStyle } from "react-native"
+import { theme } from "../../styles/tokens"
 
-type Props = PropsWithChildren<{ style?: ViewStyle }>;
+type Props = PropsWithChildren<{ style?: ViewStyle }>
 
 export default function Card({ children, style }: Props) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={[styles.card, style]}>{children}</View>
 }
 
 const styles = StyleSheet.create({
@@ -17,4 +17,4 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     ...theme.shadows.card,
   },
-});
+})

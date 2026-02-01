@@ -1,31 +1,36 @@
 // src/components/CalendarDateDetail.tsx
-import React, { useMemo } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { useSelector } from 'react-redux';
-import DetailListContainer from './DetailListContainer';
-import { selectSelectedDate,selectCurrentPetId } from '../../state/slices/petsSlice'; // ← 路徑依你的實際專案調整
-import type { ISODate } from '../../lib/db/repos/_helpers';
+import React, { useMemo } from "react"
+import { Dimensions, StyleSheet, Text, View } from "react-native"
+import { useSelector } from "react-redux"
+import DetailListContainer from "./DetailListContainer"
+import {
+  selectCurrentPetId,
+  selectSelectedDate,
+} from "../../state/slices/petsSlice" // ← 路徑依你的實際專案調整
+import type { ISODate } from "../../lib/db/repos/_helpers"
 
 /**
  * @param isoString ISO datetime，例如 2025-10-10T08:00:00.000Z
  */
 function formatReadableDate(isoString: ISODate | null | undefined): string {
-  if (!isoString) return '';
-  const d = new Date(isoString);
-  if (Number.isNaN(d.getTime())) return '';
+  if (!isoString) return ""
+  const d = new Date(isoString)
+  if (Number.isNaN(d.getTime())) return ""
   // e.g. "Oct 10" (en-US) 或 "10 Oct" (en-GB)
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })
 }
 
 const CalenderDateDetail: React.FC = () => {
-  const selectedDate = useSelector(selectSelectedDate) as ISODate | null;
-  const currentPetId = useSelector(selectCurrentPetId) as string | null;
-  const displayDate = useMemo(() => formatReadableDate(selectedDate), [selectedDate]);
-  console.log('[DetailListContainer] currentPetId =', currentPetId);
-  console.log('[DetailListContainer] selectedDate =', selectedDate);
+  const selectedDate = useSelector(selectSelectedDate) as ISODate | null
+  const currentPetId = useSelector(selectCurrentPetId) as string | null
+  const displayDate = useMemo(() => formatReadableDate(selectedDate), [
+    selectedDate,
+  ])
+  console.log("[DetailListContainer] currentPetId =", currentPetId)
+  console.log("[DetailListContainer] selectedDate =", selectedDate)
   return (
     <View style={styles.detailsContainer}>
       <View style={styles.detailDateContainer}>
@@ -36,30 +41,30 @@ const CalenderDateDetail: React.FC = () => {
       {/* 當天 care_log 清單 */}
       <DetailListContainer />
     </View>
-  );
-};
+  )
+}
 
-export default CalenderDateDetail;
+export default CalenderDateDetail
 
 const styles = StyleSheet.create({
   detailsContainer: {
     flex: 1,
   },
   detailDateContainer: {
-    flexDirection: 'row',
-    width: '100%',
+    flexDirection: "row",
+    width: "100%",
     paddingHorizontal: 15,
-    alignItems: 'center',
-    justifyContent: 'space-evenly',
+    alignItems: "center",
+    justifyContent: "space-evenly",
   },
   dateText: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 15,
-    color: '#A2AEBE',
+    color: "#A2AEBE",
   },
   dateLine: {
-    width: Dimensions.get('window').width * 0.65,
+    width: Dimensions.get("window").width * 0.65,
     height: 2,
-    backgroundColor: '#A2AEBE',
+    backgroundColor: "#A2AEBE",
   },
-});
+})

@@ -202,7 +202,7 @@
       "tags": "標籤"
     }
   },
-    "profile": {
+  "profile": {
     "loading": "載入中...",
     "quickActions": "快捷功能",
     "requiresLogin": "需登入後使用",

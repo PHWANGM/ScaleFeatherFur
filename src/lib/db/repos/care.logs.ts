@@ -1,41 +1,41 @@
 // src/lib/db/repos/care.logs.ts
-import { query, execute, type SQLParams } from '../db.client';
-import { genId, nowIso, buildSetClause } from './_helpers';
+import { execute, query, type SQLParams } from "../db.client"
+import { buildSetClause, genId, nowIso } from "./_helpers"
 
 // 與 schema 對齊
 export type CareLogType =
-  | 'feed'
-  | 'calcium'
-  | 'vitamin'
-  | 'uvb'
-  | 'uvb_on'
-  | 'uvb_off'
-  | 'heat_on'
-  | 'heat_off'
-  | 'clean'
-  | 'weigh';
+  | "feed"
+  | "calcium"
+  | "vitamin"
+  | "uvb"
+  | "uvb_on"
+  | "uvb_off"
+  | "heat_on"
+  | "heat_off"
+  | "clean"
+  | "weigh"
 
 export type CareLogSubtype =
-  | 'calcium_plain'
-  | 'calcium_d3'
-  | 'vitamin_multi'
-  | 'feed_greens'
-  | 'feed_hay'
-  | 'feed_insect'
-  | 'feed_meat'
-  | 'feed_fruit'
-  | 'uvb'
-  | 'basking_heat'
-  | 'heat_mat'
-  | 'insect_dusting';
+  | "calcium_plain"
+  | "calcium_d3"
+  | "vitamin_multi"
+  | "feed_greens"
+  | "feed_hay"
+  | "feed_insect"
+  | "feed_meat"
+  | "feed_fruit"
+  | "uvb"
+  | "basking_heat"
+  | "heat_mat"
+  | "insect_dusting"
 
 export type CareLogRow = {
-  id: string;
-  pet_id: string;
-  type: CareLogType;
-  subtype: CareLogSubtype | null; // 可選：'calcium_plain' | 'calcium_d3' 等
-  category: string | null;        // 彙整分類：'supplement','feed_insect','feed_meat','feed_greens','feed_fruit','light','heat','maint'...
-  value: number | null;           // 數值（g/kg/分鐘/顆數/百分比等）
+  id: string
+  pet_id: string
+  type: CareLogType
+  subtype: CareLogSubtype | null // 可選：'calcium_plain' | 'calcium_d3' 等
+  category: string | null // 彙整分類：'supplement','feed_insect','feed_meat','feed_greens','feed_fruit','light','heat','maint'...
+  value: number | null // 數值（g/kg/分鐘/顆數/百分比等）
   /**
    * 單位：'g','kg','pcs','min','h','%' 等
    * - 餵食重量：g / kg
@@ -43,24 +43,24 @@ export type CareLogRow = {
    * - 次數：pcs
    * - 配方比例：%
    */
-  unit: string | null;
-  note: string | null;
-  at: string;                     // ISO datetime
-  created_at: string;
-  updated_at: string;
-};
+  unit: string | null
+  note: string | null
+  at: string // ISO datetime
+  created_at: string
+  updated_at: string
+}
 
 // ========= CRUD =========
 
 export async function insertCareLog(
-  data: Omit<CareLogRow, 'id' | 'created_at' | 'updated_at'>
+  data: Omit<CareLogRow, "id" | "created_at" | "updated_at">,
 ): Promise<string> {
   const sql = `
     INSERT INTO care_logs (id, pet_id, type, subtype, category, value, unit, note, at, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  const id = genId('log');
-  const now = nowIso();
+  `
+  const id = genId("log")
+  const now = nowIso()
   const params: SQLParams = [
     id,
     data.pet_id,
@@ -73,29 +73,31 @@ export async function insertCareLog(
     data.at,
     now,
     now,
-  ];
-  await execute(sql, params);
-  return id;
+  ]
+  await execute(sql, params)
+  return id
 }
 
 export async function updateCareLog(
   id: string,
-  patch: Partial<Omit<CareLogRow, 'id' | 'created_at' | 'updated_at'>>
+  patch: Partial<Omit<CareLogRow, "id" | "created_at" | "updated_at">>,
 ): Promise<void> {
   const { sql, params } = buildSetClause({
     ...patch,
     updated_at: nowIso(),
-  });
-  await execute(`UPDATE care_logs SET ${sql} WHERE id = ?`, [...params, id]);
+  })
+  await execute(`UPDATE care_logs SET ${sql} WHERE id = ?`, [...params, id])
 }
 
 export async function deleteCareLog(id: string): Promise<void> {
-  await execute(`DELETE FROM care_logs WHERE id = ?`, [id]);
+  await execute(`DELETE FROM care_logs WHERE id = ?`, [id])
 }
 
 export async function getCareLogById(id: string): Promise<CareLogRow | null> {
-  const rows = await query<CareLogRow>(`SELECT * FROM care_logs WHERE id = ?`, [id]);
-  return rows[0] ?? null;
+  const rows = await query<CareLogRow>(`SELECT * FROM care_logs WHERE id = ?`, [
+    id,
+  ])
+  return rows[0] ?? null
 }
 
 // ========= 常用查詢 =========
@@ -103,29 +105,29 @@ export async function listCareLogsByPetBetween(
   petId: string,
   startISOInclusive: string,
   endISOExclusive: string,
-  types?: CareLogType[]
+  types?: CareLogType[],
 ): Promise<CareLogRow[]> {
   let sql = `
     SELECT * FROM care_logs
     WHERE pet_id = ?
       AND at >= ?
       AND at <  ?
-  `;
-  const params: SQLParams = [petId, startISOInclusive, endISOExclusive];
+  `
+  const params: SQLParams = [petId, startISOInclusive, endISOExclusive]
 
   if (types && types.length > 0) {
-    sql += ` AND type IN (${types.map(() => '?').join(',')})`;
-    params.push(...types);
+    sql += ` AND type IN (${types.map(() => "?").join(",")})`
+    params.push(...types)
   }
 
-  sql += ` ORDER BY at ASC`;
-  return query<CareLogRow>(sql, params);
+  sql += ` ORDER BY at ASC`
+  return query<CareLogRow>(sql, params)
 }
 
 /** 找到某日結束前最近一次體重紀錄（type='weigh'） */
 export async function getLatestWeighOnOrBefore(
   petId: string,
-  untilISOExclusive: string
+  untilISOExclusive: string,
 ): Promise<CareLogRow | null> {
   const rows = await query<CareLogRow>(
     `
@@ -136,28 +138,28 @@ export async function getLatestWeighOnOrBefore(
     ORDER BY at DESC
     LIMIT 1
     `,
-    [petId, untilISOExclusive]
-  );
-  return rows[0] ?? null;
+    [petId, untilISOExclusive],
+  )
+  return rows[0] ?? null
 }
 
 // ========= 當日彙總（單一 SQL 版） =========
 
 export type DailyAggregates = {
-  feed_grams: number;           // 當日餵食總克數
-  calcium_count: number;        // 當日補鈣（不分 D3）
-  calcium_plain_count: number;  // 當日純鈣次數
-  calcium_d3_count: number;     // 當日含 D3 次數
-  vitamin_count: number;        // 當日維他命次數
-  uvb_hours: number;            // 當日 UVB 時數（on/off 配對）
-  heat_hours: number;           // 當日加熱時數（on/off 配對）
-  weight_kg: number;            // 當日結束前最近一次體重
-};
+  feed_grams: number // 當日餵食總克數
+  calcium_count: number // 當日補鈣（不分 D3）
+  calcium_plain_count: number // 當日純鈣次數
+  calcium_d3_count: number // 當日含 D3 次數
+  vitamin_count: number // 當日維他命次數
+  uvb_hours: number // 當日 UVB 時數（on/off 配對）
+  heat_hours: number // 當日加熱時數（on/off 配對）
+  weight_kg: number // 當日結束前最近一次體重
+}
 
 export async function getDailyAggregatesSQL(
   petId: string,
   dayStartISO: string,
-  dayEndISO: string
+  dayEndISO: string,
 ): Promise<DailyAggregates> {
   const sql = `
   WITH day_logs AS (
@@ -243,7 +245,7 @@ export async function getDailyAggregatesSQL(
     ((SELECT uvb_hours FROM uvb) + (SELECT uvb_hours FROM uvb_direct)) AS uvb_hours,
     (SELECT heat_hours            FROM heat)          AS heat_hours,
     COALESCE((SELECT weight_kg FROM weigh), 0.0)      AS weight_kg;
-  `;
+  `
 
   const rows = await query<DailyAggregates>(sql, [
     petId,
@@ -251,7 +253,7 @@ export async function getDailyAggregatesSQL(
     dayEndISO,
     petId,
     dayEndISO,
-  ]);
+  ])
 
   return rows[0] ?? {
     feed_grams: 0,
@@ -262,25 +264,28 @@ export async function getDailyAggregatesSQL(
     uvb_hours: 0,
     heat_hours: 0,
     weight_kg: 0,
-  };
+  }
 }
 
 export async function getSupplementCounts(
   petId: string,
   fromISO: string,
-  toISO: string
+  toISO: string,
 ): Promise<{ subtype: string; count: number }[]> {
-  return query<{ subtype: string; count: number }>(`
+  return query<{ subtype: string; count: number }>(
+    `
     SELECT subtype, COUNT(*) as count
     FROM care_logs
     WHERE pet_id = ? AND at >= ? AND at < ? AND (type = 'calcium' OR type = 'vitamin')
     GROUP BY subtype
-  `, [petId, fromISO, toISO]);
+  `,
+    [petId, fromISO, toISO],
+  )
 }
 
 // 最近一次餵食紀錄（不限制日期）
 export async function getLatestFeedLogForPet(
-  petId: string
+  petId: string,
 ): Promise<CareLogRow | null> {
   const rows = await query<CareLogRow>(
     `
@@ -291,7 +296,7 @@ export async function getLatestFeedLogForPet(
     ORDER BY at DESC
     LIMIT 1
     `,
-    [petId]
-  );
-  return rows[0] ?? null;
+    [petId],
+  )
+  return rows[0] ?? null
 }

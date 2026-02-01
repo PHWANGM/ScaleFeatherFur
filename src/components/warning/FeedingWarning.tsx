@@ -1,77 +1,77 @@
 // src/components/warning/FeedingWarning.tsx
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useThemeColors } from '../../styles/themesColors';
+import React, { useEffect, useMemo, useState } from "react"
+import { StyleSheet, Text, View } from "react-native"
+import { Feather } from "@expo/vector-icons"
+import { useThemeColors } from "../../styles/themesColors"
 import {
   evaluateFeedingScheduleForPet,
-  type FeedingScheduleResult,
   type FeedingRiskKind,
-} from '../../lib/compliance/feedingSchedule.service';
+  type FeedingScheduleResult,
+} from "../../lib/compliance/feedingSchedule.service"
 
 type Props = {
-  petId: string | null;
-};
+  petId: string | null
+}
 
 const FeedingWarning: React.FC<Props> = ({ petId }) => {
-  const { colors } = useThemeColors();
+  const { colors } = useThemeColors()
 
   const palette = useMemo(
     () => ({
       text: colors.text,
-      subText: colors.subText ?? (colors as any).textDim ?? '#97A3B6',
-      primary: colors.primary ?? '#38e07b',
+      subText: colors.subText ?? (colors as any).textDim ?? "#97A3B6",
+      primary: colors.primary ?? "#38e07b",
     }),
-    [colors]
-  );
+    [colors],
+  )
 
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<FeedingScheduleResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<FeedingScheduleResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
 
     const run = async () => {
       if (!petId) {
-        setResult(null);
-        return;
+        setResult(null)
+        return
       }
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
       try {
-        const r = await evaluateFeedingScheduleForPet(petId);
+        const r = await evaluateFeedingScheduleForPet(petId)
 
-        console.log('[FeedingWarning] schedule result', { petId, r });
+        console.log("[FeedingWarning] schedule result", { petId, r })
 
         if (!cancelled) {
-          setResult(r);
+          setResult(r)
         }
       } catch (e: any) {
         if (!cancelled) {
-          setError(String(e?.message ?? e));
+          setError(String(e?.message ?? e))
         }
-        console.log('[FeedingWarning] error evaluating feeding schedule', {
+        console.log("[FeedingWarning] error evaluating feeding schedule", {
           petId,
           error: e,
-        });
+        })
       } finally {
         if (!cancelled) {
-          setLoading(false);
+          setLoading(false)
         }
       }
-    };
+    }
 
-    run();
+    run()
     return () => {
-      cancelled = true;
-    };
-  }, [petId]);
+      cancelled = true
+    }
+  }, [petId])
 
-  if (!petId) return null;
-  if (loading && !result) return null;
-  if (!result) return null;
-  if (!result.shouldWarn) return null;
+  if (!petId) return null
+  if (loading && !result) return null
+  if (!result) return null
+  if (!result.shouldWarn) return null
 
   const {
     feedingIntervalMinHours,
@@ -81,74 +81,72 @@ const FeedingWarning: React.FC<Props> = ({ petId }) => {
     nextFeedWindowStart,
     nextFeedWindowEnd,
     risk,
-  } = result;
+  } = result
 
   // 解析 ISO → YYYY/MM/DD HH:MM
   const formatFullLocal = (iso: string | null): string => {
-    if (!iso) return '--/--/-- --:--';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '--/--/-- --:--';
+    if (!iso) return "--/--/-- --:--"
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return "--/--/-- --:--"
 
-    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`)
 
-    const yyyy = d.getFullYear();
-    const mm = pad(d.getMonth() + 1);
-    const dd = pad(d.getDate());
-    const hh = pad(d.getHours());
-    const mi = pad(d.getMinutes());
+    const yyyy = d.getFullYear()
+    const mm = pad(d.getMonth() + 1)
+    const dd = pad(d.getDate())
+    const hh = pad(d.getHours())
+    const mi = pad(d.getMinutes())
 
-    return `${yyyy}/${mm}/${dd} ${hh}:${mi}`;
-  };
+    return `${yyyy}/${mm}/${dd} ${hh}:${mi}`
+  }
 
-  const lastFeedFullStr = formatFullLocal(lastFeedAt);
+  const lastFeedFullStr = formatFullLocal(lastFeedAt)
 
   // === 倒數：距離 now 還有幾小時 ===
   const diffHoursFromNow = (iso: string | null): number | null => {
-    if (!iso) return null;
-    const now = new Date();
-    const target = new Date(iso);
-    const diffMs = target.getTime() - now.getTime();
-    return diffMs / (1000 * 60 * 60);
-  };
+    if (!iso) return null
+    const now = new Date()
+    const target = new Date(iso)
+    const diffMs = target.getTime() - now.getTime()
+    return diffMs / (1000 * 60 * 60)
+  }
 
-  const hoursToStart = diffHoursFromNow(nextFeedWindowStart);
-  const hoursToEnd = diffHoursFromNow(nextFeedWindowEnd);
+  const hoursToStart = diffHoursFromNow(nextFeedWindowStart)
+  const hoursToEnd = diffHoursFromNow(nextFeedWindowEnd)
 
   const formatCountdownRange = (
     from: number | null,
-    to: number | null
+    to: number | null,
   ): string | null => {
-    if (from == null || to == null) return null;
+    if (from == null || to == null) return null
 
-    const fromClamped = Math.max(from, 0);
-    const toClamped = Math.max(to, 0);
+    const fromClamped = Math.max(from, 0)
+    const toClamped = Math.max(to, 0)
 
-    return `${fromClamped.toFixed(1)}–${toClamped.toFixed(1)} 小時`;
-  };
+    return `${fromClamped.toFixed(1)}–${toClamped.toFixed(1)} 小時`
+  }
 
   // === 三種訊息：用兩行 line1 / line2 來表達 ===
-  let line1: string | null = null;
-  let line2: string | null = null;
+  let line1: string | null = null
+  let line2: string | null = null
 
   if (!lastFeedAt) {
     // 2) 如果沒有餵食過的話
-    line1 = '還沒有餵食紀錄';
-    line2 = null;
-  } else if (risk === 'overdue') {
+    line1 = "還沒有餵食紀錄"
+    line2 = null
+  } else if (risk === "overdue") {
     // 3) 已經超過時間
-    line1 = '餵食看起來已經延遲，請儘快檢查並餵食。';
-    line2 = null;
+    line1 = "餵食看起來已經延遲，請儘快檢查並餵食。"
+    line2 = null
   } else {
     // 1) 有餵食紀錄 + due_soon：分成兩行
-    const range = formatCountdownRange(hoursToStart, hoursToEnd);
+    const range = formatCountdownRange(hoursToStart, hoursToEnd)
 
-    line1 = `上次餵食時間是 ${lastFeedFullStr}`;
-    line2 = range
-      ? `距離建議餵食時間窗還有約 ${range}。`
-      : null;
+    line1 = `上次餵食時間是 ${lastFeedFullStr}`
+    line2 = range ? `距離建議餵食時間窗還有約 ${range}。` : null
   }
 
-  console.log('[FeedingWarning] messageLines', {
+  console.log("[FeedingWarning] messageLines", {
     petId,
     risk,
     hoursSinceLastFeed,
@@ -157,14 +155,14 @@ const FeedingWarning: React.FC<Props> = ({ petId }) => {
     lastFeedAt,
     line1,
     line2,
-  });
+  })
 
   return (
     <View style={[styles.alertRow, { marginTop: 8 }]}>
       <View
         style={[
           styles.alertIconBox,
-          { backgroundColor: 'rgba(56,224,123,0.2)' },
+          { backgroundColor: "rgba(56,224,123,0.2)" },
         ]}
       >
         <Feather name="cloud" size={22} color={palette.primary} />
@@ -187,26 +185,26 @@ const FeedingWarning: React.FC<Props> = ({ petId }) => {
         )}
 
         {error && (
-          <Text style={[styles.alertSub, { color: 'tomato' }]}>
+          <Text style={[styles.alertSub, { color: "tomato" }]}>
             {error}
           </Text>
         )}
       </View>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
-  alertRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  alertRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   alertIconBox: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  alertTitle: { fontSize: 16, fontWeight: '600' },
+  alertTitle: { fontSize: 16, fontWeight: "600" },
   alertSub: { fontSize: 12, marginTop: 2 },
-});
+})
 
-export default FeedingWarning;
+export default FeedingWarning
