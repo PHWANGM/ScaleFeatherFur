@@ -1,6 +1,4 @@
-// src/lib/supabase/repos/message.repo.ts
 import { supabase } from "../../supabase"
-import { getAuthedUserId } from "./profile.repo"
 
 export type ConversationSummaryRow = {
   viewer_id: string
@@ -58,7 +56,8 @@ export function toConversationListItems(
       displayTitle: r.is_group
         ? (r.title ?? "Group")
         : (r.other_display_name ?? "Unknown"),
-      preview: r.last_message_text ??
+      preview:
+        r.last_message_text ??
         (r.last_message_at ? "(no preview)" : "Start a conversation"),
       timeLabel: formatTime(r.last_message_at),
     }
@@ -97,10 +96,6 @@ export async function markConversationRead(
   if (error) console.warn("[message.repo] markConversationRead error:", error)
 }
 
-/**
- * Requires SQL RPC:
- *   public.create_or_get_dm(other_user_id uuid) returns uuid
- */
 export async function createOrGetDm(
   otherUserId: string,
 ): Promise<{ conversationId: string; title?: string } | null> {
@@ -118,12 +113,14 @@ export async function createOrGetDm(
 
   let title: string | undefined
   try {
-    const { data: p, error: pErr } = await supabase.from("profiles").select(
-      "display_name",
-    ).eq("id", otherUserId).single()
+    const { data: p, error: pErr } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", otherUserId)
+      .single()
     if (!pErr && p?.display_name) title = p.display_name
   } catch {
-    // ignore mark read errors
+    // ignore
   }
 
   return { conversationId, title }
@@ -156,11 +153,12 @@ export async function fetchMessagesPage(params: {
   return (data ?? []) as MessageRow[]
 }
 
-export async function sendMessage(
-  params: { conversationId: string; senderId: string; body: string },
-): Promise<MessageRow | null> {
+export async function sendMessage(params: {
+  conversationId: string
+  senderId: string
+  body: string
+}): Promise<MessageRow | null> {
   const { conversationId, senderId, body } = params
-
   const trimmed = body.trim()
   if (!trimmed) return null
 
@@ -181,13 +179,22 @@ export async function sendMessage(
   return (data ?? null) as MessageRow | null
 }
 
-export function subscribeToConversationMessages(
-  params: { conversationId: string; onInsert: (msg: MessageRow) => void },
-) {
-  const { conversationId, onInsert } = params
+/**
+ * ✅ 收斂版 realtime subscribe：
+ * - channel name 穩定
+ * - 只聽 INSERT
+ * - filter 固定 conversation_id
+ * - unsubscribe 乾淨 removeChannel
+ */
+export function subscribeToConversationMessages(params: {
+  conversationId: string
+  onInsert: (msg: MessageRow) => void
+  onStatus?: (status: string) => void
+}) {
+  const { conversationId, onInsert, onStatus } = params
 
   const channel = supabase
-    .channel(`messages:conversation:${conversationId}`)
+    .channel(`rt:messages:${conversationId}`)
     .on(
       "postgres_changes",
       {
@@ -197,125 +204,19 @@ export function subscribeToConversationMessages(
         filter: `conversation_id=eq.${conversationId}`,
       },
       (payload) => {
-        const msg = payload.new as {
-          id: string
-          conversation_id: string
-          sender_id: string
-          body: string
-          created_at: string
-          deleted_at?: string | null
-        }
+        console.log("[rt] payload", payload) // ✅ 直接看有沒有收到
+        const msg = payload.new as MessageRow
         if (msg?.deleted_at) return
-
-        onInsert({
-          id: msg.id,
-          conversation_id: msg.conversation_id,
-          sender_id: msg.sender_id,
-          body: msg.body,
-          created_at: msg.created_at,
-          deleted_at: msg.deleted_at,
-        })
+        onInsert(msg)
       },
     )
-    .subscribe()
+    .subscribe((status) => {
+      console.log("[rt] status", status, conversationId) // ✅ 核心
+      onStatus?.(status)
+    })
 
   return () => {
     supabase.removeChannel(channel)
   }
 }
 
-// ============================
-// ✅ Thread Helpers (整合 chat.repo)
-// ============================
-
-export type OtherProfile = { name: string; avatar: string | null }
-
-export async function fetchOtherParticipantProfile(params: {
-  conversationId: string
-  myUserId: string
-}): Promise<OtherProfile | null> {
-  const { conversationId, myUserId } = params
-
-  const { data, error } = await supabase
-    .from("conversation_members")
-    .select("user_id, profiles(display_name, avatar_url)")
-    .eq("conversation_id", conversationId)
-    .neq("user_id", myUserId)
-    .single()
-
-  if (error || !data) return null
-
-  const profile = (data as {
-    profiles?:
-      | { display_name?: string | null; avatar_url?: string | null }
-      | null
-  }).profiles
-  if (!profile) return null
-
-  return {
-    name: profile.display_name ?? "",
-    avatar: profile.avatar_url ?? null,
-  }
-}
-
-export async function loadChatThreadInitial(params: {
-  conversationId: string
-  pageLimit?: number
-}): Promise<{
-  myId: string | null
-  otherProfile: OtherProfile | null
-  messages: MessageRow[]
-}> {
-  const { conversationId, pageLimit = 30 } = params
-
-  const myId = await getAuthedUserId()
-  if (!myId) return { myId: null, otherProfile: null, messages: [] }
-
-  const [otherProfile, messages] = await Promise.all([
-    fetchOtherParticipantProfile({ conversationId, myUserId: myId }),
-    fetchMessagesPage({ conversationId, limit: pageLimit }),
-  ])
-
-  try {
-    await markConversationRead(conversationId, myId)
-  } catch {
-    // ignore mark read errors
-  }
-
-  return { myId, otherProfile, messages }
-}
-
-export function subscribeChatThread(params: {
-  conversationId: string
-  myId: string
-  onInsert: (msg: MessageRow) => void | Promise<void>
-  autoMarkRead?: boolean
-}) {
-  const { conversationId, myId, onInsert, autoMarkRead = true } = params
-
-  return subscribeToConversationMessages({
-    conversationId,
-    onInsert: async (msg) => {
-      await onInsert(msg)
-
-      if (autoMarkRead && msg.sender_id !== myId) {
-        try {
-          await markConversationRead(conversationId, myId)
-        } catch {
-          // ignore mark read errors
-        }
-      }
-    },
-  })
-}
-
-export async function sendChatMessage(params: {
-  conversationId: string
-  myId: string
-  body: string
-}): Promise<MessageRow | null> {
-  const { conversationId, myId, body } = params
-  const text = body.trim()
-  if (!text) return null
-  return await sendMessage({ conversationId, senderId: myId, body: text })
-}

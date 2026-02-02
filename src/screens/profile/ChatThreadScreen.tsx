@@ -1,3 +1,4 @@
+// src/screens/profile/ChatThreadScreen.tsx
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   ActivityIndicator,
@@ -9,25 +10,16 @@ import {
   Text,
   View,
 } from "react-native"
-import { useNavigation, useRoute } from "@react-navigation/native"
-import type { RouteProp } from "@react-navigation/native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native"
 import { useHeaderHeight } from "@react-navigation/elements"
 import { useTranslation } from "react-i18next"
 
 import { theme } from "../../styles/tokens"
 import { useThemeColors } from "../../styles/themesColors"
-
-import {
-  loadChatThreadInitial,
-  type MessageRow,
-  type OtherProfile,
-  sendChatMessage,
-  subscribeChatThread,
-} from "../../lib/supabase/repos/message.repo"
-
 import MessageInputBar from "../../components/chat/MessageInputBar"
 import MessageBubble from "../../components/chat/MessageBubble"
+import { useConversationThread } from "../../hooks/useConversationThread"
+import type { MessageRow, OtherProfile } from "../../lib/supabase/repos/chat.repo"
 
 type ChatThreadRoute = RouteProp<
   { ChatThread: { conversationId: string } },
@@ -36,27 +28,16 @@ type ChatThreadRoute = RouteProp<
 
 const formatChatTime = (ts: string) => {
   const d = new Date(ts)
-  return `${String(d.getHours()).padStart(2, "0")}:${
-    String(d.getMinutes()).padStart(2, "0")
-  }`
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
 
 const Avatar = ({ url, size = 32 }: { url?: string | null; size?: number }) => (
-  <View
-    style={[styles.avatarPlaceholder, {
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-    }]}
-  >
-    {url
-      ? (
-        <Image
-          source={{ uri: url }}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
-        />
-      )
-      : <Text style={{ fontSize: size * 0.4, color: "#fff" }}>🐾</Text>}
+  <View style={[styles.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
+    {url ? (
+      <Image source={{ uri: url }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+    ) : (
+      <Text style={{ fontSize: size * 0.4, color: "#fff" }}>🐾</Text>
+    )}
   </View>
 )
 
@@ -64,104 +45,60 @@ export default function ChatThreadScreen() {
   const { t } = useTranslation()
   const navigation = useNavigation()
   const { colors } = useThemeColors()
-  const _insets = useSafeAreaInsets()
   const headerHeight = useHeaderHeight()
   const route = useRoute<ChatThreadRoute>()
   const { conversationId } = route.params
 
   const textDim = (colors?.subText ?? "#97A3B6") as string
-
-  const [myId, setMyId] = useState<string | null>(null)
-  const [otherProfile, setOtherProfile] = useState<OtherProfile | null>(null)
-  const [messages, setMessages] = useState<MessageRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [text, setText] = useState("")
-
   const listRef = useRef<FlatList<MessageRow>>(null)
 
-  // ✅ 用來動態調整內容間距的量測值
-  const [_inputBarHeight, setInputBarHeight] = useState(72)
+  const [text, setText] = useState("")
+  const [, setInputBarHeight] = useState(72)
   const [liftPx, setLiftPx] = useState(0)
 
-  // 1. 載入初始資料與 Header 設定
-  const loadInitial = useCallback(async () => {
-    setLoading(true)
-    try {
-      // 先給一個 fallback title（避免 header 空白）
-      navigation.setOptions({ title: t("chat.thread.titleFallback") })
-
-      const res = await loadChatThreadInitial({ conversationId, pageLimit: 30 })
-      setMyId(res.myId)
-      setOtherProfile(res.otherProfile)
-      setMessages(res.messages)
-
-      if (res.otherProfile) {
-        const info = res.otherProfile
-        navigation.setOptions({
-          headerTitle: () => (
-            <View style={styles.headerTitleContainer}>
-              <Avatar url={info.avatar} size={32} />
-              <Text
-                style={[styles.headerName, { color: colors.text }]}
-                numberOfLines={1}
-              >
-                {info.name}
-              </Text>
-            </View>
-          ),
-        })
-      } else {
-        // 如果拿不到對方資料，也至少要有 title
-        navigation.setOptions({ title: t("chat.thread.titleFallback") })
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [conversationId, navigation, colors.text, t])
-
-  useEffect(() => {
-    loadInitial()
-  }, [loadInitial])
-
-  // 2. 訂閱即時訊息
-  useEffect(() => {
-    if (!conversationId || !myId) return
-    return subscribeChatThread({
-      conversationId,
-      myId,
-      onInsert: (msg) => {
-        setMessages((
-          prev,
-        ) => (prev.some((x) => x.id === msg.id) ? prev : [msg, ...prev]))
-      },
-      autoMarkRead: true,
+  const { loading, myId, otherProfile, messages, sending, send } =
+    useConversationThread(conversationId, {
+      pageLimit: 30,
+      enableFallbackPolling: true,
+      pollIntervalMs: 15000,
+      debug: __DEV__,
     })
-  }, [conversationId, myId])
 
-  // 3. 發送訊息邏輯
+  // header
+  useEffect(() => {
+    const p: OtherProfile | null = otherProfile
+    if (p) {
+      navigation.setOptions({
+        headerTitle: () => (
+          <View style={styles.headerTitleContainer}>
+            <Avatar url={p.avatar} size={32} />
+            <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
+              {p.name}
+            </Text>
+          </View>
+        ),
+      })
+    } else {
+      navigation.setOptions({ title: t("chat.thread.titleFallback") })
+    }
+  }, [colors.text, navigation, otherProfile, t])
+
   const onSend = useCallback(async () => {
     const body = text.trim()
-    if (!body || !myId || sending) return
-
-    setSending(true)
+    if (!body) return
     setText("")
-    const msg = await sendChatMessage({ conversationId, myId, body })
+    const msg = await send(body)
     if (msg) {
-      setMessages((prev) => [msg, ...prev])
       requestAnimationFrame(() => {
         listRef.current?.scrollToOffset({ offset: 0, animated: true })
       })
     }
-    setSending(false)
-  }, [conversationId, myId, sending, text])
+  }, [send, text])
 
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color={colors.primary} />
-        {/* 如果你想顯示文字 loading，可以取消註解 */}
-        {/* <Text style={{ marginTop: 10, color: textDim }}>{t('chat.thread.loading')}</Text> */}
       </View>
     )
   }
@@ -182,12 +119,7 @@ export default function ChatThreadScreen() {
             contentContainerStyle={[
               styles.listContent,
               {
-                /*
-                  ✅ 重要：Inverted 列表的底部其實是 paddingTop。
-                  我們加上 liftPx，確保當輸入框抬升時，最後一則訊息也會被推上去，不被遮擋。
-                */
-                paddingTop: theme.spacing.md +
-                  (Platform.OS === "android" ? liftPx : 0),
+                paddingTop: theme.spacing.md + (Platform.OS === "android" ? liftPx : 0),
                 paddingBottom: theme.spacing.lg,
               },
             ]}
@@ -204,22 +136,6 @@ export default function ChatThreadScreen() {
             keyExtractor={(item) => item.id}
             keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
-              <View style={[styles.center, { paddingTop: 40 }]}>
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontWeight: "700",
-                    fontSize: 16,
-                  }}
-                >
-                  {t("chat.thread.empty")}
-                </Text>
-                <Text style={{ color: textDim, marginTop: 6, fontSize: 13 }}>
-                  {t("chat.thread.emptyHint")}
-                </Text>
-              </View>
-            }
           />
         </View>
 
@@ -234,8 +150,6 @@ export default function ChatThreadScreen() {
           onLiftPxChange={setLiftPx}
           androidCandidateBar={84}
           extraGap={12}
-          // ✅ 如果你的 MessageInputBar 支援 placeholder，建議加上
-          // placeholder={t('chat.thread.inputPlaceholder')}
         />
       </KeyboardAvoidingView>
     </View>

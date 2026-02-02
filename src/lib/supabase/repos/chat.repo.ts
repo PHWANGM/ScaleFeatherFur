@@ -39,13 +39,6 @@ export async function fetchOtherParticipantProfile(params: {
   }
 }
 
-/**
- * 給 ChatThreadScreen 一次性初始化用：
- * - 取得登入者 myId
- * - 取得對方 profile
- * - 拉一頁訊息
- * - 標記已讀
- */
 export async function loadChatThreadInitial(params: {
   conversationId: string
   pageLimit?: number
@@ -66,11 +59,10 @@ export async function loadChatThreadInitial(params: {
     fetchMessagesPage({ conversationId, limit: pageLimit }),
   ])
 
-  // 已讀不影響畫面，失敗就忽略
   try {
     await markConversationRead(conversationId, myId)
   } catch {
-    // ignore mark read errors
+    // ignore
   }
 
   return { myId, otherProfile, messages }
@@ -80,16 +72,14 @@ export function subscribeChatThread(params: {
   conversationId: string
   myId: string
   onInsert: (msg: MessageRow) => void | Promise<void>
-  /**
-   * 是否自動把「別人傳的訊息」標記成已讀
-   * 預設 true
-   */
   autoMarkRead?: boolean
+  onStatus?: (status: string) => void
 }) {
-  const { conversationId, myId, onInsert, autoMarkRead = true } = params
+  const { conversationId, myId, onInsert, autoMarkRead = true, onStatus } = params
 
-  const unsub = subscribeToConversationMessages({
+  return subscribeToConversationMessages({
     conversationId,
+    onStatus,
     onInsert: async (msg) => {
       await onInsert(msg)
 
@@ -97,13 +87,11 @@ export function subscribeChatThread(params: {
         try {
           await markConversationRead(conversationId, myId)
         } catch {
-          // ignore mark read errors
+          // ignore
         }
       }
     },
   })
-
-  return unsub
 }
 
 export async function sendChatMessage(params: {
