@@ -56,8 +56,7 @@ export function toConversationListItems(
       displayTitle: r.is_group
         ? (r.title ?? "Group")
         : (r.other_display_name ?? "Unknown"),
-      preview:
-        r.last_message_text ??
+      preview: r.last_message_text ??
         (r.last_message_at ? "(no preview)" : "Start a conversation"),
       timeLabel: formatTime(r.last_message_at),
     }
@@ -219,4 +218,3 @@ export function subscribeToConversationMessages(params: {
     supabase.removeChannel(channel)
   }
 }
-

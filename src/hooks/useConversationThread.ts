@@ -6,10 +6,10 @@ import { useFocusEffect, useIsFocused } from "@react-navigation/native"
 import { syncRealtimeAuthForNextConnect } from "../lib/supabase"
 import {
   loadChatThreadInitial,
-  sendChatMessage,
-  subscribeChatThread,
   type MessageRow,
   type OtherProfile,
+  sendChatMessage,
+  subscribeChatThread,
 } from "../lib/supabase/repos/chat.repo"
 
 type Options = {
@@ -135,9 +135,11 @@ export function useConversationThread(conversationId: string, opts?: Options) {
       conversationId,
       myId: uid,
       autoMarkRead: true,
-      onInsert: async (msg) => {
+      onInsert: (msg) => {
         // 去重 + 新訊息插入
-        setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [msg, ...prev]))
+        setMessages((
+          prev,
+        ) => (prev.some((x) => x.id === msg.id) ? prev : [msg, ...prev]))
       },
       onStatus: async (status) => {
         if (options.debug) {
@@ -155,7 +157,10 @@ export function useConversationThread(conversationId: string, opts?: Options) {
           return
         }
 
-        if (status === "TIMED_OUT" || status === "CHANNEL_ERROR" || status === "CLOSED") {
+        if (
+          status === "TIMED_OUT" || status === "CHANNEL_ERROR" ||
+          status === "CLOSED"
+        ) {
           // realtime 不穩：啟動 polling 當備援 + 排程重連
           startPolling()
           scheduleRetry()
@@ -181,10 +186,16 @@ export function useConversationThread(conversationId: string, opts?: Options) {
 
       setSending(true)
       try {
-        const msg = await sendChatMessage({ conversationId, myId: uid, body: text })
+        const msg = await sendChatMessage({
+          conversationId,
+          myId: uid,
+          body: text,
+        })
         if (msg) {
           // optimistic insert（同時 realtime 也會來一份，但你有去重）
-          setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [msg, ...prev]))
+          setMessages((
+            prev,
+          ) => (prev.some((x) => x.id === msg.id) ? prev : [msg, ...prev]))
         }
         return msg
       } finally {

@@ -75,7 +75,8 @@ export function subscribeChatThread(params: {
   autoMarkRead?: boolean
   onStatus?: (status: string) => void
 }) {
-  const { conversationId, myId, onInsert, autoMarkRead = true, onStatus } = params
+  const { conversationId, myId, onInsert, autoMarkRead = true, onStatus } =
+    params
 
   return subscribeToConversationMessages({
     conversationId,

@@ -67,7 +67,11 @@ function buildXTicks(xMin: number, xMax: number) {
   if (xMax - xMin < 7 * ONE_DAY_MS) return [xMin, xMax]
 
   const start = new Date(xMin)
-  const dayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()
+  const dayStart = new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate(),
+  ).getTime()
 
   const ticks: number[] = []
   for (let t = dayStart; t <= xMax; t += 7 * ONE_DAY_MS) {
@@ -127,7 +131,10 @@ export default function ChartLineWeight({
     const scaleX = (x: number) => padLeft + ((x - xMin) / xDen) * plotWidth
     const scaleY = (y: number) => padTop + (1 - (y - yMin) / yDen) * plotHeight
 
-    const pts: Point[] = safeData.map((d) => ({ x: scaleX(d.x), y: scaleY(d.y) }))
+    const pts: Point[] = safeData.map((d) => ({
+      x: scaleX(d.x),
+      y: scaleY(d.y),
+    }))
     const path = buildSmoothPath(pts)
 
     const xAxisY = padTop + plotHeight
@@ -135,7 +142,10 @@ export default function ChartLineWeight({
 
     const yRange = yMax - yMin || 1
     const yStep = yRange / (yTicks - 1)
-    const yTickValues = Array.from({ length: yTicks }, (_, i) => yMin + i * yStep)
+    const yTickValues = Array.from(
+      { length: yTicks },
+      (_, i) => yMin + i * yStep,
+    )
 
     return {
       padLeft,
@@ -216,7 +226,13 @@ export default function ChartLineWeight({
         {/* dots */}
         {showDots &&
           layout.pts.map((p, i) => (
-            <Circle key={`pt-${i}`} cx={p.x} cy={p.y} r={3} fill={theme.colors.primary} />
+            <Circle
+              key={`pt-${i}`}
+              cx={p.x}
+              cy={p.y}
+              r={3}
+              fill={theme.colors.primary}
+            />
           ))}
 
         {/* X axis + ticks */}

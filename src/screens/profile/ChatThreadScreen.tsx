@@ -10,7 +10,11 @@ import {
   Text,
   View,
 } from "react-native"
-import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native"
+import {
+  type RouteProp,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native"
 import { useHeaderHeight } from "@react-navigation/elements"
 import { useTranslation } from "react-i18next"
 
@@ -19,7 +23,10 @@ import { useThemeColors } from "../../styles/themesColors"
 import MessageInputBar from "../../components/chat/MessageInputBar"
 import MessageBubble from "../../components/chat/MessageBubble"
 import { useConversationThread } from "../../hooks/useConversationThread"
-import type { MessageRow, OtherProfile } from "../../lib/supabase/repos/chat.repo"
+import type {
+  MessageRow,
+  OtherProfile,
+} from "../../lib/supabase/repos/chat.repo"
 
 type ChatThreadRoute = RouteProp<
   { ChatThread: { conversationId: string } },
@@ -28,16 +35,27 @@ type ChatThreadRoute = RouteProp<
 
 const formatChatTime = (ts: string) => {
   const d = new Date(ts)
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+  return `${String(d.getHours()).padStart(2, "0")}:${
+    String(d.getMinutes()).padStart(2, "0")
+  }`
 }
 
 const Avatar = ({ url, size = 32 }: { url?: string | null; size?: number }) => (
-  <View style={[styles.avatarPlaceholder, { width: size, height: size, borderRadius: size / 2 }]}>
-    {url ? (
-      <Image source={{ uri: url }} style={{ width: size, height: size, borderRadius: size / 2 }} />
-    ) : (
-      <Text style={{ fontSize: size * 0.4, color: "#fff" }}>🐾</Text>
-    )}
+  <View
+    style={[styles.avatarPlaceholder, {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+    }]}
+  >
+    {url
+      ? (
+        <Image
+          source={{ uri: url }}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+        />
+      )
+      : <Text style={{ fontSize: size * 0.4, color: "#fff" }}>🐾</Text>}
   </View>
 )
 
@@ -72,7 +90,10 @@ export default function ChatThreadScreen() {
         headerTitle: () => (
           <View style={styles.headerTitleContainer}>
             <Avatar url={p.avatar} size={32} />
-            <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.headerName, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {p.name}
             </Text>
           </View>
@@ -119,7 +140,8 @@ export default function ChatThreadScreen() {
             contentContainerStyle={[
               styles.listContent,
               {
-                paddingTop: theme.spacing.md + (Platform.OS === "android" ? liftPx : 0),
+                paddingTop: theme.spacing.md +
+                  (Platform.OS === "android" ? liftPx : 0),
                 paddingBottom: theme.spacing.lg,
               },
             ]}
